@@ -102,7 +102,7 @@ type Props = {
   projectId: number | null;
 };
 
-type RefImage = { id: string; url: string; name: string; file?: File };
+type RefImage = { id: string; url: string; name: string; file?: File; sourceKey?: string };
 
 type DraftJob = {
   job_id: string;
@@ -186,7 +186,7 @@ async function resolveReferenceUrls(refs: RefImage[]): Promise<string[]> {
     if (r.file) out.push(await readFileAsDataUrl(r.file));
     else out.push(r.url);
   }
-  return out;
+  return [...new Set(out)];
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -1410,6 +1410,27 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     }
   };
 
+  const appendReferences = (candidates: RefImage[]) => {
+    const next = [...referenceImagesRef.current];
+    let added = 0;
+    for (const candidate of candidates) {
+      const duplicate = next.some((ref) =>
+        (candidate.sourceKey && ref.sourceKey === candidate.sourceKey) || ref.url === candidate.url,
+      );
+      if (duplicate || next.length >= maxReferences) {
+        revokeRefUrl(candidate.url);
+        continue;
+      }
+      next.push(candidate);
+      added += 1;
+    }
+    // Reserve slots immediately: concurrent history downloads must see each other.
+    referenceImagesRef.current = next;
+    setReferenceImages(next);
+    if (added) toast.success(`Добавлено ${added} референс(ов)`);
+    else toast.info("Референс уже добавлен или достигнут лимит");
+  };
+
   const addReferenceFromHistory = async (item: HistoryItem) => {
     if (maxReferences <= 0) return;
     if (referenceImages.length >= maxReferences) {
@@ -1418,15 +1439,12 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     }
     const httpUrl = item.raw_url && item.raw_url.startsWith("http") ? item.raw_url : null;
     if (httpUrl) {
-      setReferenceImages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          url: httpUrl,
-          name: item.label || "история",
-        },
-      ]);
-      toast.success("Референс взят из истории");
+      appendReferences([{
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        url: httpUrl,
+        name: item.label || "история",
+        sourceKey: `history:${item.path || httpUrl || item.id}`,
+      }]);
       return;
     }
     if (!item.preview_url) {
@@ -1438,8 +1456,10 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
       const blob = await res.blob();
       if (!assertFrameBlob(res, blob)) return;
       const file = new File([blob], `${item.id}.png`, { type: blob.type || "image/png" });
-      setReferenceImages((prev) => [...prev, makeRefFromFile(file)]);
-      toast.success("Референс добавлен из истории");
+      appendReferences([{
+        ...makeRefFromFile(file),
+        sourceKey: `history:${item.path || item.preview_url || item.id}`,
+      }]);
     } catch {
       toast.error("Не удалось взять референс из истории");
     }
@@ -1455,10 +1475,12 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
       toast.error(`Достигнут лимит референсов (${maxReferences})`);
       return;
     }
-    const newRefs = files.slice(0, remaining).map(makeRefFromFile);
+    const newRefs = files.map((file) => ({
+      ...makeRefFromFile(file),
+      sourceKey: `file:${file.name}:${file.size}:${file.lastModified}:${file.type}`,
+    }));
     if (!newRefs.length) return;
-    setReferenceImages((prev) => [...prev, ...newRefs]);
-    toast.success(`Добавлено ${newRefs.length} референс(ов)`);
+    appendReferences(newRefs);
   };
 
   const applyModelDefaults = (slug: string, kind: OutseeMediaType) => {
