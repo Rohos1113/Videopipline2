@@ -102,25 +102,3 @@ dc72f1403d7dadf0ca88d96999eeeef6d7edc745:tests/test_action_layer_node_edit.py:ge
 d3fa261b732f559dbc29e2e3b1be6770416ec7d4:tests/agents/test_chat_task_summary.py:generic-api-key:277
 672e6531715b27c4b16b64945e3a8a50b33853cd:tests/test_backup_db.py:generic-api-key:172
 d336aa572a5c9a1f69ecff1e6e2cc5a1bd10f1b4:app/services/decision_v1.py:generic-api-key:702
-
-# 2026-11-09 historic test fixtures in commits:
-8397a62de237683c39ecfa4fb66927b83dd6b7ed:tests/adapter/test_redact.py:generic-api-key:12
-6b2e113daa2bbd4d2f8289ca1f1ed36045f3b7b6:tests/test_change_control_core.py:generic-api-key:55
-6b2e113daa2bbd4d2f8289ca1f1ed36045f3b7b6:tests/test_change_control_core.py:generic-api-key:254
-233d3b62534a64ac369eaa57b9b35b0ee2cb2cef:tests/rag/test_dev_v2_grid.py:generic-api-key:33
-233d3b62534a64ac369eaa57b9b35b0ee2cb2cef:tests/rag/test_dev_v2_grid.py:generic-api-key:38
-89ca97c8d8c5b5be1df2c3909eff9767ef17470d:tests/rag/test_dev70_grid.py:generic-api-key:73
-30921a9088c8b2023ede4c769d3363db20928660:tests/observe_v1/test_redaction_trackers.py:generic-api-key:12
-30921a9088c8b2023ede4c769d3363db20928660:tests/observe_v1/test_vibecode_redaction.py:generic-api-key:8
-30921a9088c8b2023ede4c769d3363db20928660:tests/test_chat_action_audit.py:generic-api-key:12
-30921a9088c8b2023ede4c769d3363db20928660:tests/test_live_media_probe_script.py:generic-api-key:13
-30921a9088c8b2023ede4c769d3363db20928660:tests/test_change_control_core.py:generic-api-key:55
-30921a9088c8b2023ede4c769d3363db20928660:tests/test_change_control_core.py:generic-api-key:254
-30921a9088c8b2023ede4c769d3363db20928660:tests/w2_int_redaction_test.py:generic-api-key:7
-30921a9088c8b2023ede4c769d3363db20928660:tests/w2_2_operator_audit_test.py:generic-api-key:158
-30921a9088c8b2023ede4c769d3363db20928660:tests/w3_4_notify_test.py:generic-api-key:105
-30921a9088c8b2023ede4c769d3363db20928660:tests/w3_2_timeline_test.py:generic-api-key:68
-30921a9088c8b2023ede4c769d3363db20928660:tests/w3_2_timeline_test.py:generic-api-key:95
-30921a9088c8b2023ede4c769d3363db20928660:tests/w5_d04_5_managed_auth_test.py:generic-api-key:11
-30921a9088c8b2023ede4c769d3363db20928660:tests/w5_d11_rollback_test.py:generic-api-key:147
-30921a9088c8b2023ede4c769d3363db20928660:tests/w5n_action_layer_paid_exec_script_test.py:generic-api-key:238
