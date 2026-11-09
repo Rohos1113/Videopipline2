@@ -18,7 +18,7 @@ def test_pay52_override_routes_to_52pay_chat(monkeypatch: pytest.MonkeyPatch) ->
         route = gpt_api._pay52_override()
         assert route is not None
         assert route.url == "https://api.52pay.com/v1/chat/completions"
-        assert route.api_model == "gpt-5.6-sol"
+        assert route.api_model == "gpt-6.1-sol"
         assert route.headers()["Authorization"] == "Bearer test-key-not-real"
         assert gpt_api.is_responses_mode() is False
 
@@ -28,6 +28,7 @@ def test_without_key_or_override_stays_on_common_provider(monkeypatch: pytest.Mo
     with use_override(OV):
         assert gpt_api._pay52_override() is None
     monkeypatch.setattr(settings, "pay52_gpt_key", "test-key-not-real")
+    monkeypatch.setattr("app.services.text_llm_catalog.resolve_active_provider", lambda *a, **kw: "kie")
     assert gpt_api._pay52_override() is None
     vibe = NodeLlmOverride(
         model_id="gpt-5.6-sol", channel="stable", kind="text", provider="vibecode", label="v"

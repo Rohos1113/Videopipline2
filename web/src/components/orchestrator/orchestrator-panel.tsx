@@ -85,12 +85,18 @@ function historyItem(m: ChatMsg): { role: string; content: string } {
 
 /** Ошибку провайдера/сервера — словами, без кодов и английского. */
 function friendlyChatError(err: unknown): string {
-  const s = String(err ?? "");
+  const s = String(err ?? "").trim();
   if (/[А-Яа-яЁё]/.test(s) && !/Traceback|Exception|Error:|\{|\[/.test(s)) return s;
-  if (/timeout|timed out|504|408/i.test(s)) return "Модель долго не отвечает. Повторите чуть позже.";
-  if (/401|403|unauthor/i.test(s)) return "Вход в студию закончился. Обновите страницу и войдите снова.";
+  if (/getaddrinfo|connecterror|сетев/i.test(s)) {
+    return "Сетевая ошибка: не удалось подключиться к шлюзу модели (сбой DNS или интернет-соединения). Проверьте связь или повторите запрос.";
+  }
+  if (/timeout|timed out|504|408/i.test(s)) return "Модель долго не отвечает (таймаут). Повторите чуть позже.";
+  if (/401|403|unauthor/i.test(s)) return "Вход в студию закончился или неверный API-ключ. Обновите страницу.";
   if (/429|rate|quota|balance|insufficient/i.test(s)) return "Модель сейчас перегружена или кончился лимит. Повторите позже.";
-  return "Модель ответила ошибкой. Повторите просьбу.";
+  if (/下架|not found|not register|invalid_request_error|unknown model/i.test(s)) {
+    return "Выбранная модель отключена или недоступна у провайдера. Пожалуйста, выберите другую модель в селекторе.";
+  }
+  return s.length > 0 && s.length < 250 && !/\{|\[|Traceback/.test(s) ? s : "Модель ответила ошибкой. Повторите просьбу.";
 }
 
 interface ChatMsg {

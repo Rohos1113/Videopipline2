@@ -3319,6 +3319,27 @@ async def _execute_orchestrator_reply(
     }
 
 
+def _format_stream_error(e: Exception) -> str:
+    msg = str(e)
+    low = msg.lower()
+    if "下架" in msg:
+        return "Выбранная модель отключена (снята с обслуживания) провайдером 52pay. Пожалуйста, выберите другую модель в селекторе (например, GPT 6.1 Sol или Claude Sonnet 5)."
+    if "model not register" in low or "not register" in low or "model_not_found" in low or "does not exist" in low:
+        return "Выбранная модель недоступна или не найдена у провайдера. Пожалуйста, выберите другую модель в селекторе."
+    if "getaddrinfo" in low or "connecterror" in low or "сетевая ошибка" in low:
+        return "Сетевая ошибка: не удалось подключиться к шлюзу модели (сбой DNS или интернет-соединения). Проверьте связь или повторите запрос."
+    if "apikey error" in low or "whitelist" in low:
+        return "API-ключ не авторизован для выбранной модели. Пожалуйста, выберите другую модель."
+    if "401" in low or "unauthorized" in low:
+        return "Ошибка авторизации API-ключа у провайдера."
+    if "429" in low or "rate limit" in low or "quota" in low or "insufficient" in low or "balance" in low:
+        return "Превышен лимит запросов или баланс провайдера. Повторите позже или выберите другую модель."
+    if "timeout" in low or "timed out" in low or "504" in low or "408" in low:
+        return "Модель не ответила вовремя (таймаут). Повторите попытку или выберите другую модель."
+    clean = re.sub(r"^(?:GptApiError|Exception|RuntimeError|ValueError|HTTPException):\s*", "", msg).strip()
+    return clean or msg
+
+
 @router.post("/projects/{project_id}/orchestrator/chat")
 async def orchestrator_chat(
     project_id: int,
@@ -3332,13 +3353,13 @@ async def orchestrator_chat(
     project = await _project(session, project_id)
     prompt, diagnose_only, canvas_keymap, diag_lines = await _build_orchestrator_prompt(session, project, body)
     try:
-        reply = await get_gpt_client().ask_fresh(prompt, timeout=600, project_id=project.id)
+        reply = await get_gpt_client().ask_fresh(prompt, timeout=600, project_id=project.id, max_retries=1)
     except GptApiUnavailable as e:
-        raise HTTPException(503, str(e)) from None
+        raise HTTPException(503, _format_stream_error(e)) from None
     except GptApiError as e:
-        raise HTTPException(502, str(e)[:800]) from None
+        raise HTTPException(502, _format_stream_error(e)) from None
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(502, str(e)[:800]) from None
+        raise HTTPException(502, _format_stream_error(e)) from None
 
     return await _execute_orchestrator_reply(
         session,
@@ -3392,6 +3413,7 @@ async def orchestrator_chat_stream(
                             prompt,
                             timeout=600,
                             project_id=project.id,
+                            max_retries=1,
                             on_delta=_on_delta,
                         )
                         await queue.put(("done", reply))
@@ -3399,7 +3421,7 @@ async def orchestrator_chat_stream(
                         raise
                     except Exception as e:
                         logger.error("orchestrator_chat_stream runner error: {}", e)
-                        await queue.put(("error", str(e)))
+                        await queue.put(("error", _format_stream_error(e)))
 
             task = asyncio.create_task(_runner())
 
