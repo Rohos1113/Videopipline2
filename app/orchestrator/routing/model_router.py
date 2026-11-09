@@ -94,6 +94,15 @@ DEAD_PROVIDER_AFTER = 3
 DEAD_PROVIDER_PAUSE_S = 300.0
 
 
+_DEAD_ERROR_RE = re.compile(
+    r"http 40[12]\b|http 403\b|empty responses stream|all connection attempts failed|"
+    r"invalid token|insufficient|不能用模型|密钥",
+    re.I,
+)
+DEAD_PROVIDER_AFTER = 3
+DEAD_PROVIDER_PAUSE_S = 300.0
+
+
 def compute_cost(model: str, usage: LLMUsage, prices: dict) -> float:
     price = prices.get(model) or prices.get(_PRICE_ALIAS.get(model, "")) or prices.get("default")
     if price is None:
