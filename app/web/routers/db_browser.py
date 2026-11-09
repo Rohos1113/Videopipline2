@@ -1189,6 +1189,12 @@ def _settings_context(project: Project) -> list[str]:
             lines.append(f"- {step_code}: {overrides.get(step_code, 'default')} → {', '.join(variants)}")
     st = catalog_status()
     lines.append(f"ТЕКСТОВАЯ LLM: активна {st['active_label']} → провайдеры: kie, vibecode")
+    try:
+        from app.services.action_layer.builtin_voice import voice_text
+
+        lines.append("- " + voice_text(project.meta))
+    except Exception:
+        pass
     lines.extend(_briefing_context(project))
     return lines
 
@@ -2808,6 +2814,27 @@ async def _execute_orchestrator_reply(
             except Exception:
                 pass
 
+    if not choices and reply:
+        lr = reply.lower()
+        if "хронометраж" in lr or "вопрос 1" in lr or "длительност" in lr:
+            choices = ["15–20 сек (Shorts / 4–6 сцен)", "30–45 сек (Стандарт / 8–12 сцен)", "60 сек (Сюжет / 15–20 сцен)", "2–3 мин (Лонг / 30–50 сцен)", "Свой хронометраж"]
+        elif "формат" in lr or "вопрос 2" in lr or "соотношени" in lr:
+            choices = ["9:16 Вертикальный (Shorts, Reels, TikTok)", "16:9 Горизонтальный (YouTube, ТВ)", "1:1 Квадратный (Ленты соцсетей)", "21:9 Кинематографичный (Ultra-wide)", "Свой формат"]
+        elif "вопрос 3" in lr or "тип сценари" in lr or "структура сценари" in lr or "жанр" in lr:
+            choices = ["Кинематографичная история (драма, конфликт)", "Документальный YouTube (хроника, факты)", "Эксплейнер / Обучающий (проблема → решение)", "Топ-лист / Подборка (перечень фактов)", "Свой сценарий / из файла"]
+        elif "вопрос 4" in lr or "темп закадр" in lr or "дикторск" in lr or "озвучк" in lr or "закадр" in lr:
+            choices = ["Плотный нарратив (непрерывный рассказ)", "Сбалансированный темп (речь с паузами)", "Лаконичные реплики (редкие хуки)", "Без диктора (музыка, титры, SFX)", "Свой объём закадра"]
+        elif "вопрос 5" in lr or "персонаж" in lr or "геро" in lr:
+            choices = ["Один постоянный Главный Герой (модельный лист)", "Ансамбль из 2–3 персонажей", "Без персонажей (локации, техника, графика)", "Сюжет вокруг ключевого предмета", "Свой состав героев"]
+        elif "вопрос 6" in lr or "визуальн" in lr or "стиль анимаци" in lr or "художественн" in lr:
+            choices = ["Кинематографичный фотореализм (35mm кино)", "3D мультфильм / CGI Pixar (сочный объём)", "Тёмный нуар / Аниме (контрастная графика)", "Пластилиновый стоп-моушен / Claymation", "Свой художественный стиль"]
+        elif "вопрос 7" in lr or "монтаж" in lr or "субтитр" in lr or "склеек" in lr:
+            choices = ["Клиповый динамичный с субтитрами (2–3с)", "Плавный киномонтаж без субтитров (4–6с)", "Нарезка строго по предложениям с субтитрами", "Размеренный документальный с субтитрами", "Свой стиль монтажа"]
+        elif "вопрос 8" in lr or "саунд-дизайн" in lr or "sfx" in lr or "звукорежисс" in lr or "звук" in lr:
+            choices = ["Полный саунд-дизайн (диктор + музыка + SFX)", "Музыка + диктор (без SFX шумов)", "Эмбиент и звуки окружения (ASMR + музыка)", "Нативный звук видеогенераторов (Kling)", "Своя звуковая схема"]
+        elif "итог" in lr and ("пайплайн" in lr or "брифинг" in lr or "пункт" in lr):
+            choices = ["Запустить весь пайплайн (Сценарий → Монтаж)", "Запустить только сценарий (нода plan)", "Показать граф и настройки проекта", "Внести изменения в параметры", "Свой ответ"]
+
     if ops_data:
         raw_ops = ops_data.get("ops") or []
         ops = [op for op in raw_ops if isinstance(op, dict) and not _is_dummy_uuid(op.get("frame_uuid"))]
@@ -2983,6 +3010,30 @@ async def _execute_orchestrator_reply(
                     except ValueError as e:
                         raise db_apply.ApplyOpsError(str(e)) from None
                     actions_run.append({"set_text_llm": f"{payload['provider']} ({payload['model_id']})"})
+                elif "set_voice" in act or "audio.set_voice" in act:
+                    spec = act.get("set_voice") or act.get("audio.set_voice") or {}
+                    voice_req = spec.get("voice") or spec.get("voice_id") or ""
+                    from app.services.action_layer.builtin_voice import (
+                        current_voice_id,
+                        pick_voice,
+                        voice_name,
+                    )
+
+                    meta = dict(project.meta or {})
+                    before_id = current_voice_id(meta)
+                    chosen = pick_voice(str(voice_req), before_id)
+                    if chosen:
+                        nsp = dict(meta.get("node_step_params") or {})
+                        audio_p = dict(nsp.get("audio") or {})
+                        audio_p["elevenlabs_voice_id"] = chosen["id"]
+                        nsp["audio"] = audio_p
+                        meta["node_step_params"] = nsp
+                        project.meta = meta
+                        await commit_with_retry(session)
+                        label = f"голос: {voice_name(chosen['id'])}"
+                    else:
+                        label = f"голос не найден: {voice_req}"
+                    actions_run.append({"set_voice": label, "note": label})
                 elif "open_ui" in act:
                     ui_actions.append(
                         await _resolve_open_ui(session, project, act.get("open_ui") or {}, canvas_keymap)
@@ -3168,7 +3219,7 @@ async def _execute_orchestrator_reply(
                     keys = sorted(str(k) for k in act)
                     raise db_apply.ApplyOpsError(
                         f"неизвестное действие {keys}; есть: run_step, run_node, stop_step, "
-                        "set_option, set_prompt, set_briefing, set_text_llm, open_ui, hitl_decision, "
+                        "set_option, set_prompt, set_briefing, set_text_llm, set_voice, open_ui, hitl_decision, "
                         "set_topic, create_project, create_child, delete_projects, "
                         "add_node, connect_edges, remove_node, rename_node, repair_graph, "
                         "run_harness, read_file, edit_files, run_tests, git_commit_push"

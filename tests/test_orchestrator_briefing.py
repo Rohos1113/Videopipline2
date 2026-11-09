@@ -115,6 +115,31 @@ async def test_execute_orchestrator_reply_choices(monkeypatch):
     assert (p.meta or {}).get("briefing", {}).get("duration_seconds") == 30.0
 
 
+@pytest.mark.asyncio
+async def test_execute_orchestrator_reply_briefing_fallback_choices(monkeypatch):
+    p = Project(slug="test-proj-3", title="Test 3", meta={})
+    p.id = 43
+    mock_session = AsyncMock()
+    monkeypatch.setattr("app.web.routers.db_browser.commit_with_retry", AsyncMock())
+
+    # Response without any choices tag or JSON (plain text like Claude Sonnet 5 screenshot)
+    reply = "Начинаем брифинг проекта «Дом». Вопрос 1 из 8: какой хронометраж должен быть у ролика?"
+
+    res = await _execute_orchestrator_reply(
+        mock_session,
+        p,
+        reply,
+        diagnose_only=False,
+        canvas_keymap={},
+        diag_lines=[],
+        body_message="брифинг проекта",
+    )
+
+    assert len(res["choices"]) == 5
+    assert "15–20 сек (Shorts / 4–6 сцен)" in res["choices"]
+    assert "Свой хронометраж" in res["choices"]
+
+
 def test_clean_orchestrator_human_reply_nested_json():
     # 1. Nested set_briefing
     t1 = '{"actions":[{"set_briefing":{"plan_prompt":"cinematic_story_plan"}}]}\n\nЗаписал: кинематографичная история'
