@@ -115,7 +115,6 @@ def vibecode_cost_metadata(model: str | None, *, usage_known: bool) -> dict[str,
 _MEDIA_RATES: dict[str, float] = {
     "flux-2-pro": 0.05,
     "seedream-5-pro": 0.045,
-    "z-image": 0.02,
     "qwen3-image": 0.035,
     "gpt-image-2": 0.04,
     "kling": 0.08,

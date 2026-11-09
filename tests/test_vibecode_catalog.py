@@ -90,7 +90,7 @@ def test_grouped_vendors_match_ui_tabs() -> None:
 def test_kie_image_models_in_catalog() -> None:
     cat = grouped_catalog()
     by_id = {m["id"]: m for m in cat["models"]}
-    for mid in ("flux-2-pro", "seedream-5-pro", "z-image", "qwen3-image"):
+    for mid in ("flux-2-pro", "seedream-5-pro", "qwen3-image"):
         m = by_id.get(mid)
         assert m is not None, mid
         assert m["kind"] == "image"

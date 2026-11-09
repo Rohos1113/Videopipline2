@@ -636,6 +636,7 @@ def _clean_model_name(raw: str) -> tuple[str, str]:
         "seedance-2-0-fast-overseas": "Seedance 2.0 Fast",
         "seedance-2-5": "Seedance 2.5",
         "seedance-1-5-pro": "Seedance 1.5 Pro",
+        "kling-2-6": "Kling 2.6",
         "kling-3-0": "Kling 3.0 Pro",
         "kling-v3-turbo-t2v": "Kling 3.0 Turbo (T2V)",
         "kling-v3-turbo-i2v": "Kling 3.0 Turbo (I2V)",

@@ -75,12 +75,6 @@ IMAGE_GENERATORS: list[OptionChoice] = [
         "Vibecode · GPT Image 2.5 (1K)",
     ),
     OptionChoice(
-        "z_image",
-        "Z-Image",
-        "z-image",
-        "Kie · Z-Image (быстрая генерация)",
-    ),
-    OptionChoice(
         "qwen3_image",
         "Alibaba Qwen Image 3",
         "qwen3-image",
@@ -121,7 +115,6 @@ IMAGE_RESOLUTIONS_BY_GENERATOR: dict[str, tuple[str, ...]] = {
     "gpt_image_2_5": ("1k",),
     "flux_2_pro": ("1k", "2k"),
     "seedream_5_pro": ("1k", "2k"),
-    "z_image": ("1k", "2k"),
     "qwen3_image": ("1k", "2k"),
 }
 

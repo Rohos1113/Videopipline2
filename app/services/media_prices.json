@@ -201,10 +201,6 @@
       "unit": "item",
       "usd_per_unit": 0.045
     },
-    "kie:z-image": {
-      "unit": "item",
-      "usd_per_unit": 0.02
-    },
     "kie:qwen3-image": {
       "unit": "item",
       "usd_per_unit": 0.035
@@ -212,10 +208,6 @@
     "kie:seedance-2-0-mini": {
       "unit": "second",
       "usd_per_call": 0.2
-    },
-    "kie:seedance-2-0-fast-overseas": {
-      "unit": "second",
-      "usd_per_call": 0.22
     },
     "kie:seedance-2-5": {
       "unit": "second",
@@ -253,10 +245,6 @@
       "unit": "second",
       "usd_per_call": 0.4
     },
-    "kie:pixverse-v6-t2v": {
-      "unit": "second",
-      "usd_per_call": 0.21
-    },
     "kie:topaz-video-upscale": {
       "unit": "second",
       "usd_per_call": 0.15
@@ -269,23 +257,7 @@
       "unit": "second",
       "usd_per_unit": 0.205
     },
-    "kie:seedance-2-0-fast": {
-      "unit": "second",
-      "usd_per_unit": 0.124
-    },
-    "kie:seedance-2-0-overseas": {
-      "unit": "second",
-      "usd_per_unit": 0.08
-    },
     "kie:kling-2-6": {
-      "unit": "second",
-      "usd_per_call": 0.275
-    },
-    "kie:kling-2-6-t2v": {
-      "unit": "second",
-      "usd_per_call": 0.275
-    },
-    "kie:kling-2-6-i2v": {
       "unit": "second",
       "usd_per_call": 0.275
     },
@@ -293,69 +265,13 @@
       "unit": "second",
       "usd_per_unit": 0.1
     },
-    "kie:grok-imagine-t2v": {
-      "unit": "second",
-      "usd_per_unit": 0.0225
-    },
-    "kie:grok-imagine-i2v": {
-      "unit": "second",
-      "usd_per_unit": 0.0225
-    },
-    "kie:wan-2-6-t2v": {
-      "unit": "second",
-      "usd_per_call": 0.35
-    },
-    "kie:pixverse-v6-i2v": {
-      "unit": "second",
-      "usd_per_unit": 0.036
-    },
     "kie:minimax-h3-t2v": {
       "unit": "second",
       "usd_per_unit": 0.13
     },
-    "kie:runway-gen4": {
-      "unit": "second",
-      "usd_per_call": 0.06
-    },
-    "kie:happyhorse-1-1-t2v": {
-      "unit": "second",
-      "usd_per_unit": 0.1125
-    },
-    "kie:infinitalk": {
-      "unit": "second",
-      "usd_per_unit": 0.06
-    },
-    "kie:kling-ai-avatar": {
-      "unit": "second",
-      "usd_per_unit": 0.04
-    },
-    "kie:omnihuman-1-5": {
-      "unit": "second",
-      "usd_per_unit": 0.135
-    },
-    "kie:wan-speech-to-video": {
-      "unit": "second",
-      "usd_per_unit": 0.12
-    },
-    "kie:volcengine-lip-sync": {
-      "unit": "second",
-      "usd_per_unit": 0.04
-    },
-    "kie:grok-imagine-upscale": {
-      "unit": "second",
-      "usd_per_call": 0.1
-    },
     "kie:topaz-image-upscale": {
       "unit": "item",
       "usd_per_call": 0.05
-    },
-    "kie:recraft-remove-bg": {
-      "unit": "item",
-      "usd_per_call": 0.005
-    },
-    "kie:recraft-crisp-upscale": {
-      "unit": "item",
-      "usd_per_call": 0.0025
     },
     "kie:suno-music": {
       "unit": "track",

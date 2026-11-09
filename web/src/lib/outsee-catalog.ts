@@ -194,16 +194,6 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
     defaults: { aspectRatio: "16:9", imageResolution: "2K" },
   },
   {
-    slug: "z-image",
-    studioId: "z_image",
-    displayName: "Z-Image",
-    description: "Быстрая генерация изображений высокой чёткости.",
-    icon: `${OUTSEE_ORIGIN}/imagemobilepreview/1.jpg`,
-    price: "от 1",
-    chips: ["aspect", "resolution", "image-input"],
-    defaults: { aspectRatio: "16:9", imageResolution: "2K" },
-  },
-  {
     slug: "qwen3-image",
     studioId: null,
     displayName: "Qwen Image 3",
@@ -243,22 +233,6 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
  */
 export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
   {
-    slug: "grok-imagine-video-1.5",
-    studioId: null,
-    displayName: "Grok Imagine 1.5",
-    description: "Новейшая модель от xAI, лучшая на рынке с русской речью.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/grok.webp`,
-    price: "от 3.3",
-    isNew: true,
-    chips: ["aspect", "resolution", "duration", "image-input"],
-    defaults: { aspectRatio: "16:9", resolution: "480p", duration: 8 },
-    nn: {
-      resolutions: ["480p", "720p"],
-      durations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-      aspectRatios: ["16:9", "9:16", "1:1", "3:2", "2:3"],
-    },
-  },
-  {
     slug: "seedance-2-0-mini",
     studioId: null,
     displayName: "Seedance 2 Mini",
@@ -272,22 +246,6 @@ export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
       resolutions: ["480p", "720p"],
       durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
       aspectRatios: ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9"],
-    },
-  },
-  {
-    slug: "seedance-2-0-fast-overseas",
-    studioId: null,
-    displayName: "Seedance 2 Fast (Лица)",
-    description: "Seedance 2.0 Fast Overseas: поддержка живых лиц, промпт до 10к знаков, 480p/720p.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/seedance.webp`,
-    price: "от 10",
-    isNew: true,
-    chips: ["aspect", "resolution", "duration", "image-input"],
-    defaults: { aspectRatio: "16:9", resolution: "720p", duration: 5 },
-    nn: {
-      resolutions: ["480p", "720p"],
-      durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-      aspectRatios: ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9", "adaptive"],
     },
   },
   {
@@ -359,23 +317,6 @@ export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
     },
   },
   {
-    slug: "happyhorse-1-0",
-    studioId: null,
-    displayName: "HappyHorse 1.0",
-    description:
-      "Новейшая модель от Alibaba. Реалистичное движение, мульти-референс, редактирование видео.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/happyhorse.webp`,
-    price: "от 15",
-    isNew: true,
-    chips: ["aspect", "resolution", "duration", "image-input"],
-    defaults: { aspectRatio: "16:9", resolution: "720P", duration: 5 },
-    nn: {
-      resolutions: ["720P", "1080P"],
-      durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-      aspectRatios: ["16:9", "9:16", "1:1", "4:3", "3:4"],
-    },
-  },
-  {
     slug: "topaz-video-upscale",
     studioId: null,
     displayName: "Topaz Video Upscale",
@@ -426,16 +367,13 @@ const CREATE_PICKER_IMAGE_SLUGS = [
   "seedream-5-pro",
   "nano-banana-2",
   "gpt-image-2",
-  "z-image",
   "qwen3-image",
 ] as const;
 const CREATE_PICKER_VIDEO_SLUGS = [
   "veo-3-1-lite",
   "kling-2-6",
   "kling-3-0-turbo",
-  "grok-imagine-video-1.5",
   "seedance-2-0-mini",
-  "seedance-2-0-fast-overseas",
 ] as const;
 
 export function pickerImageModels(): OutseeImageModel[] {
@@ -611,10 +549,6 @@ export function resToStudioId(label: string): string {
 
 export function studioResToLabel(id: string | null | undefined, slug?: string): string {
   if (!id) return "2K";
-  if (slug === "happyhorse-1-0") {
-    const u = id.toUpperCase();
-    return u.endsWith("P") ? u : `${u}P`;
-  }
   if (id === "std" || id === "pro" || id === "4k") return id;
   if (/^\d+p$/i.test(id)) return id.toLowerCase();
   return id.toUpperCase();

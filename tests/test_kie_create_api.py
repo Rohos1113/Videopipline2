@@ -24,7 +24,7 @@ def test_catalog_endpoint_lists_models() -> None:
     assert r.status_code == 200
     data = r.json()
     assert data["credit_usd"] == 0.005
-    assert len(data["models"]) >= 50
+    assert len(data["models"]) >= 30
     veo = next(m for m in data["models"] if m["id"] == "veo-3-1")
     assert any(f["name"] == "resolution" for f in veo["fields"])
     assert veo["pricing"]["rules"]

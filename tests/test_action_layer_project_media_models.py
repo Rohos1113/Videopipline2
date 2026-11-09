@@ -103,15 +103,15 @@ def test_node_overrides_name_the_node_that_wins() -> None:
                                         n_videos={"modelId": "kling-3-0"}), project)
     assert any("«Картинки»" in n and "выбрана «Flux 2 Pro»" in n for n in explicit)
     assert any("«Видео»" in n and "Kling" in n for n in explicit)
-    same = pgs.node_overrides(_meta(n_images={"modelId": "z-image"}, n_hero={"modelId": "z-image"},
-                                    n_items={"modelId": "z-image"}),
-                              {"image_generator": "z_image"})
+    same = pgs.node_overrides(_meta(n_images={"modelId": "qwen3-image"}, n_hero={"modelId": "qwen3-image"},
+                                    n_items={"modelId": "qwen3-image"}),
+                              {"image_generator": "qwen3_image"})
     assert same == []
 
 @pytest.mark.parametrize(("node_key", "node_type", "model_id", "generator"), [
     ("n_images", "images", "nano-banana-2-lite", "nano_banana_2_lite"),
     ("n_hero", "hero", "flux-2-pro", "flux_2_pro"),
-    ("n_items", "items", "z-image", "z_image"),
+    ("n_items", "items", "qwen3-image", "qwen3_image"),
 ])
 def test_set_model_on_image_nodes_reaches_the_step_generator(node_key, node_type, model_id,
                                                              generator) -> None:

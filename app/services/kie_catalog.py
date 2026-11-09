@@ -285,38 +285,6 @@ MODELS: list[dict[str, Any]] = [
         },
     },
     {
-        "id": "seedance-2-0-fast",
-        "label": "Seedance 2.0 Fast",
-        "category": "video",
-        "api": "jobs",
-        "model": "bytedance/seedance-2-fast",
-        "result": "video",
-        "desc": "Быстрый и дешёвый Seedance 2.0 для черновиков.",
-        "fields": [
-            _prompt(),
-            _f("first_frame_url", "Первый кадр", "images", max_items=1),
-            _f("last_frame_url", "Последний кадр", "images", max_items=1),
-            _f("reference_image_urls", "Референс-картинки", "images", max_items=9),
-            _f("reference_video_urls", "Референс-видео", "videos", max_items=3),
-            _f("reference_audio_urls", "Референс-аудио", "audios", max_items=3),
-            _res(["480p", "720p"], "720p"),
-            _aspect(_ASPECT_WIDE, "16:9"),
-            _duration(5, 4, 15),
-            _audio_toggle(True),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"resolution": "480p", "_has_videos": True}, "credits": 6.8},
-                {"when": {"resolution": "480p"}, "credits": 11.7},
-                {"when": {"resolution": "720p", "_has_videos": True}, "credits": 15},
-                {"when": {"resolution": "720p"}, "credits": 24.8},
-            ],
-            "default": 24.8,
-            "note": "кр/сек: 480p 6.8/11.7, 720p 15/24.8 (с видео/без)",
-        },
-    },
-    {
         "id": "seedance-2-0-mini",
         "is_top": True,
         "badge": "ТОП",
@@ -347,63 +315,6 @@ MODELS: list[dict[str, Any]] = [
             ],
             "default": 8.2,
             "note": "кр/сек: 480p 2.4/3.8, 720p 5/8.2 (с видео/без)",
-        },
-    },
-    {
-        "id": "seedance-2-0-fast-overseas",
-        "is_top": True,
-        "badge": "👤 Лица",
-        "label": "Seedance 2.0 Fast (Лица)",
-        "category": "video",
-        "api": "pay52",
-        "model": "Seedance 2.0 Fast 海外",
-        "result": "video",
-        "desc": "Seedance 2.0 Fast Overseas: поддержка живых лиц, промпт до 10 000 знаков, до 9 фото, 3 видео, 3 аудио.",
-        "fields": [
-            _prompt(max_len=10000),
-            _f("reference_image_urls", "Референс-картинки (до 9)", "images", max_items=9),
-            _f("reference_video_urls", "Референс-видео (до 3)", "videos", max_items=3),
-            _f("reference_audio_urls", "Референс-аудио (до 3)", "audios", max_items=3),
-            _res(["480p", "720p"], "720p"),
-            _aspect(_ASPECT_WIDE, "16:9"),
-            _duration(5, 4, 15),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"resolution": "480p"}, "credits": 4.5},
-                {"when": {"resolution": "720p"}, "credits": 9.5},
-            ],
-            "default": 9.5,
-            "note": "кр/сек: 480p 4.5, 720p 9.5 (поддержка живых лиц)",
-        },
-    },
-    {
-        "id": "seedance-2-0-overseas",
-        "label": "Seedance 2.0 Overseas",
-        "category": "video",
-        "api": "pay52",
-        "model": "Seedance 2.0 海外",
-        "result": "video",
-        "desc": "Seedance 2.0 Overseas: 480p/720p/1080p, до 9 картинок.",
-        "fields": [
-            _prompt(max_len=10000),
-            _f("reference_image_urls", "Референс-картинки", "images", max_items=9),
-            _f("reference_video_urls", "Референс-видео", "videos", max_items=3),
-            _f("reference_audio_urls", "Референс-аудио", "audios", max_items=3),
-            _res(["480p", "720p", "1080p"], "720p"),
-            _aspect(_ASPECT_WIDE, "16:9"),
-            _duration(5, 4, 15),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"resolution": "480p"}, "credits": 8},
-                {"when": {"resolution": "720p"}, "credits": 16},
-                {"when": {"resolution": "1080p"}, "credits": 32},
-            ],
-            "default": 16,
-            "note": "кр/сек: 480p 8, 720p 16, 1080p 32",
         },
     },
     {
@@ -568,43 +479,19 @@ MODELS: list[dict[str, Any]] = [
         },
     },
     {
-        "id": "kling-2-6-t2v",
-        "label": "Kling 2.6 (текст)",
+        "id": "kling-2-6",
+        "badge": "1080p",
+        "label": "Kling 2.6",
         "category": "video",
         "api": "jobs",
         "model": "kling-2.6/text-to-video",
+        "model_map_i2i": "kling-2.6/image-to-video",
         "result": "video",
-        "desc": "Kling 2.6 HD из текста, 5/10 сек.",
+        "desc": "Kling 2.6: генерация из текста или фото (Full HD 1080p), 5/10 сек.",
         "fields": [
             _prompt(),
-            _aspect(_ASPECT_VIDEO, "9:16"),
-            _f("duration", "Длительность, сек", "select", options=["5", "10"], default="5"),
-            _f("sound", "Звук", "toggle", default=False),
-        ],
-        "pricing": {
-            "unit": "gen",
-            "rules": [
-                {"when": {"duration": "5", "sound": True}, "credits": 110},
-                {"when": {"duration": "5"}, "credits": 55},
-                {"when": {"duration": "10", "sound": True}, "credits": 220},
-                {"when": {"duration": "10"}, "credits": 110},
-            ],
-            "default": 55,
-            "note": "за ролик: 5с 55/110, 10с 110/220 кр (без/со звуком)",
-        },
-    },
-    {
-        "id": "kling-2-6-i2v",
-        "badge": "1080p",
-        "label": "Kling 2.6 (фото в 1080p)",
-        "category": "video",
-        "api": "jobs",
-        "model": "kling-2.6/image-to-video",
-        "result": "video",
-        "desc": "Оживление картинок в честном разрешении Full HD без малейшей потери чёткости.",
-        "fields": [
-            _prompt(),
-            _f("image_urls", "Стартовый кадр", "images", max_items=1, required=True),
+            _f("image_urls", "Стартовый кадр / фото", "images", max_items=1, required=False),
+            _aspect(_ASPECT_VIDEO, "16:9"),
             _f("duration", "Длительность, сек", "select", options=["5", "10"], default="5"),
             _f("sound", "Звук", "toggle", default=False),
         ],
@@ -643,58 +530,6 @@ MODELS: list[dict[str, Any]] = [
             ],
             "default": 20,
             "note": "кр/сек: 720p 20, 1080p 27",
-        },
-    },
-    {
-        "id": "grok-imagine-t2v",
-        "label": "Grok Imagine (текст)",
-        "category": "video",
-        "api": "jobs",
-        "model": "grok-imagine/text-to-video",
-        "result": "video",
-        "desc": "Стильные контрастные цвета и художественная выразительность от xAI Илона Маска.",
-        "fields": [
-            _prompt(),
-            _aspect(["2:3", "3:2", "1:1", "16:9", "9:16"], "2:3"),
-            _f("mode", "Режим", "select", options=["normal", "fun", "spicy"], default="normal"),
-            _duration(6, 6, 30),
-            _res(["480p", "720p", "1080p"], "720p"),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"resolution": "480p"}, "credits": 2.4},
-                {"when": {"resolution": "720p"}, "credits": 4.5},
-                {"when": {"resolution": "1080p"}, "credits": 8},
-            ],
-            "default": 4.5,
-            "note": "кр/сек: 480p 2.4, 720p 4.5, 1080p 8",
-        },
-    },
-    {
-        "id": "grok-imagine-i2v",
-        "label": "Grok Imagine (картинка)",
-        "category": "video",
-        "api": "jobs",
-        "model": "grok-imagine/image-to-video",
-        "result": "video",
-        "desc": "Оживление картинки Grok Imagine, 6–30 сек.",
-        "fields": [
-            _prompt(),
-            _f("image_urls", "Стартовый кадр", "images", max_items=1, required=True),
-            _f("mode", "Режим", "select", options=["normal", "fun", "spicy"], default="normal"),
-            _duration(6, 6, 30),
-            _res(["480p", "720p", "1080p"], "720p"),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"resolution": "480p"}, "credits": 2.4},
-                {"when": {"resolution": "720p"}, "credits": 4.5},
-                {"when": {"resolution": "1080p"}, "credits": 8},
-            ],
-            "default": 4.5,
-            "note": "кр/сек: 480p 2.4, 720p 4.5, 1080p 8",
         },
     },
     {
@@ -801,101 +636,6 @@ MODELS: list[dict[str, Any]] = [
         },
     },
     {
-        "id": "wan-2-6-t2v",
-        "label": "WAN 2.6 (текст)",
-        "category": "video",
-        "api": "jobs",
-        "model": "wan/2-6-text-to-video",
-        "result": "video",
-        "desc": "WAN 2.6: флэт-цена за 5/10/15 сек.",
-        "fields": [
-            _prompt(),
-            _f("duration", "Длительность, сек", "select", options=["5", "10", "15"], default="5"),
-            _res(["720p", "1080p"], "720p"),
-            _aspect(_ASPECT_VIDEO, "16:9"),
-        ],
-        "pricing": {
-            "unit": "gen",
-            "rules": [
-                {"when": {"duration": "5", "resolution": "720p"}, "credits": 70},
-                {"when": {"duration": "10", "resolution": "720p"}, "credits": 140},
-                {"when": {"duration": "15", "resolution": "720p"}, "credits": 209.5},
-                {"when": {"duration": "5", "resolution": "1080p"}, "credits": 104.5},
-                {"when": {"duration": "10", "resolution": "1080p"}, "credits": 209.5},
-                {"when": {"duration": "15", "resolution": "1080p"}, "credits": 315},
-            ],
-            "default": 70,
-            "note": "за ролик 5/10/15с: 720p 70/140/209.5, 1080p 104.5/209.5/315 кр",
-        },
-    },
-    {
-        "id": "pixverse-v6-t2v",
-        "is_top": True,
-        "badge": "⚡ 45с",
-        "label": "PixVerse V6 (текст)",
-        "category": "video",
-        "api": "jobs",
-        "model": "pixverse-v6/text-to-video",
-        "result": "video",
-        "desc": "Абсолютный рекордсмен по скорости генерации (45 сек), поддержка 8 форматов кадра.",
-        "fields": [
-            _prompt(),
-            _aspect(["16:9", "4:3", "1:1", "3:4", "9:16", "2:3", "3:2", "21:9"], "16:9"),
-            _f("quality", "Разрешение", "select", options=["360p", "540p", "720p", "1080p"], default="720p"),
-            _duration(5, 1, 15),
-            _f("generate_audio_switch", "Звук", "toggle", default=False),
-            _f("generate_multi_clip_switch", "Мульти-клип", "toggle", default=False),
-            _seed(),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"quality": "360p", "generate_audio_switch": True}, "credits": 5.6},
-                {"when": {"quality": "360p"}, "credits": 4},
-                {"when": {"quality": "540p", "generate_audio_switch": True}, "credits": 7.2},
-                {"when": {"quality": "540p"}, "credits": 5.6},
-                {"when": {"quality": "720p", "generate_audio_switch": True}, "credits": 9.6},
-                {"when": {"quality": "720p"}, "credits": 7.2},
-                {"when": {"quality": "1080p", "generate_audio_switch": True}, "credits": 18.4},
-                {"when": {"quality": "1080p"}, "credits": 14.4},
-            ],
-            "default": 7.2,
-            "note": "кр/сек без/со звуком: 360p 4/5.6, 540p 5.6/7.2, 720p 7.2/9.6, 1080p 14.4/18.4",
-        },
-    },
-    {
-        "id": "pixverse-v6-i2v",
-        "label": "PixVerse V6 (картинка)",
-        "category": "video",
-        "api": "jobs",
-        "model": "pixverse-v6/image-to-video",
-        "result": "video",
-        "desc": "PixVerse V6 из стартового кадра.",
-        "fields": [
-            _prompt(),
-            _f("image_url", "Стартовый кадр", "images", max_items=1, required=True),
-            _f("quality", "Разрешение", "select", options=["360p", "540p", "720p", "1080p"], default="720p"),
-            _duration(5, 1, 15),
-            _f("generate_audio_switch", "Звук", "toggle", default=False),
-            _seed(),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"quality": "360p", "generate_audio_switch": True}, "credits": 5.6},
-                {"when": {"quality": "360p"}, "credits": 4},
-                {"when": {"quality": "540p", "generate_audio_switch": True}, "credits": 7.2},
-                {"when": {"quality": "540p"}, "credits": 5.6},
-                {"when": {"quality": "720p", "generate_audio_switch": True}, "credits": 9.6},
-                {"when": {"quality": "720p"}, "credits": 7.2},
-                {"when": {"quality": "1080p", "generate_audio_switch": True}, "credits": 18.4},
-                {"when": {"quality": "1080p"}, "credits": 14.4},
-            ],
-            "default": 7.2,
-            "note": "кр/сек без/со звуком: 360p 4/5.6 … 1080p 14.4/18.4",
-        },
-    },
-    {
         "id": "minimax-h3-t2v",
         "label": "MiniMax H3 (текст)",
         "category": "video",
@@ -917,184 +657,6 @@ MODELS: list[dict[str, Any]] = [
             ],
             "default": 26,
             "note": "кр/сек: 768P 16, 2K 26; входные картинки свыше 5 — по 8 кр",
-        },
-    },
-    {
-        "id": "runway-gen4",
-        "label": "Runway",
-        "category": "video",
-        "api": "runway",
-        "endpoint": "/api/v1/runway/generate",
-        "result": "video",
-        "desc": "Голливудский кинематографичный стиль и художественная эстетика Runway.",
-        "fields": [
-            _prompt(),
-            _f("imageUrl", "Стартовый кадр", "images", max_items=1),
-            _f("duration", "Длительность, сек", "select", options=["5", "10"], default="5"),
-            _f("quality", "Разрешение", "select", options=["720p", "1080p"], default="720p"),
-            _f("aspectRatio", "Соотношение сторон", "select", options=["16:9", "9:16"], default="16:9"),
-            _f("waterMark", "Вотермарка", "toggle", default=False),
-        ],
-        "pricing": {
-            "unit": "gen",
-            "rules": [
-                {"when": {"duration": "5", "quality": "720p"}, "credits": 12},
-                {"when": {"duration": "10", "quality": "720p"}, "credits": 30},
-                {"when": {"duration": "5", "quality": "1080p"}, "credits": 30},
-                {"when": {"duration": "10", "quality": "1080p"}, "credits": 30},
-            ],
-            "default": 12,
-            "note": "за ролик: 5с 720p 12 кр; 10с 720p или 5с 1080p — 30 кр",
-        },
-    },
-    {
-        "id": "happyhorse-1-1-t2v",
-        "label": "HappyHorse 1.1 (текст)",
-        "category": "video",
-        "api": "jobs",
-        "model": "happyhorse-1-1/text-to-video",
-        "result": "video",
-        "desc": "HappyHorse 1.1 из текста.",
-        "fields": [
-            _prompt(),
-            _res(["720p", "1080p"], "720p"),
-            _aspect(_ASPECT_VIDEO, "16:9"),
-            _duration(5, 2, 15),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"resolution": "720p"}, "credits": 22.5},
-                {"when": {"resolution": "1080p"}, "credits": 29},
-            ],
-            "default": 22.5,
-            "note": "кр/сек: 720p 22.5, 1080p 29",
-        },
-    },
-    {
-        "id": "infinitalk",
-        "hint": "Фото лица + аудио речи → говорящее видео (губы в такт).",
-        "label": "InfiniTalk (говорящее фото)",
-        "category": "video",
-        "api": "jobs",
-        "model": "infinitalk/from-audio",
-        "result": "video",
-        "desc": "Липсинк фотопортрета под аудиозапись голоса за считанные секунды.",
-        "fields": [
-            _prompt(),
-            _f("image_url", "Фото лица", "images", max_items=1, required=True),
-            _f("audio_url", "Аудио речи", "audios", max_items=1, required=True),
-            _res(["480p", "720p"], "720p"),
-            _seed(),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"resolution": "480p"}, "credits": 3},
-                {"when": {"resolution": "720p"}, "credits": 12},
-            ],
-            "default": 12,
-            "note": "кр/сек: 480p 3, 720p 12; до 15 сек",
-        },
-    },
-    {
-        "id": "kling-ai-avatar",
-        "hint": "Фото + аудио → говорящий аватар. Pro = 1080p.",
-        "label": "Kling AI Avatar",
-        "category": "video",
-        "api": "jobs",
-        "model": "kling/ai-avatar-standard",
-        "result": "video",
-        "desc": "Говорящий человек: точная синхронизация губ и мимики под аудиозапись речи.",
-        "fields": [
-            _prompt("Промпт", required=False),
-            _f("image_url", "Фото", "images", max_items=1, required=True),
-            _f("audio_url", "Аудио", "audios", max_items=1, required=True),
-            _f("mode", "Тир", "select", options=["standard", "pro"], default="standard"),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"mode": "standard"}, "credits": 8},
-                {"when": {"mode": "pro"}, "credits": 16},
-            ],
-            "default": 8,
-            "note": "кр/сек: standard 8 (720p), pro 16 (1080p)",
-        },
-        "model_map": {"standard": "kling/ai-avatar-standard", "pro": "kling/ai-avatar-pro"},
-    },
-    {
-        "id": "omnihuman-1-5",
-        "hint": "Фото + аудио → реалистичный говорящий человек (ByteDance).",
-        "label": "OmniHuman 1.5",
-        "category": "video",
-        "api": "jobs",
-        "model": "omnihuman-1-5",
-        "result": "video",
-        "desc": "ByteDance OmniHuman: реалистичный говорящий человек из фото+аудио.",
-        "fields": [
-            _prompt("Промпт", required=False),
-            _f("image_url", "Фото", "images", max_items=1, required=True),
-            _f("audio_url", "Аудио", "audios", max_items=1, required=True),
-            _f("mask_url", "Маска (опционально)", "images", max_items=1),
-            _f("output_resolution", "Разрешение", "select", options=["720p", "1080p"], default="720p"),
-            _f("pe_fast_mode", "Быстрый режим", "toggle", default=False),
-            _seed(),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [],
-            "default": 27,
-            "note": "27 кр/сек (~$0.135)",
-        },
-    },
-    {
-        "id": "wan-speech-to-video",
-        "hint": "Картинка/текст + аудио речи → видео, синхронное с речью.",
-        "label": "WAN 2.2 Speech-to-Video",
-        "category": "video",
-        "api": "jobs",
-        "model": "wan/2-2-a14b-speech-to-video-turbo",
-        "result": "video",
-        "desc": "WAN: видео из текста/картинки под речь (turbo).",
-        "fields": [
-            _prompt(),
-            _f("image_url", "Стартовый кадр", "images", max_items=1),
-            _f("audio_url", "Аудио речи", "audios", max_items=1, required=True),
-            _res(["480p", "580p", "720p"], "720p"),
-            _aspect(_ASPECT_VIDEO, "16:9"),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [
-                {"when": {"resolution": "480p"}, "credits": 12},
-                {"when": {"resolution": "580p"}, "credits": 18},
-                {"when": {"resolution": "720p"}, "credits": 24},
-            ],
-            "default": 24,
-            "note": "кр/сек: 480p 12, 580p 18, 720p 24",
-        },
-    },
-    {
-        "id": "volcengine-lip-sync",
-        "hint": "Готовое видео + новое аудио → губы двигаются под новое аудио.",
-        "label": "Lip Sync (video→video)",
-        "category": "video",
-        "api": "jobs",
-        "model": "volcengine/video-to-video-lip-sync",
-        "result": "video",
-        "desc": "Переозвучка готового видео: липсинк под новое аудио.",
-        "fields": [
-            _f("video_url", "Видео", "videos", max_items=1, required=True),
-            _f("audio_url", "Новое аудио", "audios", max_items=1, required=True),
-            _f("mode", "Режим", "select", options=["lite", "pro"], default="lite"),
-            _f("separate_vocal", "Отделить вокал", "toggle", default=False),
-        ],
-        "pricing": {
-            "unit": "sec",
-            "rules": [],
-            "default": 8,
-            "note": "8 кр/сек (~$0.04)",
         },
     },
     # ============================ КАРТИНКИ ============================
@@ -1184,20 +746,6 @@ MODELS: list[dict[str, Any]] = [
             "default": 5,
             "note": "за картинку: 1K 5, 2K 7 кр",
         },
-    },
-    {
-        "id": "z-image",
-        "label": "Z-Image",
-        "category": "image",
-        "api": "jobs",
-        "model": "z-image",
-        "result": "image",
-        "desc": "Сверхбыстрая (15 сек) и ультра-дешевая генерация черновиков.",
-        "fields": [
-            _prompt(),
-            _aspect(["1:1", "16:9", "9:16", "4:3", "3:4"], "1:1"),
-        ],
-        "pricing": {"unit": "gen", "rules": [], "default": 0.8, "note": "0.8 кр/картинку (~$0.004)"},
     },
     {
         "id": "nano-banana-2-lite",
@@ -1613,57 +1161,6 @@ MODELS: list[dict[str, Any]] = [
             "note": "за картинку: ≤2K 10, 4K 20 кр",
         },
     },
-    {
-        "id": "grok-imagine-upscale",
-        "hint": "Видео 480p → 720p или 1080p. Загружаешь файл, выбираешь цель — всё.",
-        "label": "Grok — апскейл видео",
-        "category": "tools",
-        "api": "jobs",
-        "model": "grok-imagine/upscale",
-        "result": "video",
-        "desc": "Апскейл видео Grok: 480p→720p/1080p, 720p→1080p.",
-        "fields": [
-            _f("video_url", "Видео", "videos", max_items=1, required=True),
-            _f("target_resolution", "Цель", "select", options=["720p", "1080p"], default="1080p"),
-        ],
-        "pricing": {
-            "unit": "gen",
-            "rules": [
-                {"when": {"target_resolution": "720p"}, "credits": 10},
-                {"when": {"target_resolution": "1080p"}, "credits": 20},
-            ],
-            "default": 20,
-            "note": "за ролик: →720p 10, →1080p 20 кр (с 480p →1080p 30)",
-        },
-    },
-    {
-        "id": "recraft-remove-bg",
-        "hint": "Картинка → PNG без фона (прозрачный). Промпт не нужен.",
-        "label": "Recraft — убрать фон",
-        "category": "tools",
-        "api": "jobs",
-        "model": "recraft/remove-background",
-        "result": "image",
-        "desc": "Вырезает объект с прозрачным фоном.",
-        "fields": [
-            _f("image_url", "Картинка", "images", max_items=1, required=True),
-        ],
-        "pricing": {"unit": "gen", "rules": [], "default": 1, "note": "1 кр/картинку (~$0.005)"},
-    },
-    {
-        "id": "recraft-crisp-upscale",
-        "hint": "Картинка → резче и больше. Промпт не нужен.",
-        "label": "Recraft — crisp апскейл",
-        "category": "tools",
-        "api": "jobs",
-        "model": "recraft/crisp-upscale",
-        "result": "image",
-        "desc": "Дешёвая резкость/апскейл картинки.",
-        "fields": [
-            _f("image_url", "Картинка", "images", max_items=1, required=True),
-        ],
-        "pricing": {"unit": "gen", "rules": [], "default": 0.5, "note": "0.5 кр/картинку (~$0.0025)"},
-    },
 ]
 
 _BY_ID: dict[str, dict[str, Any]] = {m["id"]: m for m in MODELS}
@@ -1674,10 +1171,9 @@ _MODEL_ALIASES: dict[str, str] = {
     "seedance-2.0-mini": "seedance-2-0-mini",
     "seedance-2.0-mini-ref": "seedance-2-0-mini",
     "seedance-2.5": "seedance-2-5",
-    "seedance-2-0-fast-overseas": "seedance-2-0-fast-overseas",
-    "seedance-fast-overseas": "seedance-2-0-fast-overseas",
-    "seedance-2-0-overseas": "seedance-2-0-overseas",
-    "seedance-overseas": "seedance-2-0-overseas",
+    "kling-2-6-t2v": "kling-2-6",
+    "kling-2-6-i2v": "kling-2-6",
+    "kling-2.6": "kling-2-6",
 }
 
 _FILE_KINDS = {"images", "videos", "audios", "file"}
@@ -1858,7 +1354,7 @@ def resolve_model_id(spec: dict[str, Any], values: dict[str, Any]) -> str:
         if val is not None and str(val) in mmap:
             return mmap[str(val)]
     i2i = spec.get("model_map_i2i")
-    if i2i and _has_files(merged, spec, {"images"}):
+    if i2i and (_has_files(merged, spec, {"images"}) or bool(merged.get("first_frame_url"))):
         return i2i
     return spec.get("model") or ""
 
@@ -1927,11 +1423,22 @@ def build_payload(spec: dict[str, Any], values: dict[str, Any]) -> dict[str, Any
                 extra = f" Duration about {dur} seconds."
             body[key] = (wrap.format(prompt=raw) + extra)[:500]
     if spec.get("category") == "video":
+        if spec.get("id") == "kling-2-6":
+            img = body.get("image_urls") or body.get("first_frame_url") or body.get("first_frame")
+            if img:
+                urls = img if isinstance(img, list) else [img]
+                body["image_urls"] = [str(u) for u in urls if str(u).strip()]
+                body.pop("aspect_ratio", None)
+                body.pop("first_frame_url", None)
+                body.pop("first_frame", None)
+            else:
+                body.pop("image_urls", None)
         has_frames = bool(
             body.get("first_frame_url")
             or body.get("last_frame_url")
             or body.get("first_frame")
             or body.get("last_frame")
+            or body.get("image_urls")
         )
         has_refs = bool(body.get("reference_image_urls") or body.get("reference_images"))
         if has_frames and has_refs:

@@ -75,17 +75,6 @@ export function mediaOptionsForModel(modelId: string | null | undefined): NodeMe
     };
   }
 
-  if (id === "z-image") {
-    return {
-      resolutions: ["1K", "2K"],
-      qualities: [],
-      aspects: ["16:9", "9:16", "1:1", "4:3", "3:4"],
-      defaultResolution: "1K",
-      defaultQuality: "medium",
-      defaultAspect: "16:9",
-    };
-  }
-
   if (id === "qwen3-image") {
     return {
       resolutions: ["2K"],
