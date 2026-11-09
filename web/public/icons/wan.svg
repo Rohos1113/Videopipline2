@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="wanGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="wanGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="wanGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="#0C101F"/>
+  <rect x="0.5" y="0.5" width="47" height="47" rx="11.5" fill="none" stroke="#38BDF8" stroke-opacity="0.15"/>
+  <!-- Alibaba WAN / Wanxiang dynamic ribbon 'W' -->
+  <g transform="translate(24, 24)">
+    <!-- Left stroke -->
+    <path d="M-15 -11 L-9 -11 L-5 9 L-10 9 Z" fill="url(#wanGrad1)"/>
+    <!-- Center Left upstroke -->
+    <path d="M-6 8 L-1 -10 L4 -10 L-1 11 Z" fill="url(#wanGrad2)"/>
+    <!-- Center Right downstroke -->
+    <path d="M1 -10 L6 -10 L10 8 L5 8 Z" fill="url(#wanGrad1)"/>
+    <!-- Right upstroke -->
+    <path d="M9 7 L14 -11 L19 -11 L13 11 Z" fill="url(#wanGrad3)"/>
+    <!-- Kinetic connect glow -->
+    <circle cx="15.5" cy="-8.5" r="2.5" fill="#38BDF8"/>
+  </g>
+</svg>

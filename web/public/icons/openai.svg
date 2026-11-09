@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="oaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10A37F"/>
+      <stop offset="100%" stop-color="#2DD4BF"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="#0C1514"/>
+  <rect x="0.5" y="0.5" width="47" height="47" rx="11.5" fill="none" stroke="#10A37F" stroke-opacity="0.18"/>
+  <!-- Official OpenAI 6-segment rosette -->
+  <g transform="translate(24, 24)">
+    <g fill="none" stroke="url(#oaGrad)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 -14 C4 -14 7 -11 7 -7 V2 L0 6" />
+      <path d="M0 -14 C4 -14 7 -11 7 -7 V2 L0 6" transform="rotate(60)" />
+      <path d="M0 -14 C4 -14 7 -11 7 -7 V2 L0 6" transform="rotate(120)" />
+      <path d="M0 -14 C4 -14 7 -11 7 -7 V2 L0 6" transform="rotate(180)" />
+      <path d="M0 -14 C4 -14 7 -11 7 -7 V2 L0 6" transform="rotate(240)" />
+      <path d="M0 -14 C4 -14 7 -11 7 -7 V2 L0 6" transform="rotate(300)" />
+    </g>
+    <circle cx="0" cy="0" r="2.2" fill="#10A37F"/>
+  </g>
+</svg>

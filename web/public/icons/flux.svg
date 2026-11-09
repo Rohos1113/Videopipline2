@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="fluxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="fluxFace" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#93C5FD" stop-opacity="0.6"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="#0D0F18"/>
+  <rect x="0.5" y="0.5" width="47" height="47" rx="11.5" fill="none" stroke="#00F0FF" stroke-opacity="0.15"/>
+  <!-- Black Forest Labs FLUX isometric cube structure -->
+  <g transform="translate(24, 24)">
+    <!-- Top Face -->
+    <path d="M0 -15 L13 -7.5 L0 0 L-13 -7.5 Z" fill="url(#fluxFace)"/>
+    <!-- Left Face -->
+    <path d="M-13 -7.5 L0 0 L0 15 L-13 7.5 Z" fill="url(#fluxGrad)" fill-opacity="0.85"/>
+    <!-- Right Face -->
+    <path d="M0 0 L13 -7.5 L13 7.5 L0 15 Z" fill="url(#fluxGrad)"/>
+    <!-- Core Accent -->
+    <path d="M0 -7 L6 -3.5 L0 0 L-6 -3.5 Z" fill="#0D0F18"/>
+  </g>
+</svg>

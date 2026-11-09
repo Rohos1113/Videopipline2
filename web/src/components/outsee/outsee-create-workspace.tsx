@@ -75,6 +75,7 @@ import {
   outseeCreateUrl,
   pickerModelsForType,
   slugToStudioId,
+  modelIconForId,
   type OutseeChip,
   type OutseeFeedKind,
   type OutseeMediaType,
@@ -1305,17 +1306,16 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
       : (createQueueQ.data?.max_parallel ?? 5);
 
   const canApiDirect = kieActive ? kieConfigured : autoProvider != null;
-  const currentIcon = kieActive
-    ? kieModel?.id.includes("suno")
-      ? `${OUTSEE_ORIGIN}/imagemobilepreview/suno.webp`
-      : kieModel?.id.includes("elevenlabs")
-        ? `${OUTSEE_ORIGIN}/imagemobilepreview/elevenlabs.webp`
-        : null
-    : mediaType === "image"
-      ? imageModel.icon
-      : mediaType === "video"
-        ? videoModel.icon
-        : audioModel.icon;
+  const currentIcon = kieActive && kieModel
+    ? modelIconForId(kieModel.id)
+    : modelIconForId(
+        activeSlug,
+        mediaType === "image"
+          ? imageModel.icon
+          : mediaType === "video"
+            ? videoModel.icon
+            : audioModel.icon,
+      );
   const currentCatalogPrice =
     mediaType === "image"
       ? imageModel.price
@@ -4514,7 +4514,9 @@ function ModelCardIcon({
   isTopCard?: boolean;
 }) {
   const [error, setError] = useState(false);
-  if (!icon || error) {
+  const effectiveIcon = !error && icon ? icon : modelIconForId(label);
+
+  if (error && effectiveIcon === icon) {
     return (
       <span
         className={cn(
@@ -4531,7 +4533,7 @@ function ModelCardIcon({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={icon}
+      src={effectiveIcon}
       alt={label}
       onError={() => setError(true)}
       className="h-10 w-10 rounded-lg object-cover ring-1 ring-white/10 transition group-hover:ring-[#22d3ee]/40"
@@ -4756,20 +4758,7 @@ function ModelPickerPopover({
       kieModelIds.add(cleanId);
       const est = estimateKie(m, {}, creditUsd);
 
-      const icon =
-        (rawId.includes("seedream") ? "/icons/bytedance.svg" : null) ||
-        (rawId.includes("seedance") ? iconBySlug.get("seedance-2-0-mini") || "/icons/bytedance.svg" : null) ||
-        (rawId.includes("qwen") ? "/icons/qwen.svg" : null) ||
-        iconBySlug.get(rawId) ||
-        iconBySlug.get(cleanId) ||
-        (rawId.includes("nano-banana") ? iconBySlug.get("nano-banana-2") : null) ||
-        (rawId.includes("gpt-image") ? iconBySlug.get("gpt-image-2") : null) ||
-        (rawId.includes("veo") ? iconBySlug.get("veo-3-1-lite") || iconBySlug.get("veo-3-1") : null) ||
-        (rawId.includes("kling") ? iconBySlug.get("kling-2-6") : null) ||
-        (rawId.includes("hailuo") ? iconBySlug.get("hailuo-02") : null) ||
-        (rawId.includes("topaz") ? iconBySlug.get("topaz-video-upscale") || iconBySlug.get("topaz-image-upscale") : null) ||
-        (rawId.includes("suno") ? iconBySlug.get("suno-5-5") : null) ||
-        null;
+      const icon = modelIconForId(rawId, iconBySlug.get(rawId) || iconBySlug.get(cleanId));
 
       return {
         slug: `kie:${m.id}`,
@@ -4796,7 +4785,7 @@ function ModelPickerPopover({
         slug: m.slug,
         label: m.displayName,
         desc: m.description,
-        icon: m.icon,
+        icon: modelIconForId(m.slug, m.icon),
         letter: null as string | null,
         isKie: false,
         isTop: Boolean(m.isTop || m.slug === "veo-3-1-lite"),
