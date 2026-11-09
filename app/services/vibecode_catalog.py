@@ -71,7 +71,6 @@ IMAGE_MODEL_TO_GENERATOR: dict[str, str] = {
     "nano-banana-2-lite": "nano_banana_2_lite",
     "flux-2-pro": "flux_2_pro",
     "seedream-5-pro": "seedream_5_pro",
-    "z-image": "z_image",
     "qwen3-image": "qwen3_image",
 }
 VIDEO_MODEL_TO_GENERATOR: dict[str, str] = {
@@ -209,13 +208,6 @@ KIE_IMAGE_CATALOG_RAW: list[dict[str, Any]] = [
         "is_image": True,
         "owned_by": "kie",
         "pricing": {"currency": "usd", "usd_per_image": _kie_image_usd_per_image("seedream-5-pro")},
-    },
-    {
-        "id": "z-image",
-        "display_name": "Z-Image",
-        "is_image": True,
-        "owned_by": "kie",
-        "pricing": {"currency": "usd", "usd_per_image": _kie_image_usd_per_image("z-image")},
     },
     {
         "id": "qwen3-image",

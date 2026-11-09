@@ -44,7 +44,6 @@ def test_image_kie_ids_route_kie(monkeypatch) -> None:
     monkeypatch.setattr(mr, "settings", s)
     assert image_provider_for("flux-2-pro") == "kie"
     assert image_provider_for("seedream-5-pro") == "kie"
-    assert image_provider_for("z-image") == "kie"
     assert image_provider_for("qwen3-image") == "kie"
     assert image_provider_for("qwen3_image") == "kie"
 

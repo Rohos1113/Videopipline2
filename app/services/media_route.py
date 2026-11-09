@@ -33,7 +33,6 @@ KIE_IMAGE_IDS = frozenset(
     {
         "flux-2-pro",
         "seedream-5-pro",
-        "z-image",
         "qwen3-image",
     }
 )

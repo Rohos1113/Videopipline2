@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="klingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="klingCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="#11121A"/>
+  <rect x="0.5" y="0.5" width="47" height="47" rx="11.5" fill="none" stroke="#E2E8F0" stroke-opacity="0.12"/>
+  <!-- Kling AI 3D Möbius / Twisted Torus Wireframe -->
+  <g transform="translate(24, 24)">
+    <!-- Outer ellipse loop -->
+    <ellipse cx="0" cy="0" rx="14" ry="7" transform="rotate(-30)" fill="none" stroke="url(#klingGrad)" stroke-width="2.2" stroke-linecap="round"/>
+    <!-- Intersecting loop -->
+    <ellipse cx="0" cy="0" rx="14" ry="7" transform="rotate(30)" fill="none" stroke="url(#klingGrad)" stroke-width="2.2" stroke-linecap="round"/>
+    <!-- Central dynamic weave -->
+    <path d="M-6 -7 C-2 -2 2 2 6 7 M-6 7 C-2 2 2 -2 6 -7" stroke="url(#klingCyan)" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

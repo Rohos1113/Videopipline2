@@ -174,12 +174,36 @@ def test_build_payload_jobs_and_i2i_switch() -> None:
 
 
 def test_build_payload_model_map_variant() -> None:
-    avatar = kc.get_model("kling-ai-avatar")
-    assert avatar is not None
-    pro = kc.build_payload(
-        avatar, {"image_url": "https://x/i.png", "audio_url": "https://x/a.mp3", "mode": "pro"}
-    )
-    assert pro["model"] == "kling/ai-avatar-pro"
+    spec = {
+        "api": "jobs",
+        "model": "base/model",
+        "fields": [kc._f("mode", "Тир", "select", options=["standard", "pro"], default="standard")],
+        "model_map": {"standard": "base/model-standard", "pro": "base/model-pro"},
+    }
+    pro = kc.build_payload(spec, {"mode": "pro"})
+    assert pro["model"] == "base/model-pro"
+
+
+def test_kling_2_6_unified() -> None:
+    kling = kc.get_model("kling-2-6")
+    assert kling is not None
+    # 1. Text to video (no image provided)
+    t2v = kc.build_payload(kling, {"prompt": "ocean waves", "duration": "5", "sound": False, "aspect_ratio": "16:9"})
+    assert t2v["model"] == "kling-2.6/text-to-video"
+    assert t2v["input"]["aspect_ratio"] == "16:9"
+    assert "image_urls" not in t2v["input"]
+
+    # 2. Image to video (image provided)
+    i2v = kc.build_payload(kling, {"prompt": "ocean waves", "duration": "5", "sound": True, "image_urls": ["https://x/frame.png"]})
+    assert i2v["model"] == "kling-2.6/image-to-video"
+    assert "aspect_ratio" not in i2v["input"]
+    assert i2v["input"]["image_urls"] == ["https://x/frame.png"]
+    assert i2v["input"]["sound"] is True
+
+    # 3. Aliases
+    assert kc.get_model("kling-2-6-t2v")["id"] == "kling-2-6"
+    assert kc.get_model("kling-2-6-i2v")["id"] == "kling-2-6"
+    assert kc.get_model("kling-2.6")["id"] == "kling-2-6"
 
 
 def test_build_payload_veo_duration_int() -> None:

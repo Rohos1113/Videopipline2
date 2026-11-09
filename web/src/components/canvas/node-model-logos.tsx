@@ -16,7 +16,7 @@ export function brandForModel(id: string, label: string): Brand {
   if (s.includes("grok")) return { id: "xai", name: "xAI" };
   if (s.includes("flux")) return { id: "bfl", name: "Black Forest" };
   if (s.includes("seed")) return { id: "bytedance", name: "ByteDance" };
-  if (s.includes("qwen") || s.includes("wan") || s.includes("z-image")) return { id: "alibaba", name: "Alibaba" };
+  if (s.includes("qwen") || s.includes("wan")) return { id: "alibaba", name: "Alibaba" };
   if (s.includes("kling")) return { id: "kling", name: "Kling" };
   if (s.includes("hailuo") || s.includes("minimax")) return { id: "minimax", name: "MiniMax" };
   if (s.includes("pixverse")) return { id: "pixverse", name: "PixVerse" };

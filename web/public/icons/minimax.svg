@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="mmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5757"/>
+      <stop offset="50%" stop-color="#FF3366"/>
+      <stop offset="100%" stop-color="#9B51E0"/>
+    </linearGradient>
+    <linearGradient id="mmGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF7676"/>
+      <stop offset="100%" stop-color="#FF3366"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="#140E1B"/>
+  <rect x="0.5" y="0.5" width="47" height="47" rx="11.5" fill="none" stroke="#FF3366" stroke-opacity="0.18"/>
+  <!-- MiniMax signature waveform ribbon 'M' -->
+  <g transform="translate(24, 24)">
+    <!-- Left bar -->
+    <rect x="-15" y="-12" width="4.5" height="24" rx="2.25" fill="url(#mmGlow)"/>
+    <!-- Left slant -->
+    <path d="M-13 -9 L-2 4 L-2 10 L-13 -3 Z" fill="url(#mmGrad)"/>
+    <!-- Center pillar -->
+    <rect x="-2.25" y="-3" width="4.5" height="15" rx="2.25" fill="url(#mmGrad)"/>
+    <!-- Right slant -->
+    <path d="M13 -9 L2 4 L2 10 L13 -3 Z" fill="url(#mmGrad)"/>
+    <!-- Right bar -->
+    <rect x="10.5" y="-12" width="4.5" height="24" rx="2.25" fill="url(#mmGrad)"/>
+  </g>
+</svg>

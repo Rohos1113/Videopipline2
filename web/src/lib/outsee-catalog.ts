@@ -165,7 +165,7 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
     studioId: "flux_2_pro",
     displayName: "Flux 2 Pro",
     description: "Black Forest Labs · фотореализм нового поколения.",
-    icon: `${OUTSEE_ORIGIN}/imagemobilepreview/1.jpg`,
+    icon: "/icons/flux.svg",
     price: "от 3",
     isTop: true,
     chips: ["aspect", "resolution", "image-input"],
@@ -176,7 +176,7 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
     studioId: "seedream_5_pro",
     displayName: "ByteDance Seedream 5 Pro",
     description: "ByteDance · кинематографичные сцены и композиции.",
-    icon: `/icons/bytedance.svg`,
+    icon: "/icons/bytedance.svg",
     price: "от 2.5",
     isTop: true,
     chips: ["aspect", "resolution", "image-input"],
@@ -187,19 +187,9 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
     studioId: "nano_banana_2",
     displayName: "Nano Banana 2",
     description: "Google Gemini 3.1 Flash Image · ультрареализм и генерация текста.",
-    icon: `${OUTSEE_ORIGIN}/imagemobilepreview/1.jpg`,
+    icon: "/icons/google.svg",
     price: "3",
     isTop: true,
-    chips: ["aspect", "resolution", "image-input"],
-    defaults: { aspectRatio: "16:9", imageResolution: "2K" },
-  },
-  {
-    slug: "z-image",
-    studioId: "z_image",
-    displayName: "Z-Image",
-    description: "Быстрая генерация изображений высокой чёткости.",
-    icon: `${OUTSEE_ORIGIN}/imagemobilepreview/1.jpg`,
-    price: "от 1",
     chips: ["aspect", "resolution", "image-input"],
     defaults: { aspectRatio: "16:9", imageResolution: "2K" },
   },
@@ -208,7 +198,7 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
     studioId: null,
     displayName: "Qwen Image 3",
     description: "Alibaba Qwen Image 3 · превосходная детализация и типографика.",
-    icon: `/icons/qwen.svg`,
+    icon: "/icons/qwen.svg",
     price: "от 2",
     chips: ["aspect", "image-input"],
     defaults: { aspectRatio: "16:9" },
@@ -218,7 +208,7 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
     studioId: "gpt_image_2",
     displayName: "GPT Image 2",
     description: "OpenAI GPT Image · постеры и точный рендеринг текста.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/gptimage.webp`,
+    icon: "/icons/openai.svg",
     price: "от 0.03",
     isTop: true,
     chips: ["aspect", "resolution", "detail", "image-input"],
@@ -230,7 +220,7 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
     displayName: "Topaz Image Upscale",
     description:
       "Официальный Topaz Image API · 3 режима (Standard 2 / Wonder 2 / Bloom Realism)",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/topaz.webp`,
+    icon: "/icons/topaz.svg",
     price: "от 5",
     advanced: true,
     chips: [],
@@ -243,27 +233,11 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
  */
 export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
   {
-    slug: "grok-imagine-video-1.5",
-    studioId: null,
-    displayName: "Grok Imagine 1.5",
-    description: "Новейшая модель от xAI, лучшая на рынке с русской речью.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/grok.webp`,
-    price: "от 3.3",
-    isNew: true,
-    chips: ["aspect", "resolution", "duration", "image-input"],
-    defaults: { aspectRatio: "16:9", resolution: "480p", duration: 8 },
-    nn: {
-      resolutions: ["480p", "720p"],
-      durations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-      aspectRatios: ["16:9", "9:16", "1:1", "3:2", "2:3"],
-    },
-  },
-  {
     slug: "seedance-2-0-mini",
     studioId: null,
     displayName: "Seedance 2 Mini",
     description: "Новая, лёгкая версия Seedance 2. Отклоняет реальные лица.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/seedance.webp`,
+    icon: "/icons/bytedance.svg",
     price: "от 8",
     isNew: true,
     chips: ["aspect", "resolution", "duration", "image-input"],
@@ -275,28 +249,12 @@ export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
     },
   },
   {
-    slug: "seedance-2-0-fast-overseas",
-    studioId: null,
-    displayName: "Seedance 2 Fast (Лица)",
-    description: "Seedance 2.0 Fast Overseas: поддержка живых лиц, промпт до 10к знаков, 480p/720p.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/seedance.webp`,
-    price: "от 10",
-    isNew: true,
-    chips: ["aspect", "resolution", "duration", "image-input"],
-    defaults: { aspectRatio: "16:9", resolution: "720p", duration: 5 },
-    nn: {
-      resolutions: ["480p", "720p"],
-      durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-      aspectRatios: ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9", "adaptive"],
-    },
-  },
-  {
     slug: "veo-3-1-lite",
     studioId: "veo_3_1_lite",
     displayName: "Veo 3.1 Lite",
     description:
       "Outsee Veo 720p: звук/4–6с дожимаем локально; кадры — http URL (история → Старт).",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/google.webp`,
+    icon: "/icons/google.svg",
     price: "от 10",
     chips: ["aspect", "resolution", "duration", "audio", "image-input"],
     defaults: {
@@ -316,7 +274,7 @@ export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
     studioId: null,
     displayName: "Omni Flash",
     description: "Новейшая модель Google. Аудио-нативная, до 5 голосов, редактирование видео.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/google.webp`,
+    icon: "/icons/google.svg",
     price: "от 14",
     isNew: true,
     chips: ["aspect", "resolution", "duration"],
@@ -332,7 +290,7 @@ export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
     studioId: null,
     displayName: "Kling 3.0 Turbo",
     description: "Быстрая версия Kling 3.0.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/kling.webp`,
+    icon: "/icons/kling.svg",
     price: "от 16",
     isNew: true,
     chips: ["aspect", "resolution", "duration", "image-input"],
@@ -348,7 +306,7 @@ export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
     studioId: "kling_2_6",
     displayName: "Kling 2.6",
     description: "Подходит для всего. Лучшее соотношение цена/качество среди Kling моделей.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/kling.webp`,
+    icon: "/icons/kling.svg",
     price: "от 9",
     chips: ["aspect", "resolution", "duration", "audio", "image-input"],
     defaults: { aspectRatio: "16:9", resolution: "1080p", duration: 5, generateAudio: false },
@@ -359,28 +317,11 @@ export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
     },
   },
   {
-    slug: "happyhorse-1-0",
-    studioId: null,
-    displayName: "HappyHorse 1.0",
-    description:
-      "Новейшая модель от Alibaba. Реалистичное движение, мульти-референс, редактирование видео.",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/happyhorse.webp`,
-    price: "от 15",
-    isNew: true,
-    chips: ["aspect", "resolution", "duration", "image-input"],
-    defaults: { aspectRatio: "16:9", resolution: "720P", duration: 5 },
-    nn: {
-      resolutions: ["720P", "1080P"],
-      durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-      aspectRatios: ["16:9", "9:16", "1:1", "4:3", "3:4"],
-    },
-  },
-  {
     slug: "topaz-video-upscale",
     studioId: null,
     displayName: "Topaz Video Upscale",
     description: "AI-апскейл видео до 4K · Starlight · Proteus · Astra · от 5 ток",
-    icon: `${OUTSEE_ORIGIN}/videomobilepreview/topaz.webp`,
+    icon: "/icons/topaz.svg",
     price: "от 5",
     advanced: true,
     chips: [],
@@ -398,7 +339,7 @@ export const OUTSEE_AUDIO_MODELS: OutseeAudioModel[] = [
     studioId: null,
     displayName: "Suno 5.5",
     description: "Улучшенное качество и персонализация.",
-    icon: `${OUTSEE_ORIGIN}/imagemobilepreview/suno.webp`,
+    icon: "/icons/suno.svg",
     price: "2.5",
     chips: ["instrumental"],
     defaults: { instrumental: false },
@@ -408,7 +349,7 @@ export const OUTSEE_AUDIO_MODELS: OutseeAudioModel[] = [
     studioId: null,
     displayName: "Озвучка ElevenLabs v4",
     description: "Сверхреалистичная озвучка ElevenLabs v4 через WaveSpeed. 200 русских голосов, аудио-теги эмоций.",
-    icon: `${OUTSEE_ORIGIN}/imagemobilepreview/elevenlabs.webp`,
+    icon: "/icons/elevenlabs.svg",
     price: "от 0.015",
     isNew: true,
     chips: [],
@@ -426,16 +367,13 @@ const CREATE_PICKER_IMAGE_SLUGS = [
   "seedream-5-pro",
   "nano-banana-2",
   "gpt-image-2",
-  "z-image",
   "qwen3-image",
 ] as const;
 const CREATE_PICKER_VIDEO_SLUGS = [
   "veo-3-1-lite",
   "kling-2-6",
   "kling-3-0-turbo",
-  "grok-imagine-video-1.5",
   "seedance-2-0-mini",
-  "seedance-2-0-fast-overseas",
 ] as const;
 
 export function pickerImageModels(): OutseeImageModel[] {
@@ -611,10 +549,6 @@ export function resToStudioId(label: string): string {
 
 export function studioResToLabel(id: string | null | undefined, slug?: string): string {
   if (!id) return "2K";
-  if (slug === "happyhorse-1-0") {
-    const u = id.toUpperCase();
-    return u.endsWith("P") ? u : `${u}P`;
-  }
   if (id === "std" || id === "pro" || id === "4k") return id;
   if (/^\d+p$/i.test(id)) return id.toLowerCase();
   return id.toUpperCase();
@@ -644,4 +578,23 @@ export function supportsRelax(slug: string, mediaType: OutseeMediaType): boolean
   // на create: безлимит-чип если у юзера есть; в Studio — как в пайплайне
   if (mediaType === "image") return true;
   return slug === "veo-3-1-lite" || slug === "veo-3-fast" || slug.includes("veo");
+}
+
+/**
+ * Возвращает путь к официальной фирменной SVG-иконке модели.
+ */
+export function modelIconForId(idOrSlug: string, fallback?: string | null): string {
+  const s = (idOrSlug || "").toLowerCase();
+  if (s.includes("flux")) return "/icons/flux.svg";
+  if (s.includes("seedream") || s.includes("seedance") || s.includes("bytedance")) return "/icons/bytedance.svg";
+  if (s.includes("qwen")) return "/icons/qwen.svg";
+  if (s.includes("wan")) return "/icons/wan.svg";
+  if (s.includes("minimax") || s.includes("hailuo")) return "/icons/minimax.svg";
+  if (s.includes("kling")) return "/icons/kling.svg";
+  if (s.includes("topaz")) return "/icons/topaz.svg";
+  if (s.includes("nano-banana") || s.includes("gemini") || s.includes("veo") || s.includes("omni-flash")) return "/icons/google.svg";
+  if (s.includes("gpt-image") || s.includes("openai")) return "/icons/openai.svg";
+  if (s.includes("suno")) return "/icons/suno.svg";
+  if (s.includes("elevenlabs") || s.includes("eleven-v4")) return "/icons/elevenlabs.svg";
+  return fallback || "/icons/google.svg";
 }

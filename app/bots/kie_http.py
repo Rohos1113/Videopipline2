@@ -513,8 +513,6 @@ VIDEO_GENERATOR_TO_KIE_ID: dict[str, str] = {
     "wan-2-7-t2v": "wan-2-7-t2v",
     "wan_2_7_i2v": "wan-2-7-i2v",
     "wan-2-7-i2v": "wan-2-7-i2v",
-    "pixverse_v6_t2v": "pixverse-v6-t2v",
-    "pixverse-v6-t2v": "pixverse-v6-t2v",
     "topaz_video_upscale": "topaz-video-upscale",
     "topaz-video-upscale": "topaz-video-upscale",
     "kling_2_6": "kling-2-6",
@@ -527,16 +525,10 @@ IMAGE_GENERATOR_TO_KIE_ID: dict[str, str] = {
     "flux-2-pro": "flux-2-pro",
     "seedream_5_pro": "seedream-5-pro",
     "seedream-5-pro": "seedream-5-pro",
-    "z_image": "z-image",
-    "z-image": "z-image",
     "qwen3_image": "qwen3-image",
     "qwen3-image": "qwen3-image",
     "topaz_image_upscale": "topaz-image-upscale",
     "topaz-image-upscale": "topaz-image-upscale",
-    "recraft_remove_bg": "recraft-remove-bg",
-    "recraft-remove-bg": "recraft-remove-bg",
-    "recraft_crisp_upscale": "recraft-crisp-upscale",
-    "recraft-crisp-upscale": "recraft-crisp-upscale",
 }
 
 
