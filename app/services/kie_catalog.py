@@ -130,7 +130,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "veo-3-1",
         "is_top": True,
-        "badge": "ТОП",
         "label": "Google Veo 3.1",
         "category": "video",
         "api": "veo",
@@ -188,7 +187,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "seedance-2-5",
         "is_top": True,
-        "badge": "ТОП",
         "label": "Seedance 2.5 (ByteDance)",
         "category": "video",
         "api": "jobs",
@@ -287,7 +285,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "seedance-2-0-mini",
         "is_top": True,
-        "badge": "ТОП",
         "label": "Seedance 2.0 Mini",
         "category": "video",
         "api": "jobs",
@@ -320,7 +317,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "seedance-1-5-pro",
         "is_top": True,
-        "badge": "⚡ 45с",
         "label": "Seedance 1.5 Pro",
         "category": "video",
         "api": "jobs",
@@ -352,7 +348,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "kling-3-0",
         "is_top": True,
-        "badge": "1080p",
         "label": "Kling 3.0 Pro (1080p + звук)",
         "category": "video",
         "api": "jobs",
@@ -397,7 +392,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "kling-v3-turbo-t2v",
         "is_top": True,
-        "badge": "ТОП",
         "label": "Kling 3.0 Turbo (текст)",
         "category": "video",
         "api": "jobs",
@@ -423,7 +417,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "kling-v3-turbo-i2v",
         "is_top": True,
-        "badge": "ТОП",
         "label": "Kling 3.0 Turbo (оживление фото)",
         "category": "video",
         "api": "jobs",
@@ -449,7 +442,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "kling-3-0-omni-t2v",
         "is_top": True,
-        "badge": "🔊 Звук",
         "label": "Kling 3.0 Omni (со звуком)",
         "category": "video",
         "api": "jobs",
@@ -480,7 +472,6 @@ MODELS: list[dict[str, Any]] = [
     },
     {
         "id": "kling-2-6",
-        "badge": "1080p",
         "label": "Kling 2.6",
         "category": "video",
         "api": "jobs",
@@ -535,7 +526,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "hailuo-2-3-i2v",
         "is_top": True,
-        "badge": "ТОП",
         "label": "MiniMax Hailuo 2.3 (фото)",
         "category": "video",
         "api": "jobs",
@@ -566,7 +556,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "wan-2-7-t2v",
         "is_top": True,
-        "badge": "ТОП",
         "label": "Alibaba WAN 2.7 (текст)",
         "category": "video",
         "api": "jobs",
@@ -663,7 +652,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "nano-banana-2",
         "is_top": True,
-        "badge": "ТОП",
         "label": "Nano Banana 2",
         "category": "image",
         "api": "jobs",
@@ -693,7 +681,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "gpt-image-2",
         "is_top": True,
-        "badge": "ТОП",
         "label": "GPT Image 2",
         "category": "image",
         "api": "jobs",
@@ -721,7 +708,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "flux-2-pro",
         "is_top": True,
-        "badge": "ТОП",
         "label": "Flux 2 Pro",
         "category": "image",
         "api": "jobs",
@@ -765,7 +751,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "seedream-5-pro",
         "is_top": True,
-        "badge": "ТОП",
         "label": "ByteDance Seedream 5 Pro",
         "category": "image",
         "api": "jobs",
@@ -799,7 +784,6 @@ MODELS: list[dict[str, Any]] = [
     },
     {
         "id": "qwen3-image",
-        "badge": "2K",
         "label": "Alibaba Qwen Image 3",
         "category": "image",
         "api": "jobs",
@@ -1115,7 +1099,6 @@ MODELS: list[dict[str, Any]] = [
     {
         "id": "topaz-video-upscale",
         "is_top": True,
-        "badge": "2K/4K",
         "hint": "Загрузите любое видео (720p/1080p) → выберите кратность → получите ролик в 2K или 4K с удалением артефактов.",
         "label": "Topaz Video AI (апскейл)",
         "category": "tools",
