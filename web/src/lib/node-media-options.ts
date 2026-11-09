@@ -45,7 +45,7 @@ export type NodeMediaOptions = {
 
 function normalizeModelId(modelId: string): string {
   const id = (modelId || "").trim();
-  if (id === "gpt-image-2") return "gpt-image-2-vip";
+  if (id === "gpt-image-2-vip") return "gpt-image-2";
   return id;
 }
 
@@ -53,7 +53,7 @@ export function mediaOptionsForModel(modelId: string | null | undefined): NodeMe
   const id = normalizeModelId(modelId || "");
   if (!id) return null;
 
-  if (id === "gpt-image-2-vip") {
+  if (id === "gpt-image-2") {
     return {
       resolutions: ["1K", "2K", "4K"],
       qualities: NODE_IMAGE_QUALITY_OPTIONS,

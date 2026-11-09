@@ -71,7 +71,7 @@ export type ModelCatalogPayload = {
 export const PRICE_MARKUP = 3;
 export const PRICE_MARKUP_STABLE = PRICE_MARKUP;
 export const DEFAULT_TEXT_MODEL_ID = "gpt-6.1-sol";
-export const DEFAULT_IMAGE_MODEL_ID = "gpt-image-2-vip";
+export const DEFAULT_IMAGE_MODEL_ID = "gpt-image-2";
 export const DEFAULT_VIDEO_MODEL_ID = "veo-3-1-lite";
 export const IMAGE_NODE_TYPES = new Set(["images", "hero", "items", "hitl_images"]);
 export const VIDEO_NODE_TYPES = new Set(["videos", "hitl_videos"]);
@@ -96,9 +96,8 @@ export const MEDIA_NODE_TYPES = new Set([
 export function isTextNodeType(nodeType: string): boolean {
   return !MEDIA_NODE_TYPES.has(nodeType);
 }
-export const IMAGE_MODEL_ALIASES: Record<string, string> = { "gpt-image-2": "gpt-image-2-vip" };
+export const IMAGE_MODEL_ALIASES: Record<string, string> = { "gpt-image-2-vip": "gpt-image-2" };
 export const HIDDEN_IMAGE_IDS = new Set([
-  "gpt-image-2",
   "nano-banana",
   "nano-banana-pro",
   "seedream-4.5",
@@ -431,7 +430,7 @@ const VIDEO_EXTRA: CatalogModel[] = [
 function normalizeSnapshot(row: SnapshotRow): CatalogModel {
   const isImage = Boolean(row.is_image);
   const pricing = applyMarkup(row.pricing as RawVibecodePricing);
-  const label = row.id === "gpt-image-2-vip" ? "GPT Image 2" : row.display_name;
+  const label = (row.id === "gpt-image-2" || row.id === "gpt-image-2-vip") ? "GPT Image 2" : row.display_name.replace(/[-_]vip$/i, "");
   return {
     id: row.id,
     label,

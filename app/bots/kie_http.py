@@ -209,8 +209,8 @@ def _extract_urls(obj: Any, out: list[str] | None = None) -> list[str]:
         out = []
     if isinstance(obj, dict):
         for k, v in obj.items():
-            lk = str(k).lower()
-            if lk in ("resulturls",) and isinstance(v, list):
+            lk = str(k).lower().replace("_", "").replace("-", "")
+            if lk in ("resulturls", "urls") and isinstance(v, list):
                 for u in v:
                     if str(u).startswith("http"):
                         out.append(str(u))
@@ -222,6 +222,7 @@ def _extract_urls(obj: Any, out: list[str] | None = None) -> list[str]:
                 "sourceimageurl",
                 "resulturl",
                 "downloadurl",
+                "contenturl",
                 "url",
             ):
                 if isinstance(v, str) and v.startswith("http"):
@@ -239,6 +240,8 @@ def _url_ext(url: str) -> str:
     for ext in _AUDIO_EXTS + _VIDEO_EXTS + _IMAGE_EXTS:
         if path.endswith(ext):
             return ext
+    if "/videos/" in path or "/video/" in path or path.endswith("/content"):
+        return ".mp4"
     return ""
 
 
@@ -275,20 +278,31 @@ def _result_media_urls(data: dict[str, Any]) -> list[str]:
     suno = _suno_clip_audio_urls(data)
     if suno:
         return suno
-    urls = list(_extract_urls(data))
+
+    # 1. Сначала ищем URL в блоке результата (resultJson / result / output)
+    result_urls: list[str] = []
     raw = data.get("resultJson")
     if isinstance(raw, str) and raw.strip():
         with contextlib.suppress(json.JSONDecodeError):
-            urls.extend(_extract_urls(json.loads(raw)))
-    urls = list(dict.fromkeys(urls))
-    audio = [u for u in urls if _url_ext(u) in _AUDIO_EXTS]
+            result_urls.extend(_extract_urls(json.loads(raw)))
+    elif isinstance(raw, (dict, list)):
+        result_urls.extend(_extract_urls(raw))
+
+    for k in ("result", "output", "data"):
+        val = data.get(k)
+        if isinstance(val, (dict, list)):
+            result_urls.extend(_extract_urls(val))
+
+    # Если в блоке результата найдены медиа, отдаём предпочтение им перед input-референсами
+    all_urls = list(dict.fromkeys(result_urls + list(_extract_urls(data))))
+    audio = [u for u in all_urls if _url_ext(u) in _AUDIO_EXTS]
     if audio:
         return audio
-    video = [u for u in urls if _url_ext(u) in _VIDEO_EXTS]
+    video = [u for u in all_urls if _url_ext(u) in _VIDEO_EXTS]
     if video:
         return video
-    images = [u for u in urls if _url_ext(u) in _IMAGE_EXTS]
-    return images or urls
+    images = [u for u in all_urls if _url_ext(u) in _IMAGE_EXTS]
+    return images or all_urls
 
 
 def _task_state(api: str, data: dict[str, Any]) -> str:

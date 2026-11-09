@@ -184,8 +184,10 @@ export function NodeModelPicker({
   const isSelectedT2V =
     selected?.kind === "video" &&
     (selected.id.endsWith("-t2v") || Boolean(selected.api_model?.endsWith("-t2v")));
+  const rawLabel = selected?.label || selectedId || "";
+  const cleanLabel = rawLabel.replace(/[-_]vip$/i, "").replace(/^gpt-image-2$/i, "GPT Image 2");
   const summaryBits = [
-    selected?.label || selectedId,
+    cleanLabel,
     isSelectedT2V ? "T2V" : null,
     priceBit,
     media?.resolutions.length

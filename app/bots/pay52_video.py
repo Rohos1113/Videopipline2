@@ -348,17 +348,42 @@ async def poll_task(
             raw_meta = data.get("metadata")
             metadata: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
 
-            if status in ("completed", "success"):
-                video_url = str(metadata.get("url") or data.get("url") or "").strip()
+            if status in ("completed", "success", "succeeded", "finish", "finished", "done"):
+                video_url = str(
+                    metadata.get("url")
+                    or metadata.get("video_url")
+                    or metadata.get("videoUrl")
+                    or metadata.get("download_url")
+                    or data.get("url")
+                    or data.get("video_url")
+                    or data.get("videoUrl")
+                    or data.get("download_url")
+                    or data.get("output")
+                    or ""
+                ).strip()
                 if not video_url and isinstance(data.get("data"), dict):
                     inner_d = data["data"]
-                    video_url = str(inner_d.get("url") or inner_d.get("video_url") or "").strip()
+                    video_url = str(
+                        inner_d.get("url")
+                        or inner_d.get("video_url")
+                        or inner_d.get("videoUrl")
+                        or inner_d.get("result_url")
+                        or inner_d.get("download_url")
+                        or inner_d.get("output")
+                        or ""
+                    ).strip()
+                elif not video_url and isinstance(data.get("data"), list) and data["data"]:
+                    first_item = data["data"][0]
+                    if isinstance(first_item, str) and first_item.startswith("http"):
+                        video_url = first_item.strip()
+                    elif isinstance(first_item, dict):
+                        video_url = str(first_item.get("url") or first_item.get("video_url") or "").strip()
                 if video_url:
                     return video_url
                 # Если статус completed, но url еще не записан, подождём 1 итерацию
                 await asyncio.sleep(2.0)
 
-            if status in ("failed", "failure", "error"):
+            if status in ("failed", "failure", "error", "fail"):
                 fail_reason = str(data.get("fail_reason") or data.get("error") or data.get("message") or "Video generation failed")
                 raise Pay52VideoError(
                     f"52pay генерация завершилась ошибкой: {fail_reason[:300]}",
@@ -373,8 +398,14 @@ async def poll_task(
                     if isinstance(data_fb, dict) and isinstance(data_fb.get("data"), dict):
                         fb_inner = data_fb["data"]
                         fb_st = str(fb_inner.get("status") or "").lower()
-                        if fb_st in ("success", "completed"):
-                            video_url = str(fb_inner.get("url") or fb_inner.get("video_url") or "").strip()
+                        if fb_st in ("success", "completed", "succeeded", "done"):
+                            video_url = str(
+                                fb_inner.get("url")
+                                or fb_inner.get("video_url")
+                                or fb_inner.get("videoUrl")
+                                or fb_inner.get("download_url")
+                                or ""
+                            ).strip()
                             if video_url:
                                 return video_url
                         elif fb_st in ("fail", "failed", "error"):
@@ -422,14 +453,39 @@ async def run_generation(
     logger.info("pay52_video: видео готово, скачиваем с {}", video_url[:100])
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    async with httpx.AsyncClient(timeout=180.0, follow_redirects=True) as client:
-        r = await client.get(video_url)
-        if r.status_code != 200 or not r.content:
-            raise Pay52VideoError(
-                f"52pay: не удалось скачать готовое видео ({r.status_code})",
-                context={"provider_code": r.status_code, "video_url": video_url[:150]},
-            )
-        out_path.write_bytes(r.content)
+    dl_headers: dict[str, str] = {}
+    if key and (pay52_base_url() in video_url or "aihubkit.com" in video_url or "52pay" in video_url):
+        dl_headers["Authorization"] = f"Bearer {key}"
+
+    last_dl_err: Exception | None = None
+    for attempt in range(4):
+        try:
+            async with httpx.AsyncClient(timeout=180.0, follow_redirects=True) as client:
+                r = await client.get(video_url, headers=dl_headers if dl_headers else None)
+                if r.status_code == 200 and r.content and len(r.content) >= 32:
+                    out_path.write_bytes(r.content)
+                    last_dl_err = None
+                    break
+                if r.status_code in (401, 403) and not dl_headers and key:
+                    dl_headers["Authorization"] = f"Bearer {key}"
+                    continue
+                last_dl_err = Pay52VideoError(
+                    f"52pay: не удалось скачать готовое видео ({r.status_code})",
+                    context={"provider_code": r.status_code, "video_url": video_url[:150]},
+                )
+        except Exception as e:
+            last_dl_err = e
+            logger.warning("pay52_video: скачивание попытка {}/4 не удалась ({}): {}", attempt + 1, video_url[:80], e)
+        if attempt < 3:
+            await asyncio.sleep(2.0 * (attempt + 1))
+
+    if last_dl_err:
+        if isinstance(last_dl_err, Pay52VideoError):
+            raise last_dl_err
+        raise Pay52VideoError(
+            f"52pay: не удалось скачать готовое видео: {last_dl_err}",
+            context={"video_url": video_url[:150]},
+        ) from last_dl_err
 
     logger.info("pay52_video: успешно сохранено в {} ({} bytes)", out_path.name, out_path.stat().st_size)
     return GenerationResult(file_path=out_path, raw_url=video_url, gen_id=task_id)

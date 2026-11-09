@@ -8,7 +8,7 @@ type Media = "image" | "video" | "audio";
 
 const IMAGE_BASE: Record<string, number> = {
   "gpt-image-2": 0.5,
-  "gpt-image-2-vip": 1,
+  "gpt-image-2-vip": 0.5,
   "nano-banana": 0.3,
   "nano-banana-fast": 0.3,
   "nano-banana-2-lite": 0.3,
