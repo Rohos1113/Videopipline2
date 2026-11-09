@@ -9,11 +9,28 @@
 useDefault = true
 
 [allowlist]
-description = "Исключения для служебных файлов и артефактов статической сборки web/out"
+description = "Исключения для служебных файлов, артефактов и тестовых датасетов"
 paths = [
     '''\.gitleaksignore''',
     '''web/out/''',
+    '''evals/''',
+    '''tests/routing/evals/fixtures/''',
 ]
 stopwords = [
     "claude-haiku-4-5-20251001",
+    "claude-opus-4-5-20251101",
+    "sfq3_max_iterations",
+    "n_excel_gpt_sfq3_plan",
+    "n_excel_gpt_sfq3_shots",
+    "INT10-middleware",
+    "from-pay52-gpt-api-key",
+    "pay52_routes",
+    "lease_until=now",
+]
+commits = [
+    "8397a62de237683c39ecfa4fb66927b83dd6b7ed",
+    "6b2e113daa2bbd4d2f8289ca1f1ed36045f3b7b6",
+    "233d3b62534a64ac369eaa57b9b35b0ee2cb2cef",
+    "89ca97c8d8c5b5be1df2c3909eff9767ef17470d",
+    "30921a9088c8b2023ede4c769d3363db20928660",
 ]

@@ -10,7 +10,6 @@ import { StudioWorkspace } from "@/components/studio/studio-workspace";
 import { OutseeCreateWorkspace } from "@/components/outsee/outsee-create-workspace";
 import { GptWorkspace } from "@/components/gpt/gpt-workspace";
 import { OrchestratorPanel } from "@/components/orchestrator/orchestrator-panel";
-import { OPEN_ORCHESTRATOR_CHAT } from "@/components/orchestrator/open-chat-event";
 import { useGlobalEvents } from "@/hooks/use-bus";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { api } from "@/lib/api";
@@ -73,6 +72,7 @@ function HomePageInner() {
     return () => window.removeEventListener("studio-select-project", onSelectProject);
   }, [setSelectedProjectId]);
 
+  // Ссылка /?chat=open ведёт на открытие окна ИИ-агента:
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("chat") !== "open") return;
@@ -80,7 +80,7 @@ function HomePageInner() {
     const rest = params.toString();
     window.history.replaceState(null, "", rest ? `/?${rest}` : "/");
     const timer = window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent(OPEN_ORCHESTRATOR_CHAT, { detail: { tab: "chat" } }));
+      window.dispatchEvent(new CustomEvent("studio-toggle-orchestrator"));
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);

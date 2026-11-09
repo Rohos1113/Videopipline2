@@ -3,7 +3,7 @@
  * Дедуп по seq делает вызывающий код до dispatch.
  */
 
-import { readActionEnvelope, type ActionResultView } from "./orchestratorActionCards";
+import { readActionEnvelope, type ActionResultView } from "./orchestratorActionCards.ts";
 import {
   AGENT_ROLES,
   BLOCK_OUTCOMES,
@@ -19,7 +19,7 @@ import {
   TASK_STATUSES,
   type TaskStatus,
   type ValidatorResultPayload,
-} from "./orchestratorTypes";
+} from "./orchestratorTypes.ts";
 
 const NODE_RESULT_ACTIONS = new Set([
   "get_node",

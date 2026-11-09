@@ -82,6 +82,17 @@ _PRICE_ALIAS = {
     "claude-haiku-4-5-20251001": "claude-haiku",
 }
 
+# Отказы, которые повтором не лечатся: нет денег, ключ не пускает, сервер недоступен, пустой поток
+# (kie при минусовом балансе). После DEAD_PROVIDER_AFTER таких подряд провайдер пропускается
+# DEAD_PROVIDER_PAUSE_S секунд: иначе каждый вызов ждал по 3 попытки на мёртвом хопе.
+_DEAD_ERROR_RE = re.compile(
+    r"http 40[12]\b|http 403\b|empty responses stream|all connection attempts failed|"
+    r"invalid token|insufficient|不能用模型|密钥",
+    re.I,
+)
+DEAD_PROVIDER_AFTER = 3
+DEAD_PROVIDER_PAUSE_S = 300.0
+
 
 _DEAD_ERROR_RE = re.compile(
     r"http 40[12]\b|http 403\b|empty responses stream|all connection attempts failed|"
@@ -257,6 +268,7 @@ class ModelRouter:
         self._sleep = sleeper or asyncio.sleep
         self._rng = rng or random.Random()
         self._clock = clock or (lambda: datetime.now(UTC))
+        # Выключатель мёртвого провайдера: provider → (отказов подряд, до какого времени пропускать).
         self._dead: dict[str, tuple[int, float]] = {}
 
     async def call(
@@ -473,10 +485,12 @@ class ModelRouter:
         return self.ledger.exhausted(ctx.run_id)
 
     def _dead_open(self, provider: str) -> bool:
+        """Провайдер недавно отказывал одинаково (нет денег, ключ, нет связи): пока пропускаем."""
         _count, until = self._dead.get(provider, (0, 0.0))
         return until > time.monotonic()
 
     def _note_provider(self, provider: str, error: str | None) -> None:
+        """Успех (``error=None``) сбрасывает счёт; «мёртвый» отказ подряд — копит и выключает."""
         if error is None:
             self._dead.pop(provider, None)
             return
@@ -500,6 +514,7 @@ class ModelRouter:
         if self._blocked(ctx):
             return self._waiting_approval(ctx, hops[0], 0)
         last_error = "chain exhausted"
+        # Мёртвые провайдеры пропускаются, пока есть живой хоп; если мертвы все — пробуем все как раньше.
         alive = [hop for hop in hops if not self._dead_open(hop.provider)]
         if alive and len(alive) < len(hops):
             hops = alive

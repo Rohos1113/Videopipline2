@@ -282,6 +282,7 @@ CATALOG: list[dict[str, str]] = [
         "site": "Cloud API",
         "api_model": "gpt-6-luna",
     },
+
     # kie.ai — модель берётся из GPT_MODEL, api_model не фиксируем.
     {
         "id": "gpt-kie",
