@@ -4546,7 +4546,6 @@ interface AudioActionSpec {
   slug: string;
   name: string;
   desc: string;
-  badge?: string;
   iconType: "music" | "cover" | "vocal" | "split" | "sfx" | "sounds" | "extend" | "lyrics" | "speech" | "turbo" | "dialogue" | "isolate";
 }
 
@@ -4556,7 +4555,6 @@ const SUNO_AUDIO_ACTIONS: AudioActionSpec[] = [
     slug: "kie:suno-music",
     name: "Создание трека",
     desc: "Полная песня или инструментал по стилю / тексту (V5.5 / V5)",
-    badge: "ТОП",
     iconType: "music",
   },
   {
@@ -4616,7 +4614,6 @@ const ELEVENLABS_AUDIO_ACTIONS: AudioActionSpec[] = [
     slug: "kie:elevenlabs-v4",
     name: "Озвучка ElevenLabs v4 (WaveSpeed)",
     desc: "Новейшая модель v4, библиотека 200 русских голосов, аудио-теги эмоций",
-    badge: "NEW",
     iconType: "speech",
   },
 ];
@@ -4768,7 +4765,6 @@ function ModelPickerPopover({
         letter: m.label.slice(0, 1),
         isKie: true,
         isTop: Boolean(m.is_top || m.isTop),
-        badge: m.badge || (m.is_top || m.isTop ? "ТОП" : undefined),
         priceLabel: null as string | null,
         priceUsd: est.usd > 0 ? est.usd : null,
       };
@@ -4789,7 +4785,6 @@ function ModelPickerPopover({
         letter: null as string | null,
         isKie: false,
         isTop: Boolean(m.isTop || m.slug === "veo-3-1-lite"),
-        badge: m.isTop ? "ТОП" : m.isNew ? "НОВОЕ" : undefined,
         priceLabel: m.price ? m.price : null,
         priceUsd: null as number | null,
       }));
@@ -4821,24 +4816,6 @@ function ModelPickerPopover({
               : "border-white/[0.08] bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]",
         )}
       >
-        {item.badge && (
-          <span
-            className={cn(
-              "absolute top-2 right-2 rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wider shadow-sm",
-              item.badge === "ТОП"
-                ? "bg-[#22d3ee] text-black font-extrabold"
-                : item.badge === "1080p" || item.badge === "2K/4K"
-                  ? "bg-indigo-500 text-white"
-                  : item.badge.includes("Звук")
-                    ? "bg-purple-500 text-white"
-                    : item.badge.includes("с")
-                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                      : "bg-white/10 text-white/60",
-            )}
-          >
-            {item.badge}
-          </span>
-        )}
         <div className="flex shrink-0 flex-col items-center">
           <ModelCardIcon
             icon={item.icon}
@@ -4859,7 +4836,7 @@ function ModelPickerPopover({
             </span>
           )}
         </div>
-        <div className="min-w-0 flex-1 pr-7">
+        <div className="min-w-0 flex-1 pr-2">
           <p
             className={cn(
               "truncate text-[12px] font-semibold",
@@ -4898,11 +4875,6 @@ function ModelPickerPopover({
             : "border-white/[0.08] bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.06]",
         )}
       >
-        {action.badge && (
-          <span className="absolute top-2 right-2 rounded-md bg-[#22d3ee] px-1.5 py-0.5 font-mono text-[9px] font-extrabold text-black shadow-sm">
-            {action.badge}
-          </span>
-        )}
         <div className="flex shrink-0 flex-col items-center pt-0.5">
           <div
             className={cn(
@@ -4915,7 +4887,7 @@ function ModelPickerPopover({
             <AudioActionIcon type={action.iconType} />
           </div>
         </div>
-        <div className="min-w-0 flex-1 pr-6">
+        <div className="min-w-0 flex-1 pr-2">
           <p
             className={cn(
               "truncate text-[12px] font-semibold",
