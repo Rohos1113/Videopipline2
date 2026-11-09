@@ -2274,15 +2274,20 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
   const historyItems: HistoryItem[] = useMemo(() => {
     const real = (historyQ.data as HistoryItem[] | undefined) ?? [];
     const activeFromQueue: HistoryItem[] = [];
-    const seenIds = new Set(real.map((r) => r.id));
+    const seenIds = new Set<string>();
+    for (const r of real) {
+      if (r.id) seenIds.add(r.id);
+      if (r.job_id) seenIds.add(r.job_id);
+    }
 
     const allActive = [...runningJobs, ...waitingJobs];
     for (const j of allActive) {
       const jId = j.history_id || j.job_id;
-      if (!jId || seenIds.has(jId)) continue;
+      if (!jId || seenIds.has(jId) || (j.job_id && seenIds.has(j.job_id))) continue;
       const jobMedia = j.media || (feedKind === "video" ? "video" : feedKind === "audio" ? "audio" : "image");
       if (feedKind !== "all" && feedKind !== jobMedia) continue;
       seenIds.add(jId);
+      if (j.job_id) seenIds.add(j.job_id);
       activeFromQueue.push({
         id: jId,
         kind: jobMedia as "image" | "video" | "audio",
@@ -2322,7 +2327,7 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
             project_id: null,
             project_slug: null,
             prompt: activeJob.prompt_preview || null,
-            status: (activeJob.status as any) || "processing",
+            status: activeJob.status || "processing",
             job_id: activeJob.job_id,
             created_at: activeJob.created_at,
             started_at: activeJob.started_at,
@@ -2563,8 +2568,16 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                   const active = selected?.id === item.id;
                   const isVideo = item.kind === "video";
                   const isAudio = item.kind === "audio";
-                  const waitJob = waitingJobs.find((j) => j.history_id === item.id);
-                  const runJob = runningJobs.find((j) => j.history_id === item.id);
+                  const waitJob = waitingJobs.find(
+                    (j) =>
+                      (item.id && (j.history_id === item.id || j.job_id === item.id)) ||
+                      (item.job_id && (j.job_id === item.job_id || j.history_id === item.job_id)),
+                  );
+                  const runJob = runningJobs.find(
+                    (j) =>
+                      (item.id && (j.history_id === item.id || j.job_id === item.id)) ||
+                      (item.job_id && (j.job_id === item.job_id || j.history_id === item.job_id)),
+                  );
                   const pending =
                     item.status === "queued" ||
                     item.status === "processing" ||

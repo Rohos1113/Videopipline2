@@ -498,11 +498,28 @@ def _scan_generation_files(*, kind: str, limit: int) -> list[dict[str, Any]]:
             return "ошибка"
         return (model or "file")[:24]
 
-    def _add_from_meta(meta: dict[str, Any], *, mtime: float) -> None:
+    def _add_from_meta(meta: dict[str, Any], *, mtime: float, side: Path | None = None) -> None:
         media = str(meta.get("media") or "image")
         if media_filter and media != media_filter:
             return
         fp = Path(str(meta.get("path") or ""))
+        if not fp.name and side:
+            file_name = str(meta.get("file") or "").strip()
+            if file_name:
+                fp = side.parent / file_name
+
+        # Если путь из meta не существует на текущей машине, ищем медиафайл рядом с sidecar .json
+        if side is not None and not fp.is_file():
+            file_name = str(meta.get("file") or fp.name or "").strip()
+            candidate = (side.parent / file_name) if file_name else None
+            if candidate and candidate.is_file():
+                fp = candidate
+            else:
+                for cand in side.parent.glob(f"{side.stem}.*"):
+                    if cand.is_file() and cand.suffix.lower() != ".json":
+                        fp = cand
+                        break
+
         if not fp.name:
             return
         key = f"gen-{fp.name}"
@@ -633,7 +650,7 @@ def _scan_generation_files(*, kind: str, limit: int) -> list[dict[str, Any]]:
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
                 meta.setdefault("path", str(fp.resolve()))
                 meta.setdefault("media", media)
-                _add_from_meta(meta, mtime=fp.stat().st_mtime)
+                _add_from_meta(meta, mtime=fp.stat().st_mtime, side=meta_path)
                 return
             except Exception:  # noqa: BLE001
                 pass
@@ -671,7 +688,7 @@ def _scan_generation_files(*, kind: str, limit: int) -> list[dict[str, Any]]:
                 mtime = side.stat().st_mtime
             except OSError:
                 mtime = 0.0
-            _add_from_meta(meta, mtime=mtime)
+            _add_from_meta(meta, mtime=mtime, side=side)
 
         for media_dir in root.iterdir():
             if not media_dir.is_dir():
@@ -730,8 +747,8 @@ async def delete_generation_item(
             side = (root / path).with_suffix(".json")
             if side.is_file():
                 found_files.append(side)
-        else:
-            # Если самого медиафайла нет (ошибка генерации), ищем sidecar .json по stem
+        if not found_files:
+            # Если файл не найден по полному пути (например путь с другой машины или ошибка генерации)
             stem = p.stem
             if stem:
                 for fp in root.rglob(f"{stem}*"):
@@ -742,9 +759,9 @@ async def delete_generation_item(
         clean_name = item_id.removeprefix("gen-")
         if clean_name:
             stem = Path(clean_name).stem
-            for pattern in (f"{stem}*", f"{clean_name}*"):
+            for pattern in (f"{stem}.*", f"{clean_name}*", f"{stem}*"):
                 for fp in root.rglob(pattern):
-                    if fp.is_file():
+                    if fp.is_file() and fp not in found_files:
                         found_files.append(fp)
 
     if not found_files:
