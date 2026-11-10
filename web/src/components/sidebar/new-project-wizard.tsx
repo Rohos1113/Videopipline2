@@ -163,7 +163,7 @@ export function NewProjectWizard({
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-cyan-400 font-bold">•</span>
-                      <span><strong>Пакетная генерация:</strong> параллельный рендер картинок и видео (KIE / Midjourney)</span>
+                      <span><strong>Пакетная генерация:</strong> параллельный рендер картинок и видео (KIE / Flux / Seedance)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-cyan-400 font-bold">•</span>
@@ -315,7 +315,7 @@ export function NewProjectWizard({
                   create.mutate();
                 }
               }}
-              className="h-10 bg-zinc-900/80 border-white/10 text-sm text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-cyan-500/50"
+              className="h-10 bg-zinc-900/80 border-white/10 text-sm text-zinc-100 placeholder:text-zinc-500 focus-visible:border-white/30 focus-visible:ring-1 focus-visible:ring-white/20 focus-visible:shadow-none"
               autoFocus
             />
           </div>
