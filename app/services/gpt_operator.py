@@ -1090,7 +1090,7 @@ def hydrate_check_result_from_disk(
         for src in (reply_path, report_path):
             if src.is_file() and src.stat().st_size > 0:
                 try:
-                    dst["replyPreview"] = src.read_text(encoding="utf-8")[:2000]
+                    dst["replyPreview"] = src.read_text(encoding="utf-8")
                     break
                 except Exception:  # noqa: BLE001
                     continue
@@ -1111,7 +1111,7 @@ def hydrate_check_result_from_disk(
     if not preview and report_path.is_file():
         preview = report_path.read_text(encoding="utf-8")
     if preview:
-        entry["replyPreview"] = preview[:2000]
+        entry["replyPreview"] = preview
     return _fill_reply_preview(_merge_upload_paths(entry))
 
 
@@ -1666,7 +1666,7 @@ def save_operator_result(
         "at": datetime.now(UTC).isoformat(),
         "inputPaths": [str(p) for p in input_paths],
         "outputPaths": [str(p) for p in output_paths],
-        "replyPreview": (reply_text or "")[:2000],
+        "replyPreview": reply_text or "",
         "gateStatus": resolved_gate,
     }
     if analysis_dict:

@@ -1376,13 +1376,55 @@ function ExcelGptResultView({
       {resolve.isLoading && !reply ? (
         <LoadingBlock />
       ) : reply ? (
-        <div
-          tabIndex={0}
-          className="max-h-[520px] min-h-[140px] overflow-y-auto overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-3.5 select-text outline-none focus:border-white/25 [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:hsl(0_0%_55%_/_0.55)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb:hover]:bg-white/45 [&::-webkit-scrollbar-track]:bg-transparent"
-        >
-          <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
-            {reply}
-          </pre>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="font-mono text-[11px] text-zinc-400">
+              Ответ GPT · {reply.length.toLocaleString("ru-RU")} симв.
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xs text-zinc-300 hover:text-white"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(reply);
+                    toast.success("Ответ скопирован в буфер");
+                  } catch {
+                    toast.error("Не удалось скопировать");
+                  }
+                }}
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Копировать
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xs text-zinc-300 hover:text-white"
+                onClick={() => {
+                  const blob = new Blob([reply], { type: "application/json;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `gpt_reply_${nodeKey || "node"}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Скачать JSON
+              </Button>
+            </div>
+          </div>
+          <div
+            tabIndex={0}
+            className="max-h-[520px] min-h-[140px] overflow-y-auto overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-3.5 select-text outline-none focus:border-white/25 [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:hsl(0_0%_55%_/_0.55)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb:hover]:bg-white/45 [&::-webkit-scrollbar-track]:bg-transparent"
+          >
+            <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
+              {reply}
+            </pre>
+          </div>
         </div>
       ) : (
         <p className="py-4 text-sm text-muted-foreground">
