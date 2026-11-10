@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -129,7 +129,7 @@ def _estimate_outsee_cost_usd(media: str, model: str | None, duration: int | Non
 
 
 @router.post("/generate")
-async def outsee_generate(body: OutseeGenerateBody) -> dict[str, Any]:
+async def outsee_generate(request: Request, body: OutseeGenerateBody) -> dict[str, Any]:
     """Ставит генерацию в очередь: сразу pending в истории, файл — позже."""
     if not oh.outsee_api_configured():
         raise HTTPException(
@@ -237,6 +237,7 @@ async def outsee_generate(body: OutseeGenerateBody) -> dict[str, Any]:
                 timeout=900,
             )
 
+        client_id = request.headers.get("x-client-id") or request.query_params.get("client_id")
         job = await enqueue_generation(
             media="video",
             model=model,
@@ -247,6 +248,7 @@ async def outsee_generate(body: OutseeGenerateBody) -> dict[str, Any]:
             quote=None,
             run=_wrap_with_billing(run, "video", model),
             hold_id=hold_id,
+            client_id=client_id,
         )
     else:
         try:
@@ -271,6 +273,7 @@ async def outsee_generate(body: OutseeGenerateBody) -> dict[str, Any]:
                 timeout=600,
             )
 
+        client_id = request.headers.get("x-client-id") or request.query_params.get("client_id")
         job = await enqueue_generation(
             media="image",
             model=model,
@@ -281,6 +284,7 @@ async def outsee_generate(body: OutseeGenerateBody) -> dict[str, Any]:
             quote=None,
             run=_wrap_with_billing(run, "image", model),
             hold_id=hold_id,
+            client_id=client_id,
         )
 
     payload = job.to_dict()

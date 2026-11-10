@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.services.create_jobs import get_job, max_parallel, queue_snapshot
 from app.settings import settings
@@ -15,7 +15,7 @@ _LAST_STALE_SWEEP = 0.0
 
 
 @router.get("/queue")
-async def create_queue() -> dict[str, Any]:
+async def create_queue(request: Request) -> dict[str, Any]:
     """Параллельные задачи и ожидание для Studio Create."""
     global _LAST_STALE_SWEEP
     now = time.time()
@@ -29,7 +29,11 @@ async def create_queue() -> dict[str, Any]:
                 await expire_stale(session)
         except Exception:
             pass
-    snap = queue_snapshot()
+    from app.services.tenant import current_tenant
+
+    client_id = request.headers.get("x-client-id") or request.query_params.get("client_id")
+    tenant_id = current_tenant()
+    snap = queue_snapshot(tenant_id=tenant_id, client_id=client_id)
     return {
         **snap,
         "outsee_configured": bool((settings.outsee_api_key or "").strip()),

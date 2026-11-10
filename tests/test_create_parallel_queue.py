@@ -216,3 +216,51 @@ async def test_queue_snapshot_empty_when_idle(monkeypatch, tmp_path: Path) -> No
     assert snap["waiting_count"] == 0
     assert snap["max_parallel_outsee"] == 5
     assert snap["max_parallel"] == 10
+
+
+@pytest.mark.asyncio
+async def test_queue_snapshot_isolates_by_client_id(monkeypatch, tmp_path: Path) -> None:
+    from app.services import create_jobs as cj
+    from app.services import generation_storage as gs
+
+    monkeypatch.setattr(gs.settings, "data_dir", tmp_path)
+    _reset_create_jobs(monkeypatch, outsee=5, minimax=10)
+
+    gate = asyncio.Event()
+
+    async def waiting_run(out_path: Path):
+        class R:
+            file_path = out_path
+            raw_url = None
+
+        out_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 64)
+        await gate.wait()
+        return R()
+
+    job_a = await cj.enqueue_generation(
+        media="image",
+        model="gpt-image-2",
+        provider="outsee",
+        prompt="промпт клиента А",
+        ext=".png",
+        params={"aspect": "16:9"},
+        quote=None,
+        run=waiting_run,
+        client_id="client_a",
+    )
+    await asyncio.sleep(0.02)
+
+    # Клиент B запрашивает очередь: видит running_count=1 (сервер занят), но в running чужой задачи нет!
+    snap_b = cj.queue_snapshot(client_id="client_b")
+    assert snap_b["running_count"] == 1
+    assert snap_b["running"] == []
+
+    # Клиент A запрашивает очередь: видит свою задачу
+    snap_a = cj.queue_snapshot(client_id="client_a")
+    assert snap_a["running_count"] == 1
+    assert len(snap_a["running"]) == 1
+    assert snap_a["running"][0]["job_id"] == job_a.id
+    assert snap_a["running"][0]["prompt_preview"] == "промпт клиента А"
+
+    gate.set()
+    await asyncio.sleep(0.05)
