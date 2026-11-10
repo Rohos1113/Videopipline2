@@ -51,6 +51,7 @@ class CreateJob:
     # позиция в очереди ожидания (1-based), None если уже processing/done
     queue_position: int | None = None
     tenant_id: str | None = None
+    client_id: str | None = None
     storage_key: str | None = None
     hold_id: str | None = None
 
@@ -84,6 +85,7 @@ class CreateJob:
             "queue_position": self.queue_position,
             "prompt_preview": (self.prompt or "")[:120],
             "storage_key": self.storage_key,
+            "client_id": self.client_id,
         }
 
 
@@ -187,15 +189,18 @@ def _refresh_queue_positions() -> None:
             j.queue_position = i
 
 
-def list_active_jobs(*, provider: str | None = None, tenant_id: str | None = None) -> list[CreateJob]:
+def list_active_jobs(
+    *,
+    provider: str | None = None,
+    tenant_id: str | None = None,
+    client_id: str | None = None,
+) -> list[CreateJob]:
     _refresh_queue_positions()
     if tenant_id is None:
         try:
-            from app.services.studio_auth import current_is_admin
             from app.services.tenant import current_tenant
 
-            if not current_is_admin():
-                tenant_id = current_tenant()
+            tenant_id = current_tenant()
         except ImportError:
             pass
     out = [
@@ -204,25 +209,62 @@ def list_active_jobs(*, provider: str | None = None, tenant_id: str | None = Non
         if j.status in {"queued", "processing"}
         and (provider is None or j.provider == provider)
         and (tenant_id is None or j.tenant_id == tenant_id)
+        and (client_id is None or j.client_id == client_id)
     ]
     out.sort(key=lambda j: (0 if j.status == "processing" else 1, j.created_at))
     return out
 
 
-def queue_snapshot(*, provider: str | None = None) -> dict[str, Any]:
-    """Сводка для UI: running / waiting / лимит параллели."""
-    active = list_active_jobs(provider=provider)
-    running = [j for j in active if j.status == "processing"]
-    waiting = [j for j in active if j.status == "queued"]
+def queue_snapshot(
+    *,
+    provider: str | None = None,
+    tenant_id: str | None = None,
+    client_id: str | None = None,
+) -> dict[str, Any]:
+    """Сводка для UI: running / waiting / лимит параллели.
+
+    Общие счетчики (running_count, waiting_count, total_active) отражают
+    фактическую загрузку сервера, но подробные списки running/waiting отдаются
+    ТОЛЬКО для задач текущего клиента/арендатора. Это исключает утечку
+    чужих промптов и чужих карточек в личную историю.
+    """
+    _refresh_queue_positions()
+    all_active = [
+        j
+        for j in _JOBS.values()
+        if j.status in {"queued", "processing"}
+        and (provider is None or j.provider == provider)
+    ]
+    all_running = [j for j in all_active if j.status == "processing"]
+    all_waiting = [j for j in all_active if j.status == "queued"]
+
+    def _is_mine(j: CreateJob) -> bool:
+        if client_id and j.client_id:
+            return j.client_id == client_id
+        if tenant_id and j.tenant_id:
+            return j.tenant_id == tenant_id
+        if client_id and j.client_id != client_id:
+            return False
+        if tenant_id and j.tenant_id != tenant_id:
+            return False
+        return True
+
+    mine_active = [j for j in all_active if _is_mine(j)]
+    mine_running = [j for j in all_running if _is_mine(j)]
+    mine_waiting = [j for j in all_waiting if _is_mine(j)]
+
+    mine_running.sort(key=lambda j: (0 if j.status == "processing" else 1, j.created_at))
+    mine_waiting.sort(key=lambda j: (0 if j.status == "processing" else 1, j.created_at))
+
     return {
         "max_parallel": max_parallel(provider),
         "max_parallel_outsee": max_parallel("outsee"),
-        "running_count": len(running),
-        "waiting_count": len(waiting),
-        "total_active": len(active),
-        "running": [j.to_dict() for j in running],
-        "waiting": [j.to_dict() for j in waiting],
-        "jobs": [j.to_dict() for j in active],
+        "running_count": len(all_running),
+        "waiting_count": len(all_waiting),
+        "total_active": len(all_active),
+        "running": [j.to_dict() for j in mine_running],
+        "waiting": [j.to_dict() for j in mine_waiting],
+        "jobs": [j.to_dict() for j in mine_active],
     }
 
 
@@ -237,6 +279,7 @@ async def enqueue_generation(
     quote: dict[str, Any] | None,
     run: GenerateFn,
     hold_id: str | None = None,
+    client_id: str | None = None,
 ) -> CreateJob:
     """Регистрирует job (queued) и стартует task — слот API берёт семафор."""
     fp = _job_fingerprint(media=media, model=model, provider=provider, prompt=prompt, params=params)
@@ -287,6 +330,7 @@ async def enqueue_generation(
         status="queued",
         history_id=history_id,
         tenant_id=tenant,
+        client_id=client_id,
         hold_id=hold_id,
     )
     async with _LOCK:

@@ -367,6 +367,20 @@ export function orchAuthHeaders(): Record<string, string> {
   return {};
 }
 
+function getStudioClientId(): string {
+  if (typeof window === "undefined") return "server";
+  try {
+    let cid = localStorage.getItem("studio_client_id");
+    if (!cid) {
+      cid = "c_" + Math.random().toString(36).substring(2, 12) + "_" + Date.now().toString(36);
+      localStorage.setItem("studio_client_id", cid);
+    }
+    return cid;
+  } catch {
+    return "anonymous";
+  }
+}
+
 export async function http<T>(
   path: string,
   options: RequestInit = {},
@@ -391,6 +405,7 @@ export async function http<T>(
       signal: controller.signal,
       headers: {
         ...(isFormData ? {} : { "Content-Type": "application/json" }),
+        "X-Client-ID": getStudioClientId(),
         ...(options.headers || {}),
       },
     });

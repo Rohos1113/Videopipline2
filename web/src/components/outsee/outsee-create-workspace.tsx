@@ -868,6 +868,26 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
   const [lastFrameName, setLastFrameName] = useState<string | null>(null);
   const [referenceImages, setReferenceImages] = useState<RefImage[]>([]);
   const [draftJobs, setDraftJobs] = useState<DraftJob[]>([]);
+  const [trackingJobs, setTrackingJobs] = useState<
+    { provider: "outsee" | "kie"; jobId: string; historyId: string }[]
+  >(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = sessionStorage.getItem("studio_tracking_jobs");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      sessionStorage.setItem("studio_tracking_jobs", JSON.stringify(trackingJobs));
+    } catch {
+      // ignore
+    }
+  }, [trackingJobs]);
   const [modelOpen, setModelOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantExpanded, setAssistantExpanded] = useState(true);
@@ -944,12 +964,46 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     refetchInterval: open ? 60_000 : false,
   });
 
-  const runningJobs = [...draftJobs, ...(createQueueQ.data?.running ?? [])];
-  const waitingJobs = createQueueQ.data?.waiting ?? [];
+  const serverRunningCount =
+    createQueueQ.data?.running_count ?? (createQueueQ.data?.running?.length ?? 0);
+  const serverWaitingCount =
+    createQueueQ.data?.waiting_count ?? (createQueueQ.data?.waiting?.length ?? 0);
   const queueCount =
     (createQueueQ.data?.total_active ?? 0) ||
-    runningJobs.length + waitingJobs.length;
-  const historyBusy = queueCount > 0 || draftJobs.length > 0;
+    (serverRunningCount + serverWaitingCount);
+
+  // Идентификаторы задач, запущенных текущим пользователем / сессией
+  const myJobIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of trackingJobs) {
+      if (t.jobId) s.add(t.jobId);
+      if (t.historyId) s.add(t.historyId);
+    }
+    for (const d of draftJobs) {
+      if (d.job_id) s.add(d.job_id);
+      if (d.history_id) s.add(d.history_id);
+    }
+    return s;
+  }, [trackingJobs, draftJobs]);
+
+  const runningJobs = useMemo(() => {
+    const fromQueue = createQueueQ.data?.running ?? [];
+    const qFiltered = fromQueue.filter((j) => {
+      const jId = j.history_id || j.job_id;
+      return myJobIds.has(j.job_id) || (jId ? myJobIds.has(jId) : false);
+    });
+    return [...draftJobs, ...qFiltered];
+  }, [draftJobs, createQueueQ.data?.running, myJobIds]);
+
+  const waitingJobs = useMemo(() => {
+    const fromQueue = createQueueQ.data?.waiting ?? [];
+    return fromQueue.filter((j) => {
+      const jId = j.history_id || j.job_id;
+      return myJobIds.has(j.job_id) || (jId ? myJobIds.has(jId) : false);
+    });
+  }, [createQueueQ.data?.waiting, myJobIds]);
+
+  const historyBusy = queueCount > 0 || draftJobs.length > 0 || trackingJobs.length > 0;
 
   const historyQ = useQuery({
     queryKey: ["outsee-create-history", feedKind],
@@ -1598,10 +1652,6 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     },
     onError: (e) => toast.error(errorMessageFromUnknown(e)),
   });
-
-  const [trackingJobs, setTrackingJobs] = useState<
-    { provider: "outsee" | "kie"; jobId: string; historyId: string }[]
-  >([]);
 
   useEffect(() => {
     if (!trackingJobs.length) return;
@@ -2441,10 +2491,10 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
               <span
                 className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-black shadow-sm"
                 style={{ backgroundColor: OUTSEE_ACCENT }}
-                title={`В работе ${runningJobs.length}/${maxParallel}, ожидание ${waitingJobs.length}`}
+                title={`В работе на сервере ${serverRunningCount}/${maxParallel}, ожидание ${serverWaitingCount}`}
               >
                 <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                {runningJobs.length}·{waitingJobs.length}
+                {serverRunningCount}·{serverWaitingCount}
               </span>
             )}
             <span className="ml-auto font-mono text-[10px] text-white/40 font-semibold">

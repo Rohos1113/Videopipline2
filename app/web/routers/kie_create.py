@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from loguru import logger
 
 from app.bots import kie_http, pay52_video, wavespeed_http
@@ -189,7 +189,7 @@ async def _ensure_kie_asset_url(val: Any, filename_prefix: str = "asset") -> Any
 
 
 @router.post("/generate")
-async def post_generate(body: dict[str, Any]) -> dict[str, Any]:
+async def post_generate(request: Request, body: dict[str, Any]) -> dict[str, Any]:
     model_id = str((body or {}).get("model_id") or "").strip()
     spec = kie_catalog.get_model(model_id)
     if spec is None:
@@ -353,6 +353,7 @@ async def post_generate(body: dict[str, Any]) -> dict[str, Any]:
             raise
 
     job_provider = provider_name
+    client_id = request.headers.get("x-client-id") or request.query_params.get("client_id")
     job = await enqueue_generation(
         media=media,
         model=spec["label"],
@@ -363,6 +364,7 @@ async def post_generate(body: dict[str, Any]) -> dict[str, Any]:
         quote={"credits": quote["credits"], "usd": quote["usd"], "note": quote["note"]},
         run=run,
         hold_id=hold_id,
+        client_id=client_id,
     )
     logger.info(
         "kie-create: generate {} ({}) → job {} (~{} кр. / ${})",
