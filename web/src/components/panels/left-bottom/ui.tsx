@@ -11,7 +11,6 @@ export function PanelShell({ title, onClose, children }: { title: string; onClos
       <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="text-[17px] font-medium text-white">{title}</span>
-          <span className="rounded-md px-1.5 py-0.5 text-sm" style={{ color: ACCENT, background: "rgba(45,212,191,0.12)" }}>демо-данные</span>
         </div>
         <button type="button" onClick={onClose} aria-label="Закрыть" className="flex h-8 w-8 items-center justify-center rounded-lg text-[18px] text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-white">×</button>
       </div>

@@ -634,6 +634,13 @@ function computeNodeResult(
           viewMode: "default",
         };
       }
+      if (nodeStatus === "running" || nodeStatus === "queued") {
+        return empty(
+          "Оператор GPT выполняется… Идёт постановка шотов и обогащение сцен (для больших проектов генерация может занимать 5–10 минут)",
+          "xlsx",
+          "default",
+        );
+      }
       return empty("Оператор GPT ещё не запускался", "xlsx", "default");
     }
 
