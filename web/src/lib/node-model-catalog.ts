@@ -269,6 +269,18 @@ const IMAGE_EXTRA: CatalogModel[] = [
 
 const VIDEO_EXTRA: CatalogModel[] = [
   {
+    id: "seedance-2-0-fast",
+    label: "Seedance 2.0 Fast",
+    vendor: "video",
+    kind: "video",
+    online: true,
+    pricing: { currency: "usd", markup: PRICE_MARKUP, usd_per_video: 0.124 },
+    api_model: "seedance-2-0-fast",
+    provider: "kie",
+    video_generator: "seedance_2_0_fast",
+    channel: "stable",
+  },
+  {
     id: "seedance-2-5",
     label: "Seedance 2.5 (ByteDance)",
     vendor: "video",

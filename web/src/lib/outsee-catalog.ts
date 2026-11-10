@@ -233,6 +233,22 @@ export const OUTSEE_IMAGE_MODELS: OutseeImageModel[] = [
  */
 export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
   {
+    slug: "seedance-2-0-fast",
+    studioId: null,
+    displayName: "Seedance 2.0 Fast",
+    description: "Быстрый и дешёвый Seedance 2.0 для черновиков.",
+    icon: "/icons/bytedance.svg",
+    price: "от 6.8",
+    isNew: true,
+    chips: ["aspect", "resolution", "duration", "image-input"],
+    defaults: { aspectRatio: "16:9", resolution: "720p", duration: 5 },
+    nn: {
+      resolutions: ["480p", "720p"],
+      durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      aspectRatios: ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9"],
+    },
+  },
+  {
     slug: "seedance-2-0-mini",
     studioId: null,
     displayName: "Seedance 2 Mini",
@@ -373,6 +389,7 @@ const CREATE_PICKER_VIDEO_SLUGS = [
   "veo-3-1-lite",
   "kling-2-6",
   "kling-3-0-turbo",
+  "seedance-2-0-fast",
   "seedance-2-0-mini",
 ] as const;
 

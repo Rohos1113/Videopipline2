@@ -182,6 +182,12 @@ VIDEO_GENERATORS: list[OptionChoice] = [
         "Kie · Kling 2.6 (KIE_API_KEY)",
     ),
     OptionChoice(
+        "seedance_2_0_fast",
+        "Seedance 2.0 Fast",
+        "seedance-2-0-fast",
+        "Kie · Seedance 2.0 Fast (KIE_API_KEY)",
+    ),
+    OptionChoice(
         "seedance_2_0_mini",
         "Seedance 2.0 Mini",
         "seedance-2-0-mini",
