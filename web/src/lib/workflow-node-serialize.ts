@@ -18,8 +18,10 @@ function isLegacyEnrichLabel(label: string | undefined): boolean {
 
 const EXCEL_GPT_DEFAULT_LABEL = "ИИ-редактор сцен";
 
-function defaultExcelGptLabel(_slot: number): string {
-  return EXCEL_GPT_DEFAULT_LABEL;
+function defaultExcelGptLabel(slot: number): string {
+  if (slot === 1) return "ИИ-редактор сцен 1 (режиссура)";
+  if (slot === 2) return "ИИ-редактор сцен 2 (контроль сцен)";
+  return `ИИ-редактор сцен ${slot}`;
 }
 
 function migrateNodeType(type: string): string {

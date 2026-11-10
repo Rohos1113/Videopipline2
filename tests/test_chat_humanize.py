@@ -129,5 +129,5 @@ def test_pipeline_state_lines_uses_actual_canvas_graph():
 
     # Должен быть реальный ИИ-редактор сцен с его node_key
     assert "- «Разбивка» (код для JSON: split): готово" in lines
-    assert "- «ИИ-редактор сцен» (код для JSON: excel_gpt, node_key: n_excel_gpt_1): ждёт" in lines
+    assert "- «ИИ-редактор сцен 1 (режиссура)» (код для JSON: excel_gpt, node_key: n_excel_gpt_1): ждёт" in lines
     assert "- «Персонажи» (код для JSON: hero): ждёт" in lines

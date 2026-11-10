@@ -203,10 +203,16 @@ async def managed_launch_options(project_id: int, operator: AuthDep):
             state = states.get(key)
             data = node.get("data") or {}
             refused = node_admission_problem(node) if capability.managed else None
+            title = str(data.get("label") or data.get("title") or key)
+            if title == "ИИ-редактор сцен":
+                if key == "n_excel_gpt_1":
+                    title = "ИИ-редактор сцен 1 (режиссура)"
+                elif key == "n_excel_gpt_2":
+                    title = "ИИ-редактор сцен 2 (контроль сцен)"
             nodes.append(
                 {
                     "node_key": key,
-                    "title": str(data.get("label") or data.get("title") or key),
+                    "title": title,
                     "group_id": data.get("groupId"),
                     "supported": capability.managed and not refused,
                     "status": state.status.value if state else "unknown",
