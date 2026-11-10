@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -282,7 +284,7 @@ async def balance(limit: int = 20, session: AsyncSession = Depends(get_session))
                 "delta_credits": format_credits(abs(int(r.delta_micro)), rounding="down"),
                 "cost_usd": float(r.cost_usd) if r.cost_usd is not None else None,
                 "memo": r.memo,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "created_at": (r.created_at.isoformat() + "Z") if r.created_at else None,
             }
             for r in rows
         ],
@@ -679,20 +681,48 @@ def _clean_model_name(raw: str) -> tuple[str, str]:
     return clean, formatted
 
 
-def _unit_label(kind: str, unit: str = "") -> str:
-    if kind == "image":
+def _kind_ru(kind: str) -> str:
+    k = (kind or "").lower()
+    if k == "image":
+        return "изображения"
+    if k == "video":
+        return "видео"
+    if k == "audio":
+        return "аудио"
+    if k == "llm":
+        return "текста"
+    return kind or "медиа"
+
+
+def _unit_label(kind: str, unit: str = "", count: float = 1.0) -> str:
+    k = (kind or "").lower()
+    c = int(count) if count == int(count) else count
+    if k == "image":
+        if c == 1:
+            return "кадр"
+        if 2 <= c <= 4:
+            return "кадра"
         return "кадров"
-    if kind == "video":
+    if k == "video":
         return "сек."
-    if kind == "audio":
+    if k == "audio":
         if unit == "char":
             return "симв."
         if unit in ("item", "sfx", "sound"):
-            return "звуков"
-        return "треков"
-    if kind == "llm":
+            return "звук" if c == 1 else "звуков"
+        return "трек" if c == 1 else "треков"
+    if k == "llm":
         return "токенов"
     return unit or "шт."
+
+
+def _iso_utc(dt: datetime | None) -> str:
+    if not dt:
+        return ""
+    s = dt.isoformat()
+    if dt.tzinfo is None and not s.endswith("Z"):
+        s += "Z"
+    return s
 
 
 @router.get("/billing/usage-history", response_model=UsageHistoryResponse)
@@ -823,16 +853,19 @@ async def usage_history(
             entry["cost_usd"] = (entry["cost_usd"] or 0.0) + cost_val
 
         dur_s = int(mc.duration_ms / 1000) if mc.duration_ms else None
-        units_count = round(float(mc.units or 0.0), 1)
+        units_float = float(mc.units or 0.0)
+        units_count = int(units_float) if units_float.is_integer() else round(units_float, 1)
+        unit_lbl = _unit_label(m_kind, mc.unit or "", units_float)
+        kind_ru_str = _kind_ru(m_kind)
         recent_entries.append(
             RecentUsageEntry(
                 id=f"mc-{mc.id}",
-                created_at=mc.created_at.isoformat() if mc.created_at else "",
+                created_at=_iso_utc(mc.created_at),
                 kind=m_kind,
                 model=display_name,
                 provider=mc.provider or "outsee",
-                description=f"Генерация {m_kind} ({units_count} {_unit_label(m_kind, mc.unit)})",
-                units_label=f"{units_count} {_unit_label(m_kind, mc.unit)}",
+                description=f"Генерация {kind_ru_str} ({units_count} {unit_lbl})",
+                units_label=f"{units_count} {unit_lbl}",
                 credits_delta=f"-{format_credits(micro, rounding='up')}",
                 credits_delta_micro=-micro,
                 cost_usd=cost_val if is_admin else None,
@@ -880,7 +913,7 @@ async def usage_history(
         recent_entries.append(
             RecentUsageEntry(
                 id=f"llm-{llm.id}",
-                created_at=llm.created_at.isoformat() if llm.created_at else "",
+                created_at=_iso_utc(llm.created_at),
                 kind="llm",
                 model=display_name,
                 provider="relay",
@@ -947,17 +980,22 @@ async def usage_history(
         entry["credits_spent_micro"] += micro
         entry["cost_usd"] += usd_quote
 
+        kind_ru_str = _kind_ru(m_kind)
         prompt_str = str(g.get("prompt") or "")[:70]
-        desc = f"Генерация {m_kind}: «{prompt_str}…»" if prompt_str else f"Генерация {m_kind} (Create)"
+        desc = f"Генерация {kind_ru_str}: «{prompt_str}…»" if prompt_str else f"Генерация {kind_ru_str} (Create)"
+        unit_str = "1 кадр" if m_kind == "image" else ("1 клип" if m_kind == "video" else "1 трек")
+        created_raw = str(g.get("created_at") or g.get("started_at") or "")
+        if created_raw and not created_raw.endswith("Z") and "+" not in created_raw:
+            created_raw += "Z"
         recent_entries.append(
             RecentUsageEntry(
                 id=f"gen-{gid or jid}",
-                created_at=str(g.get("created_at") or g.get("started_at") or ""),
+                created_at=created_raw,
                 kind=m_kind,
                 model=display_name,
                 provider=g.get("provider") or "kie",
                 description=desc,
-                units_label="1 кадр" if m_kind == "image" else ("1 клип" if m_kind == "video" else "1 трек"),
+                units_label=unit_str,
                 credits_delta=f"-{format_credits(micro, rounding='up')}",
                 credits_delta_micro=-micro,
                 cost_usd=usd_quote if is_admin else None,
@@ -973,7 +1011,7 @@ async def usage_history(
             recent_entries.append(
                 RecentUsageEntry(
                     id=f"ce-{ce.id}",
-                    created_at=ce.created_at.isoformat() if ce.created_at else "",
+                    created_at=_iso_utc(ce.created_at),
                     kind="topup",
                     model="Купон / Пополнение",
                     provider="studio",
@@ -991,7 +1029,7 @@ async def usage_history(
             recent_entries.append(
                 RecentUsageEntry(
                     id=f"ce-{ce.id}",
-                    created_at=ce.created_at.isoformat() if ce.created_at else "",
+                    created_at=_iso_utc(ce.created_at),
                     kind="promo",
                     model="Бесплатный уровень",
                     provider="studio",

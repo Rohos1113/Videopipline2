@@ -82,7 +82,8 @@ import { StudioExcelGrid } from "@/components/studio/studio-excel-grid";
 import { FramePromptsPanel } from "@/components/studio/frame-prompts-panel";
 import { NodeResultViewBody } from "@/components/canvas/node-result-views";
 import { resolveNodeResult } from "@/lib/node-result-resolver";
-import type { FrameDTO } from "@/lib/types";
+import { inferNodeStatusFromProject } from "@/lib/node-run-status";
+import type { FrameDTO, NodeRunStatus } from "@/lib/types";
 import { NodeStepParamsPanel, StreamsPicker } from "@/components/studio/node-step-params-panel";
 import { NodePromptBlock } from "@/components/studio/node-prompt-block";
 import { NodeStyleVars } from "@/components/studio/node-style-vars";
@@ -581,6 +582,18 @@ export function NodeStudio({
     [],
   );
 
+  const computedNodeStatus = useMemo((): NodeRunStatus => {
+    const rawStatus = (nodeDataProp?.runStatus as NodeRunStatus) || undefined;
+    const ps = project.data?.status;
+    if (rawStatus && rawStatus !== "pending") return rawStatus;
+    if (nodeType === "excel_gpt") {
+      const slotIdx = excelGptConfig.slotIndex ?? 1;
+      if (ps === `enriching_${slotIdx}`) return "running";
+      if (ps === `enrich_${slotIdx}_ready`) return "done";
+    }
+    return inferNodeStatusFromProject(nodeType, ps);
+  }, [nodeDataProp?.runStatus, project.data?.status, nodeType, excelGptConfig.slotIndex]);
+
   const resultSnapshot = useMemo(() => {
     if (!projectId) return null;
     return resolveNodeResult(
@@ -593,7 +606,7 @@ export function NodeStudio({
         mediaImages: mapMedia(mediaImages.data ?? [], "images"),
         mediaVideos: mapMedia(mediaVideos.data ?? [], "videos"),
       },
-      undefined,
+      computedNodeStatus,
       nodeKey,
     );
   }, [
@@ -607,6 +620,7 @@ export function NodeStudio({
     mediaVideos.data,
     mapMedia,
     nodeKey,
+    computedNodeStatus,
   ]);
   const projectHasXlsxAsset = (assets.data ?? []).some((a) =>
     /\.xlsx$/i.test(String((a as { name?: string; path?: string }).name ?? (a as { path?: string }).path ?? "")),
@@ -1079,6 +1093,19 @@ export function NodeStudio({
                           </a>
                         </div>
                       ))}
+                    </div>
+                  ) : computedNodeStatus === "running" || computedNodeStatus === "queued" ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-500/30 bg-teal-500/10 shadow-[0_0_20px_rgba(45,212,191,0.2)]">
+                        <Loader2 className="h-7 w-7 animate-spin text-teal-400" />
+                      </div>
+                      <h4 className="text-[16px] font-medium text-white">Генерация в процессе…</h4>
+                      <p className="mt-1.5 max-w-md text-[13px] text-zinc-300">
+                        {inlineResult?.summary || "Шаг выполняется ИИ-воркером. Пожалуйста, подождите."}
+                      </p>
+                      <div className="mt-4 rounded-lg border border-white/[0.08] bg-black/40 px-4 py-2.5 text-[12px] text-zinc-400">
+                        💡 Анализ и расстановка шотов для больших проектов занимает от 4 до 10 минут. Результат появится здесь автоматически.
+                      </div>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">

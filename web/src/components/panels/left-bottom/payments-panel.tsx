@@ -88,11 +88,34 @@ const CURRENT_PLAN = "start";
 const usd = (v: number | null | undefined) =>
   v == null ? "—" : `$${v.toFixed(v < 0.1 ? 4 : 2)}`;
 
-const dayOf = (iso: string | null) => {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+const formatMsk = (iso: string | null | undefined): { date: string; time: string; full: string } => {
+  if (!iso) return { date: "—", time: "", full: "—" };
+  const raw = String(iso).trim();
+  const normalized = !raw.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(raw) ? `${raw}Z` : raw;
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return { date: "—", time: "", full: "—" };
+
+  try {
+    const formatter = new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Europe/Moscow",
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(d);
+    const get = (type: string) => parts.find((p) => p.type === type)?.value || "";
+    const date = `${get("day")}.${get("month")}`;
+    const time = `${get("hour")}:${get("minute")}`;
+    const sec = get("second");
+    return { date, time, full: `${date}.${d.getFullYear()} ${time}:${sec} (МСК)` };
+  } catch {
+    const date = `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    return { date, time, full: `${date} ${time}` };
+  }
 };
 
 const pill = (status: string): "успешно" | "ожидает" | "ошибка" => {
@@ -151,16 +174,28 @@ export function PaymentsPanel({ onClose }: { onClose: () => void }) {
   const [f, setF] = useState<"Все" | "Пополнения" | "Списания">("Все");
 
   const rows = useMemo(() => {
-    const list = (usage?.recent ?? []).map((r) => ({
-      key: r.id,
-      d: dayOf(r.created_at),
-      t: r.description || r.model || KIND_LABEL[r.kind] || r.kind,
-      title: `${KIND_LABEL[r.kind] ?? r.kind}${r.model ? ` · ${r.model}` : ""}`,
-      a: Number(r.credits_delta.replace(/\s/g, "").replace(",", ".")) || 0,
-      units: r.units_label,
-      s: pill(r.status),
-    }));
-    return list.filter((r) => (f === "Все" ? true : f === "Пополнения" ? r.a > 0 : r.a < 0));
+    const list = (usage?.recent ?? []).map((r) => {
+      const dt = formatMsk(r.created_at);
+      const isTopup = r.kind === "topup" || r.kind === "coupon";
+      return {
+        key: r.id,
+        date: dt.date,
+        time: dt.time,
+        fullTime: dt.full,
+        t: r.description || r.model || KIND_LABEL[r.kind] || r.kind,
+        title: `${KIND_LABEL[r.kind] ?? r.kind}${r.model ? ` · ${r.model}` : ""}`,
+        a: Number(r.credits_delta.replace(/\s/g, "").replace(",", ".")) || 0,
+        units: r.units_label,
+        s: pill(r.status),
+        isTopup,
+      };
+    });
+    return list.filter((r) => {
+      if (f === "Все") return true;
+      if (f === "Пополнения") return r.a > 0 || r.isTopup;
+      // Списания: показываем списания и попытки вызовов (включая ошибки)
+      return r.a < 0 || (!r.isTopup && r.a === 0);
+    });
   }, [usage, f]);
 
   const models = useMemo(
@@ -285,13 +320,25 @@ export function PaymentsPanel({ onClose }: { onClose: () => void }) {
         {loading ? <Empty text="Считаю…" /> : rows.length === 0 ? <Empty text="Списаний пока нет" /> : (
           <div className="space-y-1">
             {rows.map((r) => (
-              <div key={r.key} className="flex items-center gap-2 rounded-[10px] px-2 py-2 transition-colors hover:bg-white/[0.04]">
-                <span className="w-10 text-sm text-zinc-500">{r.d}</span>
+              <div
+                key={r.key}
+                title={r.fullTime}
+                className="flex items-center gap-2.5 rounded-[10px] px-2 py-2 transition-colors hover:bg-white/[0.04]"
+              >
+                <div className="flex w-12 shrink-0 flex-col text-left leading-tight">
+                  <span className="text-[12px] font-medium text-zinc-300">{r.date}</span>
+                  <span className="text-[10px] text-zinc-500">{r.time}</span>
+                </div>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-zinc-300">{r.t}</span>
-                  <span className="block truncate text-[11px] text-zinc-600">{r.title}{r.units ? ` · ${r.units}` : ""}</span>
+                  <span className="block truncate text-sm text-zinc-200">{r.t}</span>
+                  <span className="block truncate text-[11px] text-zinc-500">{r.title}</span>
                 </span>
-                <span className="text-sm" style={{ color: r.a > 0 ? ACCENT : "#e4e4e7" }}>{r.a > 0 ? "+" : r.a < 0 ? "−" : ""}{Math.abs(r.a)}</span>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: r.a > 0 ? ACCENT : r.a < 0 ? "#e4e4e7" : "#71717a" }}
+                >
+                  {r.a > 0 ? "+" : r.a < 0 ? "−" : ""}{Math.abs(r.a)}
+                </span>
                 <StatusPill s={r.s} />
               </div>
             ))}
