@@ -520,3 +520,9 @@ async def test_project_activity_change_counts_as_progress(env, monkeypatch, stub
     second = await executor.project_activity(ctx, pid)
     assert first and second and first != second
     assert await executor.project_activity(ctx, None) is None
+
+
+def test_with_default_ceiling_covers_items_and_hero():
+    assert bl.with_default_ceiling({"step_code": "items"})["ceiling_credits"] == bl.DEFAULT_TEXT_CEILING_CREDITS
+    assert bl.with_default_ceiling({"step_code": "hero"})["ceiling_credits"] == bl.DEFAULT_TEXT_CEILING_CREDITS
+
