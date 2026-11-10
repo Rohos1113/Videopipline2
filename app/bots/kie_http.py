@@ -488,6 +488,8 @@ async def run_generation(
 
 # Маппинг генераторов видео на ID модели в kie_catalog
 VIDEO_GENERATOR_TO_KIE_ID: dict[str, str] = {
+    "seedance_2_0_fast": "seedance-2-0-fast",
+    "seedance-2-0-fast": "seedance-2-0-fast",
     "seedance_2_0_mini": "seedance-2-0-mini",
     "seedance-2-0-mini": "seedance-2-0-mini",
     "seedance_2_0_fast_overseas": "seedance-2-0-fast-overseas",

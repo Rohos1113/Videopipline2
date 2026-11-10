@@ -283,6 +283,38 @@ MODELS: list[dict[str, Any]] = [
         },
     },
     {
+        "id": "seedance-2-0-fast",
+        "label": "Seedance 2.0 Fast",
+        "category": "video",
+        "api": "jobs",
+        "model": "bytedance/seedance-2-fast",
+        "result": "video",
+        "desc": "Быстрый и дешёвый Seedance 2.0 для черновиков.",
+        "fields": [
+            _prompt(),
+            _f("first_frame_url", "Первый кадр", "images", max_items=1),
+            _f("last_frame_url", "Последний кадр", "images", max_items=1),
+            _f("reference_image_urls", "Референс-картинки", "images", max_items=9),
+            _f("reference_video_urls", "Референс-видео", "videos", max_items=3),
+            _f("reference_audio_urls", "Референс-аудио", "audios", max_items=3),
+            _res(["480p", "720p"], "720p"),
+            _aspect(_ASPECT_WIDE, "16:9"),
+            _duration(5, 4, 15),
+            _audio_toggle(True),
+        ],
+        "pricing": {
+            "unit": "sec",
+            "rules": [
+                {"when": {"resolution": "480p", "_has_videos": True}, "credits": 6.8},
+                {"when": {"resolution": "480p"}, "credits": 11.7},
+                {"when": {"resolution": "720p", "_has_videos": True}, "credits": 15},
+                {"when": {"resolution": "720p"}, "credits": 24.8},
+            ],
+            "default": 24.8,
+            "note": "кр/сек: 480p 6.8/11.7, 720p 15/24.8 (с видео/без)",
+        },
+    },
+    {
         "id": "seedance-2-0-mini",
         "is_top": True,
         "label": "Seedance 2.0 Mini",
@@ -1149,6 +1181,8 @@ MODELS: list[dict[str, Any]] = [
 _BY_ID: dict[str, dict[str, Any]] = {m["id"]: m for m in MODELS}
 
 _MODEL_ALIASES: dict[str, str] = {
+    "seedance-2-fast": "seedance-2-0-fast",
+    "seedance-2.0-fast": "seedance-2-0-fast",
     "seedance-2-mini": "seedance-2-0-mini",
     "seedance-2": "seedance-2-0",
     "seedance-2.0-mini": "seedance-2-0-mini",
