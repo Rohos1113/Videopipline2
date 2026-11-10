@@ -589,16 +589,16 @@ function SplitFields({
   saving: boolean;
 }) {
   const split = params.split || {};
-  const [minDraft, setMinDraft] = useState(split.cell_min_chars?.toString() ?? "");
-  const [maxDraft, setMaxDraft] = useState(split.cell_max_chars?.toString() ?? "");
-  const [avgMinDraft, setAvgMinDraft] = useState(split.cell_avg_min?.toString() ?? "");
-  const [avgMaxDraft, setAvgMaxDraft] = useState(split.cell_avg_max?.toString() ?? "");
+  const [minDraft, setMinDraft] = useState(split.cell_min_chars != null ? String(split.cell_min_chars) : "30");
+  const [maxDraft, setMaxDraft] = useState(split.cell_max_chars != null ? String(split.cell_max_chars) : "120");
+  const [avgMinDraft, setAvgMinDraft] = useState(split.cell_avg_min != null ? String(split.cell_avg_min) : "50");
+  const [avgMaxDraft, setAvgMaxDraft] = useState(split.cell_avg_max != null ? String(split.cell_avg_max) : "80");
 
   useEffect(() => {
-    setMinDraft(split.cell_min_chars?.toString() ?? "");
-    setMaxDraft(split.cell_max_chars?.toString() ?? "");
-    setAvgMinDraft(split.cell_avg_min?.toString() ?? "");
-    setAvgMaxDraft(split.cell_avg_max?.toString() ?? "");
+    setMinDraft(split.cell_min_chars != null ? String(split.cell_min_chars) : "30");
+    setMaxDraft(split.cell_max_chars != null ? String(split.cell_max_chars) : "120");
+    setAvgMinDraft(split.cell_avg_min != null ? String(split.cell_avg_min) : "50");
+    setAvgMaxDraft(split.cell_avg_max != null ? String(split.cell_avg_max) : "80");
   }, [split.cell_avg_max, split.cell_avg_min, split.cell_max_chars, split.cell_min_chars]);
 
   const generalPlan = (project?.general_plan || ((project?.meta as Record<string, unknown> | undefined)?.general_plan as string) || "").trim();
