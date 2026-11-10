@@ -90,7 +90,6 @@ def with_default_ceiling(params: dict) -> dict:
         params.get("ceiling_credits") is not None
         or params.get("allow_auto_chain")
         or (kind and kind != "llm")
-        or code in _EXTRA_BASIS
         or code in sc.SOUND_STEPS
         or code not in launch_step_codes()
     ):

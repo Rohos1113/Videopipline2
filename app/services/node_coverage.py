@@ -11,7 +11,6 @@ TITLES = {
     "script": "Закадровый текст",
     "split": "Разбивка",
     "excel_gpt": "Работа с GPT",
-    "scene_design": "Сцена (старый тип)",
     "sd_agent": "Агент сцены",
     "sd_assemble": "Сборка сцены",
     "hero": "Персонажи",
@@ -26,19 +25,30 @@ TITLES = {
     "sfx_gen": "Звуки",
     "assemble": "Сборка",
     "publish": "Публикация",
-    **{f"enrich_{n}": f"Доп. работа с Excel {n} (старый тип)" for n in range(1, 6)},
+}
+
+LEGACY_NODE_TYPES = {
+    "scene_design",
+    "enrich_1",
+    "enrich_2",
+    "enrich_3",
+    "enrich_4",
+    "enrich_5",
 }
 
 
 def _ensure_registered() -> None:
-    pass
+    import app.services.node_capabilities  # noqa: F401
 
 
 def registry_node_types() -> list[str]:
     _ensure_registered()
     from app.orchestrator.node_registry import WORK_NODES
 
-    return ["excel_gpt", *[t for t in WORK_NODES if t != "excel_gpt"]]
+    return [
+        "excel_gpt",
+        *[t for t in WORK_NODES if t != "excel_gpt" and t not in LEGACY_NODE_TYPES],
+    ]
 
 
 def uncovered_node_types() -> list[str]:

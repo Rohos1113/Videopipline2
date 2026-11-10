@@ -102,8 +102,12 @@ def is_legacy_enrich_label(label: str | None) -> bool:
     return any(m in low for m in markers)
 
 
-def default_excel_gpt_label(_slot: int) -> str:
-    return "ИИ-редактор сцен"
+def default_excel_gpt_label(slot: int) -> str:
+    if slot == 1:
+        return "ИИ-редактор сцен 1 (режиссура)"
+    if slot == 2:
+        return "ИИ-редактор сцен 2 (контроль сцен)"
+    return f"ИИ-редактор сцен {slot}"
 
 
 def legacy_enrich_slot_from_type(node_type: str) -> int | None:

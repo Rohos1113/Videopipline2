@@ -17,9 +17,6 @@ import { SpendSection } from "./spend-section";
 import { ReservesSection } from "./reserves-section";
 import { PublicationsSection } from "./publications-section";
 import { JournalSection } from "./journal-section";
-import { ActionLayerSection } from "../action-layer/action-layer-section";
-import { ChangeControlSection } from "../change-control/change-control-section";
-
 export const REGISTRAR_SECTIONS: { id: string; title: string }[] = [
   { id: "autonomy", title: "Автономия" },
   { id: "observation", title: "Наблюдение, автономный запуск и телеметрия" },
@@ -28,8 +25,6 @@ export const REGISTRAR_SECTIONS: { id: string; title: string }[] = [
   { id: "reserves", title: "Резервы бюджета" },
   { id: "publications", title: "Публикации" },
   { id: "journal", title: "Журнал" },
-  { id: "actions", title: "Действия по плану" },
-  { id: "changes", title: "Контроль изменений" },
 ];
 
 function registrarSection(id: string, projectId: number | null) {
@@ -40,8 +35,6 @@ function registrarSection(id: string, projectId: number | null) {
   if (id === "reserves") return <ReservesSection />;
   if (id === "publications") return <PublicationsSection projectId={projectId} />;
   if (id === "journal") return <JournalSection projectId={projectId} />;
-  if (id === "actions") return <ActionLayerSection projectId={projectId} />;
-  if (id === "changes") return <ChangeControlSection projectId={projectId} />;
   return null;
 }
 
