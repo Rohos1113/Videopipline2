@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -983,7 +985,7 @@ async def usage_history(
         desc = f"Генерация {kind_ru_str}: «{prompt_str}…»" if prompt_str else f"Генерация {kind_ru_str} (Create)"
         unit_str = "1 кадр" if m_kind == "image" else ("1 клип" if m_kind == "video" else "1 трек")
         created_raw = str(g.get("created_at") or g.get("started_at") or "")
-        if created_raw and not created_raw.endswith("Z") and not ("+" in created_raw):
+        if created_raw and not created_raw.endswith("Z") and "+" not in created_raw:
             created_raw += "Z"
         recent_entries.append(
             RecentUsageEntry(
