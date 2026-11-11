@@ -16,10 +16,11 @@ import asyncio
 import re
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.db import session_scope
 from app.models import Project, ProjectStatus
+from app.settings import settings
 from app.storage import ProjectSheet
 
 DEFAULT_TOPIC = "5 фактов о рачках в стиле киберпанк"
@@ -83,19 +84,35 @@ async def _init_db() -> None:
     await upgrade_to_head()
 
 
+async def _unique_slug(session, base_slug: str) -> str:
+    """Свободный slug проекта: ``base``, ``base-2``, ``base-3``…
+
+    Проверка — ВНЕ RLS: индекс ``ix_projects_slug`` уникален ГЛОБАЛЬНО (не по
+    тенанту), а политика ``tenant_isolation`` прячет чужие проекты. Без снятия
+    RLS проверка не видит занятый slug → вставка падает на
+    ``UniqueViolationError``, и стартовое обслуживание студии умирает с
+    «duplicate key value violates unique constraint ix_projects_slug».
+    """
+    if settings.is_postgres:
+        await session.execute(text("select set_config('app.is_admin', 'true', true)"))
+    slug = base_slug
+    n = 1
+    while True:
+        exists = (
+            await session.execute(select(Project).where(Project.slug == slug))
+        ).scalar_one_or_none()
+        if exists is None:
+            return slug
+        n += 1
+        slug = f"{base_slug}-{n}"
+
+
 async def seed(topic: str = DEFAULT_TOPIC, hero_mode: str = DEFAULT_HERO_MODE) -> int:
     await _init_db()
     base_slug = _slugify(topic)
     async with session_scope() as s:
         # Уникализируем slug, если пилот уже запускался.
-        slug = base_slug
-        n = 1
-        while True:
-            exists = (await s.execute(select(Project).where(Project.slug == slug))).scalar_one_or_none()
-            if exists is None:
-                break
-            n += 1
-            slug = f"{base_slug}-{n}"
+        slug = await _unique_slug(s, base_slug)
         p = Project(
             slug=slug,
             topic=topic,
