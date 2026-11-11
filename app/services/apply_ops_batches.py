@@ -1603,6 +1603,7 @@ def _batch_footer(
     used_places: list[str] | None = None,
     frames: list[dict[str, Any]] | None = None,
     allow_empty_ops: bool = False,
+    scene_context: bool = False,
 ) -> str:
     kind = (footer_kind or "").strip().lower()
     if kind in {"vo", "voiceover"}:
@@ -1760,9 +1761,22 @@ def _batch_footer(
             "Чужие кадры не пиши. JSON apply-ops, без прозы.\n"
             f"{extra}"
         )
+    ctx_note = ""
+    if scene_context:
+        # Снимок содержит frames_context (проект целиком, только чтение) и
+        # project_state. Без пояснения модель сочтёт frames_context своей
+        # пачкой и напишет ops на чужие кадры.
+        ctx_note = (
+            "\nВ db_frames.json рядом с frames[] лежат frames_context (все кадры "
+            "проекта, ТОЛЬКО ДЛЯ ЧТЕНИЯ) и project_state (сводка по проекту). "
+            "Нумерация сцен — сквозная по всему проекту: продолжай её по "
+            "frames_context, не начинай scene_01 заново на границе батча. "
+            "ops пиши ТОЛЬКО по uuid из frames[].\n"
+        )
     return (
         f"\n# BATCH call={batch_i} split={split_level} (схема 1→2→4)\n"
         f"В db_frames.json только этот кусок: {n} кадров.\n"
+        f"{ctx_note}"
         "Верни ops ровно по каждому uuid из ЭТОГО файла. "
         "Чужие кадры не пиши. JSON apply-ops, без прозы.\n"
     )
@@ -3951,7 +3965,12 @@ async def _run_apply_ops_batched_main(
             json.dumps(batch_ctx, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        foot = _batch_footer(call_i, level, len(chunk))
+        foot = _batch_footer(
+            call_i,
+            level,
+            len(chunk),
+            scene_context=bool(db_ctx.get("frames_context")),
+        )
         # Стена вместо вечного зависания: таймаут уходит в split полосой выше.
         res = await asyncio.wait_for(
             run_operator_api(

@@ -41,6 +41,19 @@ _IMG_PR_ATTR_KEYS: tuple[str, ...] = (
     "shot02_characters",
     "shot02_notes",
     "shot02_transition",
+    # Глобальная нумерация сцен (shot01_id_scene = scene_NN, shot01_number =
+    # scene_NN_shot_01). Без них модель не видит уже присвоенные ID и
+    # не может продолжить сквозную нумерацию на границе батча: нода
+    # excel_gpt (05_XLSX_agent_v8_DB) отвечает «missing_global_context»
+    # и отказывается работать с фрагментом.
+    "shot01_id_scene",
+    "shot01_number",
+    "shot01_id_shot",
+    "shot01_prev",
+    "shot01_next",
+    "shot02_id_scene",
+    "shot02_number",
+    "shot02_id_shot",
     "биты",
     "кадры",
     "площадка",
@@ -50,6 +63,21 @@ _IMG_PR_ATTR_KEYS: tuple[str, ...] = (
     "image_prompt_shot2",
     # Реплики сцены из Каркаса (тип + «Кто: текст — …»): Кадры строят кадры реплик из них.
     "речь",
+)
+
+# Глобальная нумерация сцен. shot01_id_scene = "scene_NN" — идентификатор
+# сцены, shot01_number = "scene_NN_shot_01" — ссылка на конкретный шот.
+# Это СОСТОЯНИЕ постановки, а не «старый промт»: нода excel_gpt обязана
+# видеть его, чтобы продолжить сквозную нумерацию на границе батча.
+_SCENE_NUMBERING_KEYS: tuple[str, ...] = (
+    "shot01_id_scene",
+    "shot01_number",
+    "shot01_id_shot",
+    "shot01_prev",
+    "shot01_next",
+    "shot02_id_scene",
+    "shot02_number",
+    "shot02_id_shot",
 )
 
 
@@ -429,6 +457,80 @@ def _normalize_items(
     return cards, raw_descs
 
 
+def build_scene_numbering_context(
+    frames: list[Any],
+) -> dict[str, Any]:
+    """Контекст глобальной нумерации сцен для передачи модели.
+
+    Нода excel_gpt (промт 05_XLSX_agent_v8_DB) назначает кадрам сквозные
+    идентификаторы сцен: ``shot01_id_scene`` = "scene_NN",
+    ``shot01_number`` = "scene_NN_shot_01". Нумерация сквозная по всему
+    проекту, поэтому модель обязана видеть:
+
+    * уже присвоенные ID соседей — иначе она не знает, с какой сцены
+      продолжать, и отвечает «missing_global_context» (отказ, а не пустой
+      ops);
+    * где начинается и кончается её батч — иначе она считает границу пачки
+      границей проекта и начинает нумерацию заново с scene_01.
+
+    Формат (в ``db_frames.json``):
+
+    ``frames_context``
+        Список кадров проекта: ``number``, ``uuid`` и, если есть,
+        ``id_scene``/``number_scene``/``id_shot`` — только чтение, ops по
+        этим кадрам писать нельзя (это не батч).
+    ``project_state``
+        Сводка: ``frames_total``, ``frames_with_voiceover``,
+        ``scene_last`` (последняя присвоенная сцена), ``scenes_assigned``
+        (сколько кадров уже пронумеровано).
+    """
+    rows: list[dict[str, Any]] = []
+    scene_last = ""
+    assigned = 0
+    with_vo = 0
+    for fr in frames:
+        uuid = str(getattr(fr, "uuid", None) or "").strip()
+        if not uuid:
+            continue
+        number = getattr(fr, "number", None)
+        slim = slim_attrs_for_excel_gpt(getattr(fr, "attrs", None))
+        id_scene = str(slim.get("shot01_id_scene") or "").strip()
+        number_scene = str(slim.get("shot01_number") or "").strip()
+        id_shot = str(slim.get("shot01_id_shot") or "").strip()
+        row: dict[str, Any] = {"number": number, "uuid": uuid}
+        if id_scene:
+            row["id_scene"] = id_scene
+        if number_scene:
+            row["number_scene"] = number_scene
+        if id_shot:
+            row["id_shot"] = id_shot
+        rows.append(row)
+        if id_scene:
+            assigned += 1
+            scene_last = _max_scene_id(scene_last, id_scene)
+        if str(getattr(fr, "voiceover_text", None) or "").strip():
+            with_vo += 1
+    return {
+        "frames_context": rows,
+        "project_state": {
+            "frames_total": len(rows),
+            "frames_with_voiceover": with_vo,
+            "scene_last": scene_last,
+            "scenes_assigned": assigned,
+        },
+    }
+
+
+def _max_scene_id(current: str, candidate: str) -> str:
+    """Максимальный scene_NN из двух ID (сравнение по числу, не по строке)."""
+
+    def _num(value: str) -> int:
+        digits = "".join(ch for ch in value if ch.isdigit())
+        return int(digits) if digits else 0
+
+    return candidate if _num(candidate) > _num(current) else current
+
+
 def build_excel_gpt_db_context(
     *,
     project_id: int,
@@ -440,6 +542,7 @@ def build_excel_gpt_db_context(
     strip_output_keys: tuple[str, ...] | list[str] | None = None,
     items: list[Any] | None = None,
     entities: list[Any] | None = None,
+    with_scene_context: bool = False,
 ) -> dict[str, Any]:
     """Снимок для excel_gpt: whitelist attrs + короткий закадр, без сырого attrs.
 
@@ -450,6 +553,11 @@ def build_excel_gpt_db_context(
     ``strip_output_keys``: дополнительно выкинуть выход самой ноды
     (биты / главное_действие / кадры), чтобы ▶ fw_action не копировал
     старую цепь сцен.
+
+    ``with_scene_context``: добавить ``frames_context`` + ``project_state``
+    (глобальная нумерация сцен). Нужно нодам со сквозной нумерацией —
+    excel_gpt: без контекста модель отвечает «missing_global_context» и
+    отказывается работать с фрагментом проекта.
     """
     rows: list[dict[str, Any]] = []
     for fr in frames:
@@ -494,6 +602,14 @@ def build_excel_gpt_db_context(
                 val = slim.get(key)
                 if val:
                     keep[key] = val
+            # Глобальная нумерация сцен — НЕ «старый промт»: это состояние,
+            # из которого нода продолжает сквозную нумерацию на границе батча.
+            # Без неё модель не видит уже присвоенные scene_NN и отвечает
+            # «missing_global_context» (см. excel_gpt / 05_XLSX_agent_v8_DB).
+            for key in _SCENE_NUMBERING_KEYS:
+                val = slim.get(key)
+                if val:
+                    keep[key] = val
             slim = keep
         drop = tuple(strip_output_keys or ())
         if drop:
@@ -517,7 +633,7 @@ def build_excel_gpt_db_context(
                     row[dst] = val
         rows.append(row)
     item_cards, item_descs = _normalize_items(items, entities=entities)
-    return {
+    ctx: dict[str, Any] = {
         "source": "db_v2",
         "project_id": project_id,
         "slug": slug,
@@ -526,6 +642,9 @@ def build_excel_gpt_db_context(
         "items": item_cards,
         "item_descriptions": item_descs,
     }
+    if with_scene_context:
+        ctx.update(build_scene_numbering_context(frames))
+    return ctx
 
 
 def build_excel_gpt_check_context(

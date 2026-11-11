@@ -232,6 +232,15 @@ _SCENE_ANALYTICS_MARKERS = (
     "scene_analytics_54_59",
     "scene_analytics",
 )
+# Промты, которые назначают кадрам сквозную глобальную нумерацию сцен
+# (scene_NN / scene_NN_shot_01). Таким нужен контекст проекта: без уже
+# присвоенных ID и границ проекта модель отвечает «missing_global_context»
+# и отказывается работать с фрагментом (05_XLSX_agent_v8_DB).
+_SCENE_NUMBERING_MARKERS = (
+    "05_XLSX_agent_v8_DB",
+    "XLSX_agent_v8",
+    "xlsx_agent_v8",
+)
 
 
 def _drop_replace_frames_ops(ops: list) -> tuple[list, int]:
@@ -461,6 +470,21 @@ def _is_shots_qc_prompt(variant: str | None, master: str | None) -> bool:
     if _is_qc_prompts_prompt(variant, master):
         return False
     return any(m in _prompt_blob(variant, master) for m in _SHOTS_QC_MARKERS)
+
+
+def _needs_scene_numbering_context(
+    variant: str | None,
+    master: str | None,
+    node_key: str | None,
+) -> bool:
+    """Нужен ли ноде контекст глобальной нумерации сцен (frames_context).
+
+    Да — промтам, которые назначают кадрам сквозные scene_NN: без уже
+    присвоенных ID и границ проекта модель не может продолжить нумерацию
+    на границе батча и отвечает «missing_global_context».
+    """
+    del node_key
+    return any(m in _prompt_blob(variant, master) for m in _SCENE_NUMBERING_MARKERS)
 
 
 def _is_shots_qc_node(variant: str | None, master: str | None, node_key: str | None) -> bool:
@@ -2574,6 +2598,10 @@ async def run(session: AsyncSession, project: Project, bot: Any = None) -> None:
                     full_vo=vo_markup or _is_script_frames_qc_group_node(variant, master, node_key),
                     items=project.item_descriptions or [],
                     entities=ents,
+                    # Нумерация сцен сквозная по проекту: без frames_context
+                    # модель не видит уже присвоенные scene_NN и отвечает
+                    # «missing_global_context» (отказ работать с фрагментом).
+                    with_scene_context=_needs_scene_numbering_context(variant, master, node_key),
                 )
                 if vo_markup:
                     overlay = {
