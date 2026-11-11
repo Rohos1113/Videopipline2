@@ -203,6 +203,15 @@ class Settings(BaseSettings):
     # off по умолчанию (быстрый старт, минимальный риск таймаутов).
     # Переключение на лету: Studio UI / data/text_llm_choice.json / GPT_REASONING_EFFORT.
     gpt_reasoning_effort: str = Field("off", alias="GPT_REASONING_EFFORT")
+    # Потолок на одну apply-ops ноду (секунды). Лестница дробления 1→2→4→8→16
+    # умеет растянуть шаг на час+: каждый уровень ждёт своего таймаута, а
+    # провайдерские 502/504 дробить бессмысленно — ждать надо ту же пачку.
+    # 0 = потолка нет (старое поведение).
+    apply_ops_node_deadline_s: float = Field(1800.0, alias="APPLY_OPS_NODE_DEADLINE_S")
+    # Стена на один apply-ops вызов (секунды). Живой замер 11.11: успешный
+    # ответ 104-кадровой ноды — 240–300 с, провайдерский 504 — 300 с. 420 с
+    # переживает оба, но не даёт одной упавшей пачке съесть 10 минут.
+    apply_ops_pack_call_timeout_s: float = Field(420.0, alias="APPLY_OPS_PACK_CALL_TIMEOUT_S")
 
     # --- Движок (video-pipeline int/chat-v1): action_layer, watchdog, decision_v1 ---
     watchdog_enabled: bool = Field(True, alias="WATCHDOG_ENABLED")

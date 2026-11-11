@@ -81,6 +81,12 @@ _LIGHT_JSON_BYTES_PER_BATCH = 180_000
 # Image prompts (~5000 символов/кадр): меньше, чем shot_fill.
 _IMG_FRAMES_PER_BATCH = 8
 _IMG_JSON_BYTES_PER_BATCH = 24_000
+# Провайдерские сбои (5xx/обрыв) на одной пачке: сколько раз повторять ту же
+# пачку с паузой, прежде чем честно упасть. Дробить при этом нельзя — лежит
+# провайдер, а не «модель не поняла задачу».
+PROVIDER_PACK_RETRIES = 3
+# Пауза перед повтором провайдерского сбоя: 10с, 20с, 30с… (потолок 60с).
+PROVIDER_PACK_BACKOFF_S = 10.0
 # Сценарист / закадр (прочие ноды): пачка = 6 ячеек VO.
 VO_UNITS_PER_BATCH = 6
 # Группа script_frames_qc (биты → действие → кадры-шаги → QC):
@@ -147,16 +153,31 @@ ProgressFn = Callable[[str], Awaitable[None]]
 
 
 def pack_call_timeout_s(footer_kind: str | None = None) -> float:
-    """Стена на одну apply-ops пачку: GPT_TIMEOUT_S, минимум 180с.
+    """Стена на одну apply-ops пачку: APPLY_OPS_PACK_CALL_TIMEOUT_S, минимум 180с.
 
-    Короткие таймауты резали script/shots на больших промтах: GPT пишет
-    дольше, а обрыв превращался в ошибку вместо добора.
+    Раньше тут стоял GPT_TIMEOUT_S (600 с). Но GPT_TIMEOUT_S — потолок на ВЕСЬ
+    чат вместе с ретраями, а не на одну HTTP-попытку: одна упавшая пачка
+    ждала 10 минут, и на 104 кадрах лестница 1→2→4→8→16 растягивала ноду на
+    час. Стена на пачку — своя, короткая.
     """
     del footer_kind
     from app.settings import settings
 
-    wall = float(getattr(settings, "gpt_timeout_s", 600.0) or 600.0)
-    return max(180.0, wall)
+    wall = float(getattr(settings, "apply_ops_pack_call_timeout_s", 0.0) or 0.0)
+    if wall > 0:
+        return max(180.0, wall)
+    legacy = float(getattr(settings, "gpt_timeout_s", 600.0) or 600.0)
+    return max(180.0, legacy)
+
+
+def apply_ops_node_deadline_s() -> float:
+    """Потолок на одну apply-ops ноду (все пачки и все уровни дробления).
+
+    0 = потолка нет (старое поведение: нода может висеть час).
+    """
+    from app.settings import settings
+
+    return float(getattr(settings, "apply_ops_node_deadline_s", 0.0) or 0.0)
 
 
 def _kadry_pack_call_timeout_s(footer_kind: str | None = None) -> float:
@@ -305,6 +326,21 @@ def should_batch_apply_ops(
         skip_if_field=skip_if_field,
         target_batches=target_batches,
     )
+
+
+def _pending_json_bytes(pending: list[dict[str, Any]]) -> int:
+    """Размер входа одной пачки в байтах — для расчёта размера пачки.
+
+    Считаем сами кадры (то, что реально уходит в GPT), без обёртки db_ctx:
+    лимиты _DENSE_JSON_BYTES_PER_BATCH и _LIGHT_JSON_BYTES_PER_BATCH задуманы
+    именно про объём кадров.
+    """
+    if not pending:
+        return 0
+    try:
+        return len(json.dumps(pending, ensure_ascii=False).encode("utf-8"))
+    except (TypeError, ValueError):
+        return 0
 
 
 def split_frames(frames: list[Any], size: int) -> list[list[Any]]:
@@ -3851,6 +3887,10 @@ async def _run_apply_ops_batched_main(
         )
 
     effort = resolve_current_reasoning_effort()
+    # Дедлайн ноды: общий потолок на все пачки и все уровни дробления.
+    # Без него провайдер, который лежит 502-ами, растягивает шаг на час+.
+    deadline_s = apply_ops_node_deadline_s()
+    started_at = asyncio.get_running_loop().time()
     if effort in ("high", "xhigh"):
         batch_size = 10
         initial_packs = split_frames(pending, batch_size) if len(pending) > batch_size else [pending]
@@ -3858,10 +3898,19 @@ async def _run_apply_ops_batched_main(
         batch_size = 16
         initial_packs = split_frames(pending, batch_size) if len(pending) > batch_size else [pending]
     else:
-        # Для стандартного режима off/low: стартуем одним вызовом на все кадры (схема 1→2→4),
-        # а при ошибках адаптивно дробим 1→2→4→8→16
-        batch_size = len(pending)
-        initial_packs = [pending]
+        # off/low: размер пачки считаем по тем же лимитам, что и у остальных
+        # линий (frames_per_batch: dense — 32 кадра / 40 КБ, light — 120 / 180 КБ).
+        # Раньше тут стояло batch_size = len(pending), то есть ВСЕ кадры одной
+        # пачкой: на 104 кадрах это 144 КБ входа, и провайдер отвечал 504 —
+        # нода уходила в лестницу 1→2→4→8→16 и висела час.
+        batch_size = frames_per_batch(
+            n_frames=len(pending),
+            json_bytes=_pending_json_bytes(pending),
+            dense=dense,
+            skip_if_field=skip_if_field,
+            reasoning_effort=effort,
+        )
+        initial_packs = split_frames(pending, batch_size) if len(pending) > batch_size else [pending]
 
     logger.info(
         "[#{}] apply_ops batched node={!r}: pending={} packs={} batch_size={} effort={} adaptive 1→2→4→8→16 dense={}",
@@ -3990,19 +4039,61 @@ async def _run_apply_ops_batched_main(
         missing = [fr for fr in chunk if str(fr.get("uuid") or "").strip() not in got_uuids]
         return missing
 
-    def _is_timeout_err(exc: Exception | None) -> bool:
+    def _is_provider_err(exc: Exception | None) -> bool:
+        """Провайдер не ответил (5xx/обрыв), а не «модель не поняла задачу».
+
+        Такую ошибку дробить бессмысленно: провайдер лежит — он вернёт то же
+        самое и на 13 кадрах. Ждать надо ту же пачку (с паузой), а дедлайн
+        ноды не даст этому превратиться в вечное выполнение.
+        """
         if exc is None:
             return False
         if isinstance(exc, (TimeoutError, asyncio.TimeoutError)):
             return True
         s = str(exc).lower()
-        return "504" in s or "timeout" in s or "timed out" in s or "gateway" in s
+        if any(code in s for code in ("502", "503", "504", "429")):
+            return True
+        if any(mark in s for mark in ("bad gateway", "service unavailable", "gateway timeout")):
+            return True
+        # Сетевые ошибки httpx/asyncpg — имена классов не читаем из текста.
+        name = type(exc).__name__
+        return name in {
+            "ConnectError",
+            "ConnectTimeout",
+            "ReadTimeout",
+            "ReadError",
+            "RemoteProtocolError",
+            "PoolTimeout",
+            "WriteError",
+        }
 
     async def _run_adaptive(chunk: list[dict[str, Any]], level: int) -> None:
+        # Дедлайн ноды проверяем и здесь: дробление рекурсивно, и без этой
+        # проверки нода могла бы дойти до конца лестницы уже за дедлайном.
+        if deadline_s > 0:
+            spent = asyncio.get_running_loop().time() - started_at
+            if spent > deadline_s:
+                logger.error(
+                    "[#{}] apply_ops node={!r}: дедлайн ноды истёк ({:.0f}s из {:.0f}s) "
+                    "на L{} — останавливаемся",
+                    project_id,
+                    node_key,
+                    spent,
+                    deadline_s,
+                    level,
+                )
+                raise RuntimeError(
+                    f"enrich_xlsx node={node_key}: дедлайн ноды истёк "
+                    f"({spent:.0f}s из {deadline_s:.0f}s) на L{level}"
+                )
+        # Два независимых счётчика: провайдерский сбой (размер пачки ни при
+        # чём — повторяем ту же пачку) и модельный брак (дробим).
+        provider_attempts = 0
+        model_attempts = 0
         max_whole_attempts = 5 if len(chunk) <= 8 else 1
         last_exc: Exception | None = None
         missing: list[dict[str, Any]] = []
-        for attempt in range(1, max_whole_attempts + 1):
+        while True:
             try:
                 missing = await _one_chunk(chunk, level)
                 last_exc = None
@@ -4015,21 +4106,42 @@ async def _run_apply_ops_batched_main(
                 if isinstance(exc, BudgetExhausted):
                     raise
                 last_exc = exc
-                if _is_timeout_err(exc):
-                    # При 504 / таймауте повторять тот же размер бессмысленно — сразу делим
-                    break
-                if attempt < max_whole_attempts:
+                if _is_provider_err(exc):
+                    provider_attempts += 1
+                    if provider_attempts > PROVIDER_PACK_RETRIES:
+                        # Провайдер не ожил — дробить бессмысленно (он вернёт
+                        # то же на любой пачке). Честный fail: нода уйдёт в
+                        # soft-retry, а не будет висеть до дедлайна.
+                        raise
+                    pause = min(60.0, PROVIDER_PACK_BACKOFF_S * provider_attempts)
+                    logger.warning(
+                        "[#{}] apply_ops node={!r}: L{} провайдерский сбой ({}), "
+                        "повтор той же пачки через {:.0f}s ({}/{}) — дробить не будем",
+                        project_id,
+                        node_key,
+                        level,
+                        str(exc)[:120],
+                        pause,
+                        provider_attempts,
+                        PROVIDER_PACK_RETRIES,
+                    )
+                    await asyncio.sleep(pause)
+                    continue
+                model_attempts += 1
+                if model_attempts < max_whole_attempts:
                     logger.warning(
                         "[#{}] apply_ops node={!r}: L{} whole-pack retry {}/{} ({} frames): {}",
                         project_id,
                         node_key,
                         level,
-                        attempt,
+                        model_attempts,
                         max_whole_attempts,
                         len(chunk),
                         str(exc)[:160],
                     )
-                    await asyncio.sleep(2.0 * attempt)
+                    await asyncio.sleep(2.0 * model_attempts)
+                    continue
+                break
         if last_exc is not None:
             nxt = next_split_level(level)
             if nxt is None or len(chunk) <= 2:
@@ -4080,6 +4192,8 @@ async def _run_apply_ops_batched_main(
         for part in split_in_half(missing):
             await _run_adaptive(part, nxt)
 
+    # Дедлайн ноды проверяется внутри _run_adaptive (дробление рекурсивно) и
+    # здесь — перед каждой пачкой верхнего уровня.
     for pack in initial_packs:
         await _run_adaptive(pack, 1)
 
