@@ -12,14 +12,29 @@ from app.services.apply_ops_batches import (
 )
 
 
-def test_pack_call_timeout_uses_gpt_timeout_not_90(monkeypatch) -> None:
-    """Пачку нельзя резать коротким wait_for — GPT пишет дольше."""
+def test_pack_call_timeout_uses_own_wall_not_gpt_timeout(monkeypatch) -> None:
+    """Стена пачки — своя (APPLY_OPS_PACK_CALL_TIMEOUT_S), не GPT_TIMEOUT_S.
+
+    GPT_TIMEOUT_S — потолок на весь чат с ретраями; как стена одной пачки он
+    превращал одно падение в 10 минут ожидания.
+    """
     from app.settings import settings
 
+    monkeypatch.setattr(settings, "apply_ops_pack_call_timeout_s", 420.0)
+    assert pack_call_timeout_s("bits") == 420.0
+    assert pack_call_timeout_s("shots_coverage") == 420.0
+    assert pack_call_timeout_s("prompts") == 420.0
+    monkeypatch.setattr(settings, "apply_ops_pack_call_timeout_s", 30.0)
+    assert pack_call_timeout_s("bits") >= 180.0
+
+
+def test_pack_call_timeout_falls_back_to_gpt_timeout(monkeypatch) -> None:
+    """Без своей стены — старое поведение (GPT_TIMEOUT_S, не короче 180с)."""
+    from app.settings import settings
+
+    monkeypatch.setattr(settings, "apply_ops_pack_call_timeout_s", 0.0)
     monkeypatch.setattr(settings, "gpt_timeout_s", 600.0)
     assert pack_call_timeout_s("bits") == 600.0
-    assert pack_call_timeout_s("shots_coverage") == 600.0
-    assert pack_call_timeout_s("prompts") == 600.0
     monkeypatch.setattr(settings, "gpt_timeout_s", 90.0)
     assert pack_call_timeout_s("bits") >= 180.0
 
@@ -134,8 +149,14 @@ def _frame(i: int) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_run_apply_ops_starts_with_one_batch(tmp_path, monkeypatch) -> None:
-    """Успех с первого раза = ровно один LLM-вызов, не 5 пачек."""
+async def test_run_apply_ops_dense_splits_104_into_bounded_packs(tmp_path, monkeypatch) -> None:
+    """104 кадра НЕ уходят одной пачкой — иначе провайдер отвечает 504.
+
+    Живой случай 11.11 (проект #86, нода «ИИ-редактор сцен 2»): off/low
+    отправлял все 104 кадра одним вызовом (144 КБ входа) → 504 → лестница
+    1→2→4→8→16 → нода висела 62 минуты. Теперь размер пачки считается по
+    лимитам frames_per_batch (dense — 32 кадра / 40 КБ).
+    """
     import json
 
     from app.services.gpt_operator_client import OperatorApiResult
@@ -154,7 +175,185 @@ async def test_run_apply_ops_starts_with_one_batch(tmp_path, monkeypatch) -> Non
         )
 
     monkeypatch.setattr("app.services.apply_ops_batches.run_operator_api", fake_run)
-    frames = [_frame(i) for i in range(160)]
+    frames = [_frame(i) for i in range(104)]
+    ctx = tmp_path / "db_frames.json"
+    ctx.write_text("{}", encoding="utf-8")
+    res = await run_apply_ops_batched(
+        project_dir=tmp_path,
+        node_key="n_excel_gpt_2",
+        role="excel_gpt",
+        output_mode="project_file",
+        prompt="p",
+        accompanying="",
+        db_ctx={"frames": frames},
+        ctx_path=ctx,
+        project_id=86,
+        dense=True,
+    )
+    # Ни одна пачка не больше 32 кадров (лимит dense), и их больше одной.
+    assert max(calls) <= 32
+    assert len(calls) > 1
+    assert sum(calls) == 104
+    assert len(res.apply_ops["ops"]) == 104
+
+
+@pytest.mark.asyncio
+async def test_run_apply_ops_provider_502_retries_same_pack_without_split(tmp_path, monkeypatch) -> None:
+    """Провайдерский 502 → повтор ТОЙ ЖЕ пачки, без дробления.
+
+    Дробить при 502 бессмысленно: лежит провайдер, а не «модель не поняла
+    задачу» — на 13 кадрах он вернёт то же самое. Дробление на 502 и было
+    причиной 62-минутного вися ноды.
+    """
+    import json
+
+    from app.services.gpt_operator_client import OperatorApiResult
+
+    calls: list[int] = []
+    attempts = {"n": 0}
+
+    async def fake_run(**kwargs):
+        path = kwargs["input_paths"][0]
+        frames = json.loads(path.read_text(encoding="utf-8"))["frames"]
+        calls.append(len(frames))
+        attempts["n"] += 1
+        if attempts["n"] <= 2:
+            raise RuntimeError("GPT HTTP 502: Bad Gateway")
+        ops = [{"frame_uuid": fr["uuid"], "fields": {"main_action": "x"}} for fr in frames]
+        return OperatorApiResult(
+            reply_text='{"ops":[]}',
+            output_paths=[path],
+            apply_ops={"ops": ops},
+        )
+
+    monkeypatch.setattr("app.services.apply_ops_batches.run_operator_api", fake_run)
+    monkeypatch.setattr("app.services.apply_ops_batches.PROVIDER_PACK_BACKOFF_S", 0.0)
+    frames = [_frame(i) for i in range(30)]
+    ctx = tmp_path / "db_frames.json"
+    ctx.write_text("{}", encoding="utf-8")
+    res = await run_apply_ops_batched(
+        project_dir=tmp_path,
+        node_key="n_excel_gpt_2",
+        role="excel_gpt",
+        output_mode="project_file",
+        prompt="p",
+        accompanying="",
+        db_ctx={"frames": frames},
+        ctx_path=ctx,
+        project_id=86,
+        dense=True,
+    )
+    # Первые две попытки — та же пачка (30 кадров), потом успех той же пачки.
+    assert calls[0] == calls[1] == calls[2] == 30
+    assert len(res.apply_ops["ops"]) == 30
+
+
+@pytest.mark.asyncio
+async def test_run_apply_ops_provider_502_gives_up_after_retries(tmp_path, monkeypatch) -> None:
+    """Провайдер не ожил — честный fail, а не бесконечное дробление."""
+    import json
+
+    calls: list[int] = []
+
+    async def fake_run(**kwargs):
+        path = kwargs["input_paths"][0]
+        frames = json.loads(path.read_text(encoding="utf-8"))["frames"]
+        calls.append(len(frames))
+        raise RuntimeError("GPT HTTP 502: Bad Gateway")
+
+    monkeypatch.setattr("app.services.apply_ops_batches.run_operator_api", fake_run)
+    monkeypatch.setattr("app.services.apply_ops_batches.PROVIDER_PACK_BACKOFF_S", 0.0)
+    frames = [_frame(i) for i in range(30)]
+    ctx = tmp_path / "db_frames.json"
+    ctx.write_text("{}", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="502"):
+        await run_apply_ops_batched(
+            project_dir=tmp_path,
+            node_key="n_excel_gpt_2",
+            role="excel_gpt",
+            output_mode="project_file",
+            prompt="p",
+            accompanying="",
+            db_ctx={"frames": frames},
+            ctx_path=ctx,
+            project_id=86,
+            dense=True,
+        )
+    # Одна пачка, без дробления; попыток — PROVIDER_PACK_RETRIES + 1.
+    assert len(set(calls)) == 1
+    assert len(calls) <= 4
+
+
+@pytest.mark.asyncio
+async def test_run_apply_ops_node_deadline_stops_run(tmp_path, monkeypatch) -> None:
+    """Дедлайн ноды останавливает прогон, а не даёт висеть часами."""
+    import asyncio
+    import json
+
+    from app.services.gpt_operator_client import OperatorApiResult
+
+    calls: list[int] = []
+
+    async def fake_run(**kwargs):
+        path = kwargs["input_paths"][0]
+        frames = json.loads(path.read_text(encoding="utf-8"))["frames"]
+        calls.append(len(frames))
+        # Каждая пачка «думает» дольше дедлайна — иначе проверка не срабатывает.
+        await asyncio.sleep(0.05)
+        ops = [{"frame_uuid": fr["uuid"], "fields": {"main_action": "x"}} for fr in frames]
+        return OperatorApiResult(
+            reply_text='{"ops":[]}',
+            output_paths=[path],
+            apply_ops={"ops": ops},
+        )
+
+    monkeypatch.setattr("app.services.apply_ops_batches.run_operator_api", fake_run)
+    monkeypatch.setattr("app.services.apply_ops_batches.apply_ops_node_deadline_s", lambda: 0.01)
+    frames = [_frame(i) for i in range(104)]
+    ctx = tmp_path / "db_frames.json"
+    ctx.write_text("{}", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="дедлайн ноды"):
+        await run_apply_ops_batched(
+            project_dir=tmp_path,
+            node_key="n_excel_gpt_2",
+            role="excel_gpt",
+            output_mode="project_file",
+            prompt="p",
+            accompanying="",
+            db_ctx={"frames": frames},
+            ctx_path=ctx,
+            project_id=86,
+            dense=True,
+        )
+    # Успеть можно было только первую пачку — дальше дедлайн.
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_run_apply_ops_starts_with_one_batch(tmp_path, monkeypatch) -> None:
+    """Успех с первого раза = ровно один LLM-вызов, без дробления.
+
+    32 кадра — ровно лимит dense-пачки, поэтому уходит одним вызовом.
+    """
+    import json
+
+    from app.services.gpt_operator_client import OperatorApiResult
+
+    calls: list[int] = []
+
+    async def fake_run(**kwargs):
+        path = kwargs["input_paths"][0]
+        frames = json.loads(path.read_text(encoding="utf-8"))["frames"]
+        calls.append(len(frames))
+        ops = [{"frame_uuid": fr["uuid"], "fields": {"main_action": "x"}} for fr in frames]
+        return OperatorApiResult(
+            reply_text='{"ops":[]}',
+            output_paths=[path],
+            apply_ops={"ops": ops},
+        )
+
+    monkeypatch.setattr("app.services.apply_ops_batches.run_operator_api", fake_run)
+    frames = [_frame(i) for i in range(32)]
     ctx = tmp_path / "db_frames.json"
     ctx.write_text("{}", encoding="utf-8")
     res = await run_apply_ops_batched(
@@ -169,13 +368,13 @@ async def test_run_apply_ops_starts_with_one_batch(tmp_path, monkeypatch) -> Non
         project_id=1,
         dense=True,
     )
-    assert calls == [160]
-    assert len(res.apply_ops["ops"]) == 160
+    assert calls == [32]
+    assert len(res.apply_ops["ops"]) == 32
 
 
 @pytest.mark.asyncio
 async def test_run_apply_ops_splits_1_to_2_on_error(tmp_path, monkeypatch) -> None:
-    """Полный батч падает → два полубатча, не заранее 5×32."""
+    """Модельный отказ → пачка делится пополам (1→2)."""
     import json
 
     from app.services.gpt_operator_client import OperatorApiResult
@@ -186,7 +385,7 @@ async def test_run_apply_ops_splits_1_to_2_on_error(tmp_path, monkeypatch) -> No
         path = kwargs["input_paths"][0]
         frames = json.loads(path.read_text(encoding="utf-8"))["frames"]
         calls.append(len(frames))
-        if len(frames) > 80:
+        if len(frames) > 16:
             raise RuntimeError("too big")
         ops = [{"frame_uuid": fr["uuid"], "fields": {"main_action": "x"}} for fr in frames]
         return OperatorApiResult(
@@ -196,7 +395,7 @@ async def test_run_apply_ops_splits_1_to_2_on_error(tmp_path, monkeypatch) -> No
         )
 
     monkeypatch.setattr("app.services.apply_ops_batches.run_operator_api", fake_run)
-    frames = [_frame(i) for i in range(160)]
+    frames = [_frame(i) for i in range(32)]
     ctx = tmp_path / "db_frames.json"
     ctx.write_text("{}", encoding="utf-8")
     res = await run_apply_ops_batched(
@@ -211,13 +410,13 @@ async def test_run_apply_ops_splits_1_to_2_on_error(tmp_path, monkeypatch) -> No
         project_id=1,
         dense=True,
     )
-    assert calls == [160, 80, 80]
-    assert len(res.apply_ops["ops"]) == 160
+    assert calls == [32, 16, 16]
+    assert len(res.apply_ops["ops"]) == 32
 
 
 @pytest.mark.asyncio
 async def test_run_apply_ops_splits_2_to_4_on_second_error(tmp_path, monkeypatch) -> None:
-    """Полубатч тоже падает → ещё раз пополам (4 куска исходного)."""
+    """Полупачка тоже падает → ещё раз пополам (4 куска исходного)."""
     import json
 
     from app.services.gpt_operator_client import OperatorApiResult
@@ -228,7 +427,7 @@ async def test_run_apply_ops_splits_2_to_4_on_second_error(tmp_path, monkeypatch
         path = kwargs["input_paths"][0]
         frames = json.loads(path.read_text(encoding="utf-8"))["frames"]
         calls.append(len(frames))
-        if len(frames) > 40:
+        if len(frames) > 8:
             raise RuntimeError("still too big")
         ops = [{"frame_uuid": fr["uuid"], "fields": {"main_action": "x"}} for fr in frames]
         return OperatorApiResult(
@@ -238,7 +437,7 @@ async def test_run_apply_ops_splits_2_to_4_on_second_error(tmp_path, monkeypatch
         )
 
     monkeypatch.setattr("app.services.apply_ops_batches.run_operator_api", fake_run)
-    frames = [_frame(i) for i in range(160)]
+    frames = [_frame(i) for i in range(32)]
     ctx = tmp_path / "db_frames.json"
     ctx.write_text("{}", encoding="utf-8")
     res = await run_apply_ops_batched(
@@ -253,9 +452,9 @@ async def test_run_apply_ops_splits_2_to_4_on_second_error(tmp_path, monkeypatch
         project_id=1,
         dense=True,
     )
-    # 160 fail, 80 fail → 40+40, other 80 fail → 40+40
-    assert calls == [160, 80, 40, 40, 80, 40, 40]
-    assert len(res.apply_ops["ops"]) == 160
+    # 32 fail → 16+16, каждая 16 fail → 8+8
+    assert calls == [32, 16, 8, 8, 16, 8, 8]
+    assert len(res.apply_ops["ops"]) == 32
 
 
 @pytest.mark.asyncio
