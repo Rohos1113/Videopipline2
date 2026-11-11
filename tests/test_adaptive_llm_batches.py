@@ -5,10 +5,12 @@ from app.services.adaptive_llm_batches import (
 )
 
 
-def test_next_split_is_1_then_2_then_4() -> None:
+def test_next_split_progression() -> None:
     assert next_split_level(1) == 2
     assert next_split_level(2) == 4
-    assert next_split_level(4) is None
+    assert next_split_level(4) == 8
+    assert next_split_level(8) == 16
+    assert next_split_level(16) is None
     assert next_split_level(MAX_SPLIT_LEVEL) is None
 
 

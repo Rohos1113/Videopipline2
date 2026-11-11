@@ -256,3 +256,105 @@ async def test_run_apply_ops_splits_2_to_4_on_second_error(tmp_path, monkeypatch
     # 160 fail, 80 fail → 40+40, other 80 fail → 40+40
     assert calls == [160, 80, 40, 40, 80, 40, 40]
     assert len(res.apply_ops["ops"]) == 160
+
+
+@pytest.mark.asyncio
+async def test_run_apply_ops_medium_reasoning_batches_16(tmp_path, monkeypatch) -> None:
+    """В режиме medium reasoning 104 кадра режутся на пачки по 16, чтобы не виснуть на 300с."""
+    import json
+
+    from app.services.gpt_operator_client import OperatorApiResult
+    from app.services.llm_override import NodeLlmOverride, use_override
+
+    calls: list[int] = []
+
+    async def fake_run(**kwargs):
+        path = kwargs["input_paths"][0]
+        frames = json.loads(path.read_text(encoding="utf-8"))["frames"]
+        calls.append(len(frames))
+        ops = [{"frame_uuid": fr["uuid"], "fields": {"main_action": "x"}} for fr in frames]
+        return OperatorApiResult(
+            reply_text='{"ops":[]}',
+            output_paths=[path],
+            apply_ops={"ops": ops},
+        )
+
+    monkeypatch.setattr("app.services.apply_ops_batches.run_operator_api", fake_run)
+    frames = [_frame(i) for i in range(104)]
+    ctx = tmp_path / "db_frames.json"
+    ctx.write_text("{}", encoding="utf-8")
+    ov = NodeLlmOverride(
+        model_id="gpt-6.1-sol",
+        channel="stable",
+        kind="text",
+        provider="52pay",
+        label="GPT 6.1 Sol",
+        reasoning_effort="medium",
+    )
+    with use_override(ov):
+        res = await run_apply_ops_batched(
+            project_dir=tmp_path,
+            node_key="n_excel_gpt_2",
+            role="excel_gpt",
+            output_mode="project_file",
+            prompt="p",
+            accompanying="",
+            db_ctx={"frames": frames},
+            ctx_path=ctx,
+            project_id=86,
+            dense=True,
+        )
+    # 104 = 6*16 + 8
+    assert calls == [16, 16, 16, 16, 16, 16, 8]
+    assert len(res.apply_ops["ops"]) == 104
+
+
+@pytest.mark.asyncio
+async def test_run_apply_ops_high_reasoning_batches_10(tmp_path, monkeypatch) -> None:
+    """В режиме high/xhigh reasoning кадры режутся на пачки по 10."""
+    import json
+
+    from app.services.gpt_operator_client import OperatorApiResult
+    from app.services.llm_override import NodeLlmOverride, use_override
+
+    calls: list[int] = []
+
+    async def fake_run(**kwargs):
+        path = kwargs["input_paths"][0]
+        frames = json.loads(path.read_text(encoding="utf-8"))["frames"]
+        calls.append(len(frames))
+        ops = [{"frame_uuid": fr["uuid"], "fields": {"main_action": "x"}} for fr in frames]
+        return OperatorApiResult(
+            reply_text='{"ops":[]}',
+            output_paths=[path],
+            apply_ops={"ops": ops},
+        )
+
+    monkeypatch.setattr("app.services.apply_ops_batches.run_operator_api", fake_run)
+    frames = [_frame(i) for i in range(35)]
+    ctx = tmp_path / "db_frames.json"
+    ctx.write_text("{}", encoding="utf-8")
+    ov = NodeLlmOverride(
+        model_id="gpt-6.1-sol",
+        channel="stable",
+        kind="text",
+        provider="52pay",
+        label="GPT 6.1 Sol",
+        reasoning_effort="high",
+    )
+    with use_override(ov):
+        res = await run_apply_ops_batched(
+            project_dir=tmp_path,
+            node_key="n_excel_gpt_2",
+            role="excel_gpt",
+            output_mode="project_file",
+            prompt="p",
+            accompanying="",
+            db_ctx={"frames": frames},
+            ctx_path=ctx,
+            project_id=86,
+            dense=True,
+        )
+    # 35 = 10 + 10 + 10 + 5
+    assert calls == [10, 10, 10, 5]
+    assert len(res.apply_ops["ops"]) == 35
