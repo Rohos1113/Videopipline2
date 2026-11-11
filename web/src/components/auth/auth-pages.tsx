@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { safeAuthNext } from "@/lib/safe-next";
-import { ArrowLeft, Check, CircleAlert, Eye, EyeOff, Loader2, Lock, Mail, MailCheck, User, ImageIcon } from "lucide-react";
+import { ArrowLeft, Check, CircleAlert, Eye, EyeOff, Loader2, Lock, Mail, MailCheck, User } from "lucide-react";
 
 export const AUTH_TOKEN_KEY = "vp-auth-token";
 const A = "#2dd4bf";
@@ -90,6 +90,15 @@ function pwScore(p: string) {
 function pwValid(p: string) { return p.length >= 8 && /[A-Za-zА-Яа-я]/.test(p) && /\d/.test(p); }
 
 /* ---------- UI ---------- */
+/** Кадры на странице входа: первый — широкий (на всю ширину колонки), остальные — квадратные. */
+const SHELL_SHOTS: { src: string; alt: string; wide?: boolean }[] = [
+  { src: "/login/knight.webp", alt: "Рыцарь в золотой маске", wide: true },
+  { src: "/login/origami-birds.webp", alt: "Оригами-птицы в библиотеке" },
+  { src: "/login/penthouse-bedroom.webp", alt: "Спальня в пентхаусе с видом на город" },
+  { src: "/login/soldiers-defeated.webp", alt: "Побеждённые солдаты" },
+  { src: "/login/astronaut-planet.webp", alt: "Космонавт на тёмной планете" },
+];
+
 function Shell({ title, sub, children, foot }: { title: string; sub?: string; children: React.ReactNode; foot?: React.ReactNode }) {
   return (
     <div className="min-h-screen w-full bg-[#070909] text-white" style={FONT}>
@@ -106,9 +115,13 @@ function Shell({ title, sub, children, foot }: { title: string; sub?: string; ch
               <p className="mt-4 max-w-md text-[17px] text-zinc-400">Сценарий, персонажи, кадры, анимация, озвучка и монтаж — в одном пайплайне.</p>
             </div>
             <div className="mt-auto grid grid-cols-2 gap-3">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className={`flex items-center justify-center rounded-[16px] border border-dashed border-white/10 bg-white/[0.02] text-zinc-600 ${i === 0 ? "col-span-2 aspect-[16/7]" : "aspect-[4/3]"}`}>
-                  <div className="flex flex-col items-center gap-2 text-[13px]"><ImageIcon className="h-6 w-6" />изображение</div>
+              {SHELL_SHOTS.map((shot) => (
+                <div
+                  key={shot.src}
+                  className={`overflow-hidden rounded-[16px] border border-white/10 bg-black/20 ${shot.wide ? "col-span-2 aspect-[16/7]" : "aspect-[4/3]"}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={shot.src} alt={shot.alt} className="h-full w-full object-cover" />
                 </div>
               ))}
             </div>
