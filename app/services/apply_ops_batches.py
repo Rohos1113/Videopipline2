@@ -150,6 +150,9 @@ _SET_SKIP_KEYS = ("набор", "set", "shot_set")
 
 ApplyFn = Callable[[dict[str, Any]], Awaitable[None]]
 ProgressFn = Callable[[str], Awaitable[None]]
+#: Обновить контекст нумерации сцен в ctx ПОСЛЕ применённой пачки.
+#: Вызывается раннером с тем ctx, который реально уходит в модель.
+RefreshCtxFn = Callable[[dict[str, Any]], Awaitable[None]]
 
 
 def pack_call_timeout_s(footer_kind: str | None = None) -> float:
@@ -3026,6 +3029,7 @@ async def _run_apply_ops_batched_kadry(
     on_progress: ProgressFn | None = None,
     allow_empty_ops: bool = False,
     shots_gate: bool | None = None,
+    refresh_ctx_fn: RefreshCtxFn | None = None,
 ) -> OperatorApiResult:
     """Один GPT-вызов на пачку. Ошибка внутри пачки → 2, затем 4.
 
@@ -3376,6 +3380,11 @@ async def _run_apply_ops_batched_kadry(
             payload["export_xlsx"] = False
             async with apply_lock:
                 await apply_fn(payload)
+                if refresh_ctx_fn is not None:
+                    # Нумерация сцен сквозная: следующая пачка обязана видеть
+                    # scene_NN, присвоенные этой. Без обновления контекст остаётся
+                    # от начала ноды — модель считает, что проект начинается.
+                    await refresh_ctx_fn(db_ctx)
         if (footer_kind or "").strip().lower() in {
             "analytics",
             "scene_analytics",
@@ -3802,6 +3811,7 @@ async def run_apply_ops_batched(
     on_progress: ProgressFn | None = None,
     allow_empty_ops: bool = False,
     shots_gate: bool | None = None,
+    refresh_ctx_fn: RefreshCtxFn | None = None,
     kadry: bool | None = None,
 ) -> OperatorApiResult:
     """Один GPT-вызов на все кадры. Ошибка → 2 пачки. Снова ошибка → 4.
@@ -3846,6 +3856,7 @@ async def run_apply_ops_batched(
             on_progress=on_progress,
             allow_empty_ops=allow_empty_ops,
             shots_gate=shots_gate,
+            refresh_ctx_fn=refresh_ctx_fn,
         )
     return await _run_apply_ops_batched_main(
         project_dir=project_dir,
@@ -3860,6 +3871,7 @@ async def run_apply_ops_batched(
         dense=dense,
         apply_fn=apply_fn,
         skip_if_field=skip_if_field,
+        refresh_ctx_fn=refresh_ctx_fn,
     )
 
 
@@ -3877,6 +3889,7 @@ async def _run_apply_ops_batched_main(
     dense: bool,
     apply_fn: ApplyFn | None = None,
     skip_if_field: str | None = None,
+    refresh_ctx_fn: RefreshCtxFn | None = None,
 ) -> OperatorApiResult:
     """Основной движок: 1→2→4, пачка до 8 кадров — до 5 повторов целиком."""
     from app.services.adaptive_llm_batches import next_split_level, split_in_half
@@ -4053,6 +4066,10 @@ async def _run_apply_ops_batched_main(
             payload["scenes"] = scenes
             payload["export_xlsx"] = False
             await apply_fn(payload)
+            if refresh_ctx_fn is not None:
+                # Нумерация сцен сквозная: следующая пачка обязана видеть
+                # scene_NN, присвоенные этой (см. kadry-движок).
+                await refresh_ctx_fn(db_ctx)
         merged_ops.extend(ops)
         got_uuids = {str(op.get("frame_uuid") or "").strip() for op in ops if isinstance(op, dict)}
         missing = [fr for fr in chunk if str(fr.get("uuid") or "").strip() not in got_uuids]

@@ -477,8 +477,8 @@ def build_scene_numbering_context(
 
     ``frames_context``
         Список кадров проекта: ``number``, ``uuid`` и, если есть,
-        ``id_scene``/``number_scene``/``id_shot`` — только чтение, ops по
-        этим кадрам писать нельзя (это не батч).
+        ``id_scene``/``number_scene``/``id_shot``/``cluster`` — только
+        чтение, ops по этим кадрам писать нельзя (это не батч).
     ``project_state``
         Сводка: ``frames_total``, ``frames_with_voiceover``,
         ``scene_last`` (последняя присвоенная сцена), ``scenes_assigned``
@@ -497,6 +497,7 @@ def build_scene_numbering_context(
         id_scene = str(slim.get("shot01_id_scene") or "").strip()
         number_scene = str(slim.get("shot01_number") or "").strip()
         id_shot = str(slim.get("shot01_id_shot") or "").strip()
+        cluster = str(slim.get("cluster") or "").strip()
         row: dict[str, Any] = {"number": number, "uuid": uuid}
         if id_scene:
             row["id_scene"] = id_scene
@@ -504,6 +505,10 @@ def build_scene_numbering_context(
             row["number_scene"] = number_scene
         if id_shot:
             row["id_shot"] = id_shot
+        if cluster:
+            # Номер кластера: промт читает его для continuity на границе
+            # батча («не начинай кластер 1 заново»).
+            row["cluster"] = cluster
         rows.append(row)
         if id_scene:
             assigned += 1
@@ -519,6 +524,48 @@ def build_scene_numbering_context(
             "scenes_assigned": assigned,
         },
     }
+
+
+def rebuild_scene_numbering_context(
+    ctx: dict[str, Any],
+    frames: list[Any],
+) -> bool:
+    """Пересобрать ``frames_context``/``project_state`` в ctx по свежим кадрам.
+
+    Контекст нумерации собирается ОДИН раз до всех пачек, поэтому пачка N+1
+    не видит ``scene_NN``, присвоенные пачкой N, и сквозная нумерация
+    сбивается (модель считает, что проект только начинается). Здесь контекст
+    пересобирается по свежим данным из БД — уже с учётом применённой пачки.
+
+    Состав кадров не меняется: пересобираются те же uuid, что были в
+    контексте изначально, в исходном порядке.
+
+    Возвращает True, если контекст изменился.
+    """
+    rows = ctx.get("frames_context")
+    if not isinstance(rows, list) or not rows:
+        return False
+    wanted = [
+        str(row.get("uuid") or "").strip()
+        for row in rows
+        if isinstance(row, dict) and str(row.get("uuid") or "").strip()
+    ]
+    if not wanted:
+        return False
+    by_uuid = {
+        str(getattr(fr, "uuid", None) or "").strip(): fr
+        for fr in frames
+        if str(getattr(fr, "uuid", None) or "").strip()
+    }
+    # Порядок — как в исходном контексте: пересобираем значения, не состав.
+    fresh = [by_uuid[uuid] for uuid in wanted if uuid in by_uuid]
+    if not fresh:
+        return False
+    rebuilt = build_scene_numbering_context(fresh)
+    changed = rebuilt["frames_context"] != rows or rebuilt["project_state"] != ctx.get("project_state")
+    ctx["frames_context"] = rebuilt["frames_context"]
+    ctx["project_state"] = rebuilt["project_state"]
+    return changed
 
 
 def _max_scene_id(current: str, candidate: str) -> str:

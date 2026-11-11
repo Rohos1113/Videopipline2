@@ -487,6 +487,88 @@ def _needs_scene_numbering_context(
     return any(m in _prompt_blob(variant, master) for m in _SCENE_NUMBERING_MARKERS)
 
 
+async def _refresh_scene_numbering_ctx(
+    session: AsyncSession,
+    project: Project,
+    db_ctx: dict,
+) -> bool:
+    """Пересобрать frames_context/project_state по свежим данным из БД.
+
+    Контекст нумерации собирается ОДИН раз до всех пачек, поэтому пачка N+1
+    не видела ``scene_NN``, присвоенные пачкой N: модель считала, что проект
+    начинается с ``scene_01``, и нумерация сбивалась (плюс ``scene_last`` в
+    сводке устаревал). Здесь контекст обновляется ПОСЛЕ каждой применённой
+    пачки — из БД, где уже записаны id_scene.
+
+    Меняется только нумерация: состав кадров и uuid прежние (читаем те же
+    кадры, что были в контексте). Для нод без нумерации — no-op.
+    """
+    if not db_ctx.get("frames_context"):
+        return False
+    from sqlalchemy import select as _select
+
+    from app.services.db_frames_context import rebuild_scene_numbering_context
+
+    uuids = [
+        str(row.get("uuid") or "").strip()
+        for row in (db_ctx.get("frames_context") or [])
+        if isinstance(row, dict) and str(row.get("uuid") or "").strip()
+    ]
+    if not uuids:
+        return False
+    frames = list(
+        (
+            await session.execute(
+                _select(Frame)
+                .where(Frame.project_id == project.id, Frame.uuid.in_(uuids))
+                # populate_existing: после commit объекты сессии могли остаться
+                # со старым attrs — нужен именно свежий срез из БД.
+                .execution_options(populate_existing=True)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not frames:
+        return False
+    return rebuild_scene_numbering_context(db_ctx, frames)
+
+
+def _make_refresh_ctx_fn(
+    session: AsyncSession,
+    project: Project,
+    node_key: str | None,
+):
+    """Колбэк для раннера: обновить контекст нумерации после пачки.
+
+    Раннер зовёт его с тем ctx, который реально уходит в модель (в kadry-ветке
+    это бывает отдельный ``cam_ctx``). Ошибка не роняет ноду: нумерация может
+    разъехаться, но работа не теряется.
+    """
+
+    async def _refresh(ctx: dict) -> None:
+        try:
+            changed = await _refresh_scene_numbering_ctx(session, project, ctx)
+        except Exception as _e:  # noqa: BLE001
+            logger.warning(
+                "[#{}] enrich_xlsx node={!r}: не обновился контекст нумерации ({})",
+                project.id,
+                node_key,
+                str(_e)[:160],
+            )
+            return
+        if changed:
+            logger.info(
+                "[#{}] enrich_xlsx node={!r}: контекст нумерации обновлён после пачки "
+                "(scene_last={})",
+                project.id,
+                node_key,
+                (ctx.get("project_state") or {}).get("scene_last"),
+            )
+
+    return _refresh
+
+
 def _is_shots_qc_node(variant: str | None, master: str | None, node_key: str | None) -> bool:
     nk = str(node_key or "")
     if _is_qc_prompts_prompt(variant, master):
@@ -2996,6 +3078,7 @@ async def run(session: AsyncSession, project: Project, bot: Any = None) -> None:
                     project_id=project.id,
                     dense=True,
                     apply_fn=_apply_batch,
+                    refresh_ctx_fn=_make_refresh_ctx_fn(session, project, node_key),
                 )
             else:
                 # Группа «Кадры» (script_frames_qc: границы сцен, каркас, площадка,
@@ -3246,6 +3329,7 @@ async def run(session: AsyncSession, project: Project, bot: Any = None) -> None:
                             output_mode=output_mode,
                             check_mode=check_mode,
                         ),
+                        refresh_ctx_fn=_make_refresh_ctx_fn(session, project, node_key),
                         kadry=True,
                     )
                     if fw_frames:
@@ -3328,6 +3412,7 @@ async def run(session: AsyncSession, project: Project, bot: Any = None) -> None:
                                 footer_kind="camera_menu",
                                 on_progress=_progress,
                                 allow_empty_ops=False,
+                                refresh_ctx_fn=_make_refresh_ctx_fn(session, project, node_key),
                                 kadry=True,
                             )
                             session.expire_all()
