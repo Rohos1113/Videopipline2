@@ -10,9 +10,9 @@ from typing import TypeVar
 
 T = TypeVar("T")
 
-# After a failed full call: 2 packs. After a failed half: 4 packs (split that half).
-NEXT_SPLIT = {1: 2, 2: 4}
-MAX_SPLIT_LEVEL = 4
+# After a failed full call: 2 packs. After a failed half: 4 packs. Then 8 and 16.
+NEXT_SPLIT = {1: 2, 2: 4, 4: 8, 8: 16}
+MAX_SPLIT_LEVEL = 16
 
 
 def next_split_level(level: int) -> int | None:

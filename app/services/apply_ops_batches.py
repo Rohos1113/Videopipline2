@@ -222,6 +222,23 @@ def _release_pack_send_slot() -> None:
         gate.sem.release()
 
 
+def resolve_current_reasoning_effort() -> str:
+    """Определить текущий уровень мышления (off | low | medium | high | xhigh)."""
+    try:
+        from app.services.llm_override import current_override
+        from app.services.text_llm_catalog import (
+            normalize_reasoning_effort,
+            resolve_active_reasoning_effort,
+        )
+
+        ov = current_override()
+        if ov and ov.reasoning_effort:
+            return normalize_reasoning_effort(ov.reasoning_effort)
+        return resolve_active_reasoning_effort()
+    except Exception:
+        return "off"
+
+
 def frames_per_batch(
     *,
     n_frames: int,
@@ -229,16 +246,28 @@ def frames_per_batch(
     dense: bool,
     skip_if_field: str | None = None,
     target_batches: int | None = None,
+    reasoning_effort: str | None = None,
 ) -> int:
     """Сколько кадров в одном GPT-вызове. 0 кадров → 1 (не делить на ноль)."""
     n = max(int(n_frames), 0)
     if n <= 0:
         return 1
+    effort = (reasoning_effort or resolve_current_reasoning_effort() or "off").strip().lower()
+    if effort in ("high", "xhigh"):
+        dense_cap = 10
+        light_cap = 24
+    elif effort in ("medium", "med"):
+        dense_cap = 16
+        light_cap = 40
+    else:
+        dense_cap = _DENSE_FRAMES_PER_BATCH
+        light_cap = _LIGHT_FRAMES_PER_BATCH
+
     if target_batches and int(target_batches) > 0:
         from math import ceil
 
-        # Добор хвоста (≤32 кадра) — один вызов, не 5 крошечных пачек.
-        if dense and n <= _DENSE_FRAMES_PER_BATCH:
+        # Добор хвоста (≤dense_cap кадров) — один вызов, не 5 крошечных пачек.
+        if dense and n <= dense_cap:
             return n
         return max(1, int(ceil(n / int(target_batches))))
     avg = max(int(json_bytes), 0) / n if n else 0
@@ -249,15 +278,15 @@ def frames_per_batch(
             return max(4, min(by_count, by_bytes, n))
         return min(by_count, n)
     if dense:
-        by_count = _DENSE_FRAMES_PER_BATCH
+        by_count = dense_cap
         if avg > 0:
-            by_bytes = max(8, int(_DENSE_JSON_BYTES_PER_BATCH / avg))
-            return max(8, min(by_count, by_bytes, n))
+            by_bytes = max(4, int(_DENSE_JSON_BYTES_PER_BATCH / avg))
+            return max(4, min(by_count, by_bytes, n))
         return min(by_count, n)
-    by_count = _LIGHT_FRAMES_PER_BATCH
+    by_count = light_cap
     if avg > 0:
-        by_bytes = max(20, int(_LIGHT_JSON_BYTES_PER_BATCH / avg))
-        return max(20, min(by_count, by_bytes, n))
+        by_bytes = max(10, int(_LIGHT_JSON_BYTES_PER_BATCH / avg))
+        return max(10, min(by_count, by_bytes, n))
     return min(by_count, n)
 
 
@@ -3005,7 +3034,15 @@ async def _run_apply_ops_batched_kadry(
     elif size:
         packs = _kadry_split_frames(pending, size)
     else:
-        packs = [pending]
+        effort = resolve_current_reasoning_effort()
+        if effort in ("high", "xhigh"):
+            b_size = 10
+            packs = split_frames(pending, b_size) if len(pending) > b_size else [pending]
+        elif effort in ("medium", "med"):
+            b_size = 16
+            packs = split_frames(pending, b_size) if len(pending) > b_size else [pending]
+        else:
+            packs = [pending]
     # В полёте не больше 8. Старт пачек без сдвига.
     # Разрезанные половины идут через тот же семафор.
     asked = int(parallel_max) if parallel_max and int(parallel_max) > 0 else PACK_IN_FLIGHT_MAX
@@ -3813,11 +3850,27 @@ async def _run_apply_ops_batched_main(
             applied_in_runner=True,
         )
 
+    effort = resolve_current_reasoning_effort()
+    if effort in ("high", "xhigh"):
+        batch_size = 10
+        initial_packs = split_frames(pending, batch_size) if len(pending) > batch_size else [pending]
+    elif effort in ("medium", "med"):
+        batch_size = 16
+        initial_packs = split_frames(pending, batch_size) if len(pending) > batch_size else [pending]
+    else:
+        # Для стандартного режима off/low: стартуем одним вызовом на все кадры (схема 1→2→4),
+        # а при ошибках адаптивно дробим 1→2→4→8→16
+        batch_size = len(pending)
+        initial_packs = [pending]
+
     logger.info(
-        "[#{}] apply_ops batched node={!r}: pending={} adaptive 1→2→4 dense={}",
+        "[#{}] apply_ops batched node={!r}: pending={} packs={} batch_size={} effort={} adaptive 1→2→4→8→16 dense={}",
         project_id,
         node_key,
         len(pending),
+        len(initial_packs),
+        batch_size,
+        effort,
         dense,
     )
 
@@ -3937,6 +3990,14 @@ async def _run_apply_ops_batched_main(
         missing = [fr for fr in chunk if str(fr.get("uuid") or "").strip() not in got_uuids]
         return missing
 
+    def _is_timeout_err(exc: Exception | None) -> bool:
+        if exc is None:
+            return False
+        if isinstance(exc, (TimeoutError, asyncio.TimeoutError)):
+            return True
+        s = str(exc).lower()
+        return "504" in s or "timeout" in s or "timed out" in s or "gateway" in s
+
     async def _run_adaptive(chunk: list[dict[str, Any]], level: int) -> None:
         max_whole_attempts = 5 if len(chunk) <= 8 else 1
         last_exc: Exception | None = None
@@ -3954,6 +4015,9 @@ async def _run_apply_ops_batched_main(
                 if isinstance(exc, BudgetExhausted):
                     raise
                 last_exc = exc
+                if _is_timeout_err(exc):
+                    # При 504 / таймауте повторять тот же размер бессмысленно — сразу делим
+                    break
                 if attempt < max_whole_attempts:
                     logger.warning(
                         "[#{}] apply_ops node={!r}: L{} whole-pack retry {}/{} ({} frames): {}",
@@ -3968,7 +4032,7 @@ async def _run_apply_ops_batched_main(
                     await asyncio.sleep(2.0 * attempt)
         if last_exc is not None:
             nxt = next_split_level(level)
-            if nxt is None or len(chunk) <= 8:
+            if nxt is None or len(chunk) <= 2:
                 raise last_exc
             parts = split_in_half(chunk)
             logger.warning(
@@ -3992,7 +4056,7 @@ async def _run_apply_ops_batched_main(
                 f"({len(chunk) - len(missing)}/{len(chunk)}). uuid: "
                 f"{', '.join(str(fr.get('uuid') or '')[:8] for fr in missing[:8])}"
             )
-        if len(missing) <= 8:
+        if len(missing) <= 4:
             logger.warning(
                 "[#{}] apply_ops node={!r}: L{} incomplete {}/{} → retry missing {} frames as whole pack",
                 project_id,
@@ -4016,7 +4080,8 @@ async def _run_apply_ops_batched_main(
         for part in split_in_half(missing):
             await _run_adaptive(part, nxt)
 
-    await _run_adaptive(pending, 1)
+    for pack in initial_packs:
+        await _run_adaptive(pack, 1)
 
     ctx_path.write_text(
         json.dumps(db_ctx, ensure_ascii=False, indent=2),
