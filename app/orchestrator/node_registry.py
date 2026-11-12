@@ -218,6 +218,21 @@ def step_code_of_running_status(status: ProjectStatus) -> str | None:
     Нужно кассе: холд ставится под код шага, а воркер знает только статус.
     Обратный путь (`step_code → running_status`) уже был, прямого не хватало,
     и его каждый раз собирали на месте из двух словарей.
+
+    Слоты excel_gpt живут в статусах ``enriching_1..5``. Код шага слота N —
+    ``enrich_N``: он есть и в ``STEP_DEPENDENCIES`` (DAG), и в прайсе
+    ``PRIOR_TEXT_USD`` (смета кассы), и его же возвращает
+    ``cost_attribution.step_of_node_key('n_excel_gpt_N')`` — то есть холд кассы
+    и фактические вызовы ноды попадают в ОДИН шаг. Проверено на боевых данных
+    (VPS, проект #86): холд ``enrich_2`` и факт ``n_excel_gpt_2`` сходятся.
+
+    НЕ путать с ``EXCEL_GPT_STEP_CODE = "excel_gpt"``: это код НОДЫ для
+    ``run_sync``/UI, а не код шага DAG. Подмена одного другим обнулит смету
+    (в ``PRIOR_TEXT_USD`` нет ``excel_gpt``) и разведёт холд с фактом.
+
+    Резолв НОДЫ по типу/коду шага (в отличие от кода шага) слота не знает:
+    ``spec_for_type('excel_gpt')`` отдаёт слот 1. Для конкретного слота
+    нужен ``spec_for_node`` — по самой ноде.
     """
     node_type = RUNNING_TO_NODE_TYPE.get(status)
     if node_type is None:
