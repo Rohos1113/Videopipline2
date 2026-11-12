@@ -131,13 +131,37 @@ def slot_index_from_node(node: dict[str, Any]) -> int:
         # >5 excel_gpt: не участвует в resolve(slot), только запуск по node_key.
         return 0
     raw = data.get("slotIndex")
-    if isinstance(raw, int) and 1 <= raw <= MAX_EXCEL_GPT_SLOTS:
+    # slotIndex может прийти строкой (JSON/форма/PATCH без типизации). Раньше
+    # такая нода МОЛЧА получала слот 1: работала под статусом слота 1 и
+    # конфликтовала с настоящей нодой 1. Разбираем строку и ругаемся вслух
+    # на невалидное значение — вместо тихой подмены слота.
+    if isinstance(raw, str):
+        stripped = raw.strip()
+        if stripped.isdigit():
+            raw = int(stripped)
+        else:
+            _log_invalid_slot(raw, node)
+            raw = None
+    if isinstance(raw, int) and not isinstance(raw, bool) and 1 <= raw <= MAX_EXCEL_GPT_SLOTS:
         return raw
+    if raw is not None:
+        _log_invalid_slot(raw, node)
     typ = str(node.get("type") or "")
     legacy = legacy_enrich_slot_from_type(typ)
     if legacy is not None:
         return legacy
     return 1
+
+
+def _log_invalid_slot(raw: Any, node: dict[str, Any]) -> None:
+    """Сообщить про невалидный slotIndex — молчаливый слот 1 чинить нельзя."""
+    from loguru import logger
+
+    logger.error(
+        "excel_gpt: невалидный slotIndex={!r} на ноде {} — слот не определён",
+        raw,
+        node.get("id"),
+    )
 
 
 def assign_slot_indices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
