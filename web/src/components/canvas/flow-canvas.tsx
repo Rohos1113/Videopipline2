@@ -247,6 +247,10 @@ export function FlowCanvas({
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
   const selectedNodesRef = useRef<Node<PipelineNodeData>[]>([]);
+  /** Ноды, которые пользователь тянет прямо сейчас: их позицию нельзя
+   * перетирать серверной — она отстаёт (WS/autosave пришёл в середине
+   * перетаскивания), и нода «прыгает» назад. */
+  const draggingNodeIdsRef = useRef<Set<string>>(new Set());
   /** Подавить onSelectionChange после программного setNodes(selected). */
   const ignoreSelectionChangeRef = useRef(0);
   const saveTimerRef = useRef<number | null>(null);
@@ -287,6 +291,7 @@ export function FlowCanvas({
       mergeGraphNodesWithRuntime(
         baseNodes as Node<PipelineNodeData>[],
         switched ? [] : prev,
+        draggingNodeIdsRef.current,
       ) as Node<PipelineNodeData>[],
     );
     setEdges(baseEdges);
@@ -488,6 +493,16 @@ export function FlowCanvas({
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setNodes((ns) => applyNodeChanges(changes, ns) as Node<PipelineNodeData>[]);
+      // Тянутые ноды: пока их двигают, серверная позиция отстаёт — merge
+      // не должен перетирать локальную (иначе нода прыгает назад).
+      for (const c of changes) {
+        if (c.type !== "position" || !("dragging" in c)) continue;
+        if (c.dragging === true) {
+          draggingNodeIdsRef.current.add(c.id);
+        } else {
+          draggingNodeIdsRef.current.delete(c.id);
+        }
+      }
       if (
         changes.some(
           (c) => c.type === "position" && "dragging" in c && c.dragging === false,
@@ -864,9 +879,35 @@ export function FlowCanvas({
     });
     const offsetX = 56;
     const offsetY = 56;
+    // Слоты заняты уже существующими нодами «ИИ-редактор сцен»: вставленная
+    // нода копирует слот оригинала → две ноды в одном слоте. Даём вставленным
+    // нодам свободные слоты по очереди (как новым нодам на холсте).
+    const occupiedSlots = new Set<number>();
+    for (const n of nodes) {
+      const d = n.data as PipelineNodeData;
+      if (d.type !== "excel_gpt" || d.sdAgent || d.slotOverflow) continue;
+      const slot = d.slotIndex;
+      if (typeof slot === "number" && slot >= 1 && slot <= 5) occupiedSlots.add(slot);
+    }
+    const freeSlots = [1, 2, 3, 4, 5].filter((s) => !occupiedSlots.has(s));
+    let freeSlotIdx = 0;
+    /** Следующий свободный слот для вставленной excel-ноды (undefined — слотов нет). */
+    const takeFreeSlot = (): number | undefined => {
+      const slot = freeSlots[freeSlotIdx];
+      if (slot === undefined) return undefined;
+      freeSlotIdx += 1;
+      return slot;
+    };
+    /** Слот, выданный каждой вставленной excel-ноде (для meta.excel_gpt_nodes). */
+    const pastedSlotById = new Map<string, number | undefined>();
     const newNodes: Node<PipelineNodeData>[] = clip.nodes.map((n) => {
       const newId = idMap.get(n.id)!;
       const srcData = (n.data ?? {}) as Partial<PipelineNodeData>;
+      const isExcelGpt =
+        srcData.type === "excel_gpt" &&
+        typeof srcData.sdAgent !== "string" &&
+        srcData.slotOverflow !== true;
+      const pastedSlot = isExcelGpt ? takeFreeSlot() : undefined;
       return {
         id: newId,
         type: "pipeline",
@@ -879,7 +920,11 @@ export function FlowCanvas({
           type: n.type,
           label: (srcData.label as string | undefined) ?? (n.data?.label as string | undefined),
           description: srcData.description ?? (n.data?.description as string | undefined),
-          slotIndex: (srcData.slotIndex as number | undefined) ?? (n.data?.slotIndex as number | undefined),
+          // Слот не копируем (иначе дубль слота) — вставленная нода
+          // получает свободный слот; undefined — слотов не осталось (overflow).
+          slotIndex: isExcelGpt
+            ? pastedSlot
+            : ((srcData.slotIndex as number | undefined) ?? (n.data?.slotIndex as number | undefined)),
           inputSource: (srcData.inputSource as PipelineNodeData["inputSource"]) ??
             (n.data?.inputSource as PipelineNodeData["inputSource"]),
           uploadedFileName:
@@ -914,6 +959,10 @@ export function FlowCanvas({
       animated: true,
       style: { ...THREAD_EDGE_STYLE },
     }));
+    for (const n of newNodes) {
+      const d = n.data as PipelineNodeData;
+      if (d.type === "excel_gpt") pastedSlotById.set(n.id, d.slotIndex);
+    }
     setNodes((prev) => [
       ...prev.map((n) => ({ ...n, selected: false })),
       ...newNodes,
@@ -936,7 +985,9 @@ export function FlowCanvas({
             label: cfg.label as string | undefined,
             inputSource: cfg.inputSource as string | undefined,
             uploadedFileName: cfg.uploadedFileName as string | undefined,
-            slotIndex: cfg.slotIndex as number | undefined,
+            // Слот оригинала не переносим: он уже занят оригиналом.
+            // Ключ карты — НОВЫЙ id вставленной ноды (excelRemap: old → new).
+            slotIndex: cfg.slotIndex === undefined ? undefined : pastedSlotById.get(newId),
             workMode: cfg.workMode as string | undefined,
           })
           .catch(() => undefined);
