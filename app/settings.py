@@ -213,6 +213,16 @@ class Settings(BaseSettings):
     # переживает оба, но не даёт одной упавшей пачке съесть 10 минут.
     apply_ops_pack_call_timeout_s: float = Field(420.0, alias="APPLY_OPS_PACK_CALL_TIMEOUT_S")
 
+    # --- Приоритет плановых LLM-вызовов над ручными (adhoc) ---
+    # Ручной тест промта из UI идёт в того же провайдера, что и работающая
+    # нода: 11.11 на VPS таких вызовов было 12 за день, шлюз 52pay
+    # деградировал, и страдала нода. Плановые вызовы (в обвязке шага) идут
+    # без ожидания; ручные ждут конца плановых и уходят с внятным отказом.
+    # 0 = фича выключена, поведение не меняется.
+    llm_priority_enabled: bool = Field(False, alias="LLM_PRIORITY_ENABLED")
+    # Сколько ручной вызов ждёт конца плановых, прежде чем отказать.
+    llm_priority_wait_s: float = Field(30.0, alias="LLM_PRIORITY_WAIT_S")
+
     # --- Движок (video-pipeline int/chat-v1): action_layer, watchdog, decision_v1 ---
     watchdog_enabled: bool = Field(True, alias="WATCHDOG_ENABLED")
     watchdog_interval_s: float = Field(30.0, alias="WATCHDOG_INTERVAL_S")
