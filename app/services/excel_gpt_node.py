@@ -131,8 +131,21 @@ def slot_index_from_node(node: dict[str, Any]) -> int:
         # >5 excel_gpt: не участвует в resolve(slot), только запуск по node_key.
         return 0
     raw = data.get("slotIndex")
-    if isinstance(raw, int) and 1 <= raw <= MAX_EXCEL_GPT_SLOTS:
+    # slotIndex может прийти строкой (JSON/форма/PATCH без типизации). Раньше
+    # такая нода МОЛЧА получала слот 1: работала под статусом слота 1 и
+    # конфликтовала с настоящей нодой 1. Разбираем строку и ругаемся вслух
+    # на невалидное значение — вместо тихой подмены слота.
+    if isinstance(raw, str):
+        stripped = raw.strip()
+        if stripped.isdigit():
+            raw = int(stripped)
+        else:
+            _log_invalid_slot(raw, node)
+            raw = None
+    if isinstance(raw, int) and not isinstance(raw, bool) and 1 <= raw <= MAX_EXCEL_GPT_SLOTS:
         return raw
+    if raw is not None:
+        _log_invalid_slot(raw, node)
     typ = str(node.get("type") or "")
     legacy = legacy_enrich_slot_from_type(typ)
     if legacy is not None:
@@ -140,8 +153,34 @@ def slot_index_from_node(node: dict[str, Any]) -> int:
     return 1
 
 
+def _log_invalid_slot(raw: Any, node: dict[str, Any]) -> None:
+    """Сообщить про невалидный slotIndex — молчаливый слот 1 чинить нельзя."""
+    from loguru import logger
+
+    logger.error(
+        "excel_gpt: невалидный slotIndex={!r} на ноде {} — слот не определён",
+        raw,
+        node.get("id"),
+    )
+
+
 def assign_slot_indices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Нумерует excel_gpt ноды слева направо (1..5). Лишние — без slotIndex.
+    """Раздать слоты 1..5 между excel_gpt-нодами.
+
+    Правило: **явный валидный ``slotIndex`` сохраняется**, если явные слоты
+    образуют непрерывную последовательность 1..K. Нумеруются по X только
+    ноды без слота (и только если есть свободные).
+
+    Раньше нумерация шла ТОЛЬКО по координате X, и любой сдвиг ноды на
+    холсте переназначал слоты: нода «ИИ-редактор сцен 2», перетащенная
+    левее ноды 1, становилась слотом 1 — и работала под статусом чужого
+    слота. Слот — это СВЯЗЬ ноды с шагом DAG, а не её место на холсте.
+
+    Требование непрерывности (1..K) — страховка: дырка в слотах означала
+    бы, что переход статуса ``enrich_2_ready → enriching_3`` уводит в
+    слот, которого на холсте нет. Если явные слоты не образуют 1..K
+    (дырка после удаления ноды или дубль) — нумерация по X, как раньше:
+    слоты всегда непрерывны и уникальны.
 
     Ноды с маркером sd_agent (scene-агенты) слоты не занимают. Ноды с
     явным data.slotOverflow (проверки scene-веера и т.п.) закреплены вне
@@ -152,32 +191,70 @@ def assign_slot_indices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         data = n.get("data")
         return isinstance(data, dict) and data.get("slotOverflow") is True
 
-    excel_nodes = sorted(
-        [
-            n
-            for n in nodes
-            if is_excel_gpt_node_type(str(n.get("type") or ""))
-            and not sd_agent_marker(n)
-            and not _pinned_overflow(n)
-        ],
-        key=lambda n: float((n.get("position") or {}).get("x", 0)),
-    )
+    excel_nodes = [
+        n
+        for n in nodes
+        if is_excel_gpt_node_type(str(n.get("type") or ""))
+        and not sd_agent_marker(n)
+        and not _pinned_overflow(n)
+    ]
+
+    def _explicit_slot(n: dict[str, Any]) -> int | None:
+        raw = (n.get("data") or {}).get("slotIndex")
+        if isinstance(raw, str) and raw.strip().isdigit():
+            raw = int(raw.strip())
+        if isinstance(raw, int) and not isinstance(raw, bool) and 1 <= raw <= MAX_EXCEL_GPT_SLOTS:
+            return raw
+        return None
+
+    explicit: dict[str, int] = {}
+    for n in excel_nodes:
+        explicit_slot = _explicit_slot(n)
+        if explicit_slot is not None:
+            explicit[str(n.get("id") or id(n))] = explicit_slot
+    # Явные слоты годятся, только если они непрерывны 1..K и без дублей:
+    # иначе оставляем старую нумерацию по X (слоты всегда 1..N, без дырок).
+    values = sorted(explicit.values())
+    contiguous = values == list(range(1, len(values) + 1))
+
+    if contiguous:
+        slots: dict[str, int] = dict(explicit)
+        taken = set(values)
+        free = [s for s in range(1, MAX_EXCEL_GPT_SLOTS + 1) if s not in taken]
+        rest = sorted(
+            [n for n in excel_nodes if str(n.get("id") or id(n)) not in explicit],
+            key=lambda n: float((n.get("position") or {}).get("x", 0)),
+        )
+        for n, free_slot in zip(rest, free, strict=False):
+            slots[str(n.get("id") or id(n))] = free_slot
+    else:
+        # Дырка или дубль в явных слотах — нумеруем по X, как раньше.
+        ordered = sorted(excel_nodes, key=lambda n: float((n.get("position") or {}).get("x", 0)))
+        slots = {
+            str(n.get("id") or id(n)): i
+            for i, n in enumerate(ordered, start=1)
+            if i <= MAX_EXCEL_GPT_SLOTS
+        }
+
     out: list[dict[str, Any]] = []
-    for i, n in enumerate(excel_nodes[:MAX_EXCEL_GPT_SLOTS], start=1):
+    for n in excel_nodes:
+        key = str(n.get("id") or id(n))
         data = dict(n.get("data") or {})
-        data["slotIndex"] = i
+        slot: int | None = slots.get(key)
+        if slot is None:
+            # Слотов не хватило — нода вне нумерации (overflow).
+            data.pop("slotIndex", None)
+            data["slotOverflow"] = True
+            label = str(data.get("label") or "").strip()
+            if not label or is_legacy_enrich_label(label):
+                data["label"] = default_excel_gpt_label(MAX_EXCEL_GPT_SLOTS)
+            out.append({**n, "data": data, "type": EXCEL_GPT_NODE_TYPE})
+            continue
+        data["slotIndex"] = slot
         data.pop("slotOverflow", None)
         label = str(data.get("label") or "").strip()
         if not label or is_legacy_enrich_label(label):
-            data["label"] = default_excel_gpt_label(i)
-        out.append({**n, "data": data, "type": EXCEL_GPT_NODE_TYPE})
-    for n in excel_nodes[MAX_EXCEL_GPT_SLOTS:]:
-        data = dict(n.get("data") or {})
-        data.pop("slotIndex", None)
-        data["slotOverflow"] = True
-        label = str(data.get("label") or "").strip()
-        if not label or is_legacy_enrich_label(label):
-            data["label"] = default_excel_gpt_label(MAX_EXCEL_GPT_SLOTS)
+            data["label"] = default_excel_gpt_label(slot)
         out.append({**n, "data": data, "type": EXCEL_GPT_NODE_TYPE})
     # Закреплённые overflow-ноды: флаг сохранить, slotIndex не давать.
     for n in nodes:

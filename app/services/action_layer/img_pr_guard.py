@@ -711,6 +711,8 @@ def _explicit_slot(node: dict) -> int | None:
 
     data = node.get("data") if isinstance(node.get("data"), dict) else {}
     raw = data.get("slotIndex")
+    if isinstance(raw, str) and raw.strip().isdigit():
+        raw = int(raw.strip())
     if isinstance(raw, int) and not isinstance(raw, bool) and 1 <= raw <= MAX_EXCEL_GPT_SLOTS:
         return raw
     return legacy_enrich_slot_from_type(str(node.get("type") or ""))
