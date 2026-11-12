@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { ExcelGptNodeConfig } from "@/lib/excel-gpt-config";
+import { EXCEL_GPT_MAX_SLOTS } from "@/lib/excel-gpt-slots";
 import {
   EMIT_OPTIONS,
   OUTPUT_OPTIONS,
@@ -70,6 +71,22 @@ export function ExcelGptSettingsPanel({
     onError: (e) => toast.error(errorMessageFromUnknown(e)),
   });
 
+  // Смена слота: конфиг ноды (meta.excel_gpt_nodes) + канвас (data.slotIndex).
+  // Оба места — источник истины для слота, поэтому пишем в оба.
+  const setSlot = useMutation({
+    mutationFn: (slotIndex: number) =>
+      api.patchExcelGptConfig(projectId, nodeKey, { slotIndex }),
+    onSuccess: (_res, slotIndex) => {
+      onConfigChange({ slotIndex });
+      void qc.invalidateQueries({ queryKey: ["project", projectId] });
+      void qc.invalidateQueries({ queryKey: ["gpt-operator-resolve", projectId, nodeKey] });
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("canvas-save-workflow"));
+      }, 60);
+    },
+    onError: (e) => toast.error(errorMessageFromUnknown(e)),
+  });
+
   const data = resolve.data;
   const role = (data?.role || "assist") as OperatorRole;
   const checkMode = data?.checkMode === true;
@@ -92,6 +109,34 @@ export function ExcelGptSettingsPanel({
     queryFn: () => api.getProject(projectId),
     enabled: Boolean(projectId),
   });
+
+  // Слоты заняты другими нодами «Работа с GPT» проекта: подсказываем это
+  // при выборе слота (две ноды на одном слоте — ошибка графа, её отвергает
+  // серверная валидация с текстом «перенумеруйте ноды»).
+  const slotOwners = useMemo(() => {
+    const meta = (project.data?.meta || {}) as {
+      canvas_graph?: { nodes?: { id?: string; type?: string; data?: Record<string, unknown> }[] };
+    };
+    const nodes = meta.canvas_graph?.nodes || [];
+    const owners = new Map<number, string[]>();
+    for (const n of nodes) {
+      if (!n?.id || n.type !== "excel_gpt" || n.id === nodeKey) continue;
+      const data = n.data || {};
+      if (typeof data.sd_agent === "string" || data.slotOverflow === true) continue;
+      const raw = data.slotIndex;
+      const slot =
+        typeof raw === "number"
+          ? raw
+          : typeof raw === "string" && /^\d+$/.test(raw.trim())
+            ? Number.parseInt(raw.trim(), 10)
+            : undefined;
+      if (slot === undefined || slot < 1 || slot > EXCEL_GPT_MAX_SLOTS) continue;
+      const list = owners.get(slot) || [];
+      list.push(n.id);
+      owners.set(slot, list);
+    }
+    return owners;
+  }, [project.data?.meta, nodeKey]);
 
   const [formatDraft, setFormatDraft] = useState("");
   const [formatDirty, setFormatDirty] = useState(false);
@@ -177,8 +222,59 @@ export function ExcelGptSettingsPanel({
     patch.mutate({ emitKinds: safe, transport: "api" });
   };
 
+  const currentSlot = config.slotIndex ?? 1;
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Слот ноды: её связь с шагом DAG (enrich_1..5). Перетаскивание на
+          холсте слот НЕ меняет — только здесь. */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <h3 className="text-sm font-semibold text-foreground">Слот сцены</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Номер шага «ИИ-редактор сцен» в пайплайне (1–5). Слот определяет,
+          каким статусом нода запускается; перетаскивание ноды на холсте его
+          не меняет.
+        </p>
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-5">
+          {Array.from({ length: EXCEL_GPT_MAX_SLOTS }, (_, i) => i + 1).map((slot) => {
+            const busy = slotOwners.get(slot) || [];
+            const busyOther = busy.filter((id) => id !== nodeKey);
+            const active = currentSlot === slot;
+            return (
+              <button
+                key={slot}
+                type="button"
+                title={
+                  busyOther.length
+                    ? `Слот ${slot} занят: ${busyOther.join(", ")}`
+                    : `Слот ${slot}`
+                }
+                onClick={() => setSlot.mutate(slot)}
+                className={cn(
+                  "rounded-lg border px-3 py-2 text-sm transition",
+                  active
+                    ? "border-cyan-500 bg-cyan-600/20 text-cyan-100"
+                    : "border-white/10 bg-black/20 text-muted-foreground hover:border-cyan-500/50 hover:text-foreground",
+                )}
+              >
+                <span className="font-mono">{slot}</span>
+                {busyOther.length > 0 && (
+                  <span className="mt-0.5 block text-[10px] text-amber-300">
+                    занят
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {slotOwners.get(currentSlot)?.filter((id) => id !== nodeKey).length ? (
+          <p className="mt-2 text-[11px] text-amber-300">
+            Слот {currentSlot} уже занят другой нодой «ИИ-редактор сцен» —
+            сохранение графа будет отклонено, пока не выберете свободный.
+          </p>
+        ) : null}
+      </section>
+
       {/* 3. Check Mode Section (Only when checkMode is active) */}
       {checkMode && (
         <section className="rounded-xl border border-cyan-500/25 bg-cyan-950/20 p-4">

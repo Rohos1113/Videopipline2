@@ -2,6 +2,11 @@
  * Слияние структуры графа (canvas_graph / workflow) с runtime-полями UI.
  * Позиции ВСЕГДА из source — иначе при поздней загрузке meta заводской layout
  * залипает и потом перезаписывает canvas_graph.
+ *
+ * ИСКЛЮЧЕНИЕ — ноды из `localPositionNodeIds`: их позиция меняется прямо
+ * сейчас (пользователь тянет ноду), и серверная позиция отстаёт. Раньше
+ * merge перетирал её, и нода «прыгала» назад — вместе с ней менялся и
+ * слот (номер считался по позиции на холсте).
  */
 
 export type CanvasRuntimeData = {
@@ -35,16 +40,23 @@ export type MergeableCanvasNode<T extends CanvasRuntimeData = CanvasRuntimeData>
 export function mergeGraphNodesWithRuntime<T extends CanvasRuntimeData>(
   sourceNodes: MergeableCanvasNode<T>[],
   prevNodes: MergeableCanvasNode<T>[],
+  /**
+   * id нод, чью позицию нельзя перетирать серверной: их двигают прямо
+   * сейчас, и серверная позиция отстаёт (WS-событие пришло в середине
+   * перетаскивания).
+   */
+  localPositionNodeIds?: ReadonlySet<string>,
 ): MergeableCanvasNode<T>[] {
   const prevById = new Map(prevNodes.map((n) => [n.id, n]));
   const sourceIds = new Set(sourceNodes.map((n) => n.id));
+  const keepLocal = localPositionNodeIds ?? new Set<string>();
   const merged = sourceNodes.map((n) => {
     const old = prevById.get(n.id);
     if (!old) return n;
     return {
       ...n,
       // Источник истины для координат — canvas_graph / workflow payload.
-      position: n.position,
+      position: keepLocal.has(n.id) ? old.position : n.position,
       selected: old.selected,
       data: {
         ...n.data,
