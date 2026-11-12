@@ -33,6 +33,7 @@ from app.models import (
     Project,
     ProjectStatus,
 )
+from app.services.db_v2 import ARCHIVE_NUMBER_FROM, frame_is_archived
 from app.services.plan_validation import is_meaningful_general_plan
 from app.services.step_registry import running_statuses
 
@@ -304,7 +305,11 @@ async def _primary_image_prompt_counts(session, project_id: int) -> tuple[int, i
     «промты готовы» смотрит на primary (shot_index=1), иначе recompute
     вечно видит fr_with < fr_total → enrich_1_ready → auto hero loop.
     """
-    rows = (await session.execute(select(Frame).where(Frame.project_id == project_id))).scalars().all()
+    rows = [
+        fr
+        for fr in (await session.execute(select(Frame).where(Frame.project_id == project_id))).scalars().all()
+        if not frame_is_archived(fr)
+    ]
     primary_total = 0
     primary_with = 0
     all_with = 0
@@ -403,7 +408,12 @@ async def compute_actual_status(session, project: Project) -> ProjectStatus:
     has_hero_descr = bool(project.hero_description)
 
     fr_total = (
-        await session.execute(select(func.count(Frame.id)).where(Frame.project_id == pid))
+        await session.execute(
+            select(func.count(Frame.id)).where(
+                Frame.project_id == pid,
+                Frame.number < ARCHIVE_NUMBER_FROM,
+            )
+        )
     ).scalar_one()
     (
         fr_primary_total,
@@ -414,6 +424,7 @@ async def compute_actual_status(session, project: Project) -> ProjectStatus:
         await session.execute(
             select(func.count(Frame.id)).where(
                 Frame.project_id == pid,
+                Frame.number < ARCHIVE_NUMBER_FROM,
                 Frame.animation_prompt.isnot(None),
                 Frame.animation_prompt != "",
             )
