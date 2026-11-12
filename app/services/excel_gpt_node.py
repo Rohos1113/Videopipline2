@@ -40,7 +40,7 @@ _UPLOAD_SUFFIXES = frozenset(
 _VALID_SOURCES = frozenset({"project_xlsx", "upload", "voiceover", "image", "hero_refs", "scene_images"})
 _VALID_WORK_MODES = frozenset({"assist", "review", "transform"})
 
-_SLOT_MAP: dict[int, tuple[ProjectStatus, ProjectStatus, str]] = {
+SLOT_MAP: dict[int, tuple[ProjectStatus, ProjectStatus, str]] = {
     1: (ProjectStatus.enriching_1, ProjectStatus.enrich_1_ready, "enrich_1"),
     2: (ProjectStatus.enriching_2, ProjectStatus.enrich_2_ready, "enrich_2"),
     3: (ProjectStatus.enriching_3, ProjectStatus.enrich_3_ready, "enrich_3"),
@@ -164,6 +164,59 @@ def _log_invalid_slot(raw: Any, node: dict[str, Any]) -> None:
     )
 
 
+def declared_slot_index(node: dict[str, Any]) -> int | None:
+    """Явно заявленный слот ноды (1..5) или None.
+
+    Учитывает ``data.slotIndex`` (в т.ч. строкой — «2») и legacy-тип
+    ``enrich_N``. Ноды без заявленного слота (None) слоты не занимают: его
+    раздаёт :func:`assign_slot_indices`.
+
+    Тихий откат на слот 1 здесь НЕ делается — именно он раньше прятал
+    коллизии (две ноды «незаметно» жили в слоте 1).
+    """
+    data_raw = node.get("data")
+    data: dict[str, Any] = data_raw if isinstance(data_raw, dict) else {}
+    raw = data.get("slotIndex")
+    if isinstance(raw, str):
+        stripped = raw.strip()
+        raw = int(stripped) if stripped.isdigit() else None
+    if isinstance(raw, int) and not isinstance(raw, bool) and 1 <= raw <= MAX_EXCEL_GPT_SLOTS:
+        return raw
+    return legacy_enrich_slot_from_type(str(node.get("type") or ""))
+
+
+def slot_collisions(nodes: list[dict[str, Any]]) -> list[tuple[int, list[str]]]:
+    """Коллизии явных слотов: [(слот, [id нод...]), ...].
+
+    Коллизия — две и более excel_gpt-ноды, ЗАЯВЛЯЮЩИЕ один и тот же слот.
+    Это ошибка графа (дефект F аудита): слот — связь ноды с шагом DAG, и
+    две ноды на одном шаге означают, что одна из них работает под чужим
+    статусом. Лечится не эвристикой в резолвере, а отказом сохранять
+    такой граф.
+
+    Ноды-агенты веера (sd_agent) и закреплённые вне слотов (slotOverflow)
+    слоты не занимают. Если excel_gpt-нод больше, чем слотов (5) — это
+    переполнение, а не коллизия: лишние ноды уходят в overflow.
+    """
+    excel_nodes = [
+        n
+        for n in nodes
+        if is_excel_gpt_node_type(str(n.get("type") or ""))
+        and not sd_agent_marker(n)
+        and not (isinstance(n.get("data"), dict) and n["data"].get("slotOverflow") is True)
+    ]
+    if len(excel_nodes) > MAX_EXCEL_GPT_SLOTS:
+        # Переполнение: слотов физически не хватает — дубль не ошибка.
+        return []
+    by_slot: dict[int, list[str]] = {}
+    for n in excel_nodes:
+        slot = declared_slot_index(n)
+        if slot is None:
+            continue
+        by_slot.setdefault(slot, []).append(str(n.get("id") or ""))
+    return [(slot, ids) for slot, ids in sorted(by_slot.items()) if len(ids) > 1]
+
+
 def assign_slot_indices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Раздать слоты 1..5 между excel_gpt-нодами.
 
@@ -178,9 +231,16 @@ def assign_slot_indices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     Требование непрерывности (1..K) — страховка: дырка в слотах означала
     бы, что переход статуса ``enrich_2_ready → enriching_3`` уводит в
-    слот, которого на холсте нет. Если явные слоты не образуют 1..K
-    (дырка после удаления ноды или дубль) — нумерация по X, как раньше:
-    слоты всегда непрерывны и уникальны.
+    слот, которого на холсте нет. Если явные слоты образуют дырку
+    (после удаления ноды) — нумерация по X, как раньше: слоты всегда
+    непрерывны и уникальны.
+
+    **Дубль явного слота НЕ чинится молча** (дефект F аудита): слот —
+    связь с шагом DAG, и «починка» по позиции холста означала бы, что
+    нода 2 тихо становится нодой 1. Такой граф отвергает
+    :func:`app.orchestrator.graph.validate.validate_workflow_graph`
+    (HTTP 400 «перенумеруйте ноды»). Переполнение (>5 нод) — не
+    коллизия: лишние ноды уходят в overflow, как раньше.
 
     Ноды с маркером sd_agent (scene-агенты) слоты не занимают. Ноды с
     явным data.slotOverflow (проверки scene-веера и т.п.) закреплены вне
@@ -212,12 +272,19 @@ def assign_slot_indices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         explicit_slot = _explicit_slot(n)
         if explicit_slot is not None:
             explicit[str(n.get("id") or id(n))] = explicit_slot
-    # Явные слоты годятся, только если они непрерывны 1..K и без дублей:
-    # иначе оставляем старую нумерацию по X (слоты всегда 1..N, без дырок).
+    # Явные слоты годятся, только если они непрерывны 1..K и без дублей.
     values = sorted(explicit.values())
+    has_duplicate = len(values) != len(set(values))
     contiguous = values == list(range(1, len(values) + 1))
+    # Дубль при не более чем 5 нодах — ошибка графа, а не повод перенумеровать.
+    # При >5 нодах слотов физически не хватает — это переполнение (overflow),
+    # и лишние ноды уходят в overflow, как раньше.
+    duplicate_is_error = has_duplicate and len(excel_nodes) <= MAX_EXCEL_GPT_SLOTS
 
-    if contiguous:
+    if duplicate_is_error or contiguous:
+        # Явные слоты оставляем как есть. При дубле это намеренно: валидатор
+        # графа отвергнет такой граф с внятным текстом, вместо тихой подмены
+        # слота (иначе нода 2 тихо становится нодой 1).
         slots: dict[str, int] = dict(explicit)
         taken = set(values)
         free = [s for s in range(1, MAX_EXCEL_GPT_SLOTS + 1) if s not in taken]
@@ -228,12 +295,10 @@ def assign_slot_indices(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for n, free_slot in zip(rest, free, strict=False):
             slots[str(n.get("id") or id(n))] = free_slot
     else:
-        # Дырка или дубль в явных слотах — нумеруем по X, как раньше.
+        # Дырка в явных слотах или переполнение — нумеруем по X, как раньше.
         ordered = sorted(excel_nodes, key=lambda n: float((n.get("position") or {}).get("x", 0)))
         slots = {
-            str(n.get("id") or id(n)): i
-            for i, n in enumerate(ordered, start=1)
-            if i <= MAX_EXCEL_GPT_SLOTS
+            str(n.get("id") or id(n)): i for i, n in enumerate(ordered, start=1) if i <= MAX_EXCEL_GPT_SLOTS
         }
 
     out: list[dict[str, Any]] = []
@@ -303,9 +368,9 @@ def _slot_status_pair(slot: int) -> tuple[ProjectStatus, ProjectStatus, str]:
     enriching_1: фактическая нода задаётся ``active_excel_gpt_node_key``.
     Иначе ▶ overflow-ноды даёт KeyError → HTTP 500.
     """
-    if slot in _SLOT_MAP:
-        return _SLOT_MAP[slot]
-    return _SLOT_MAP[1]
+    if slot in SLOT_MAP:
+        return SLOT_MAP[slot]
+    return SLOT_MAP[1]
 
 
 def running_status_for_slot(slot: int) -> ProjectStatus:
@@ -317,14 +382,14 @@ def ready_status_for_slot(slot: int) -> ProjectStatus:
 
 
 def slot_from_running_status(status: ProjectStatus) -> int | None:
-    for idx, (running, _ready, _code) in _SLOT_MAP.items():
+    for idx, (running, _ready, _code) in SLOT_MAP.items():
         if status is running:
             return idx
     return None
 
 
 def slot_from_ready_status(status: ProjectStatus) -> int | None:
-    for idx, (_running, ready, _code) in _SLOT_MAP.items():
+    for idx, (_running, ready, _code) in SLOT_MAP.items():
         if status is ready:
             return idx
     return None
@@ -612,9 +677,12 @@ def resolve_excel_gpt_node_key_for_slot(
             key=lambda n: float((n.get("position") or {}).get("x", 0)),
         )
         match_ids = {str(n.get("id") or "").strip() for n in matches if str(n.get("id") or "").strip()}
-        # Коллизия slotIndex: только граф / стрелки. Incomplete-leftmost
-        # врёт, если ранние ноды уже пройдены, но ключ не записан.
         if len(matches) > 1:
+            # Коллизия слотов в СОХРАНЁННОМ графе — этого больше не бывает:
+            # сохранение отвергает дубль (validate_workflow_graph → HTTP 400
+            # «перенумеруйте ноды»). Остаток — safety-net для legacy-графов,
+            # сохранённых до того правила: решаем по стрелкам, а если стрелок
+            # нет — берём незавершённую ноду и ОРУ на уровне error.
             graph_key = _resolve_colliding_slot_via_graph(project, match_ids)
             if graph_key:
                 logger.info(
@@ -627,8 +695,9 @@ def resolve_excel_gpt_node_key_for_slot(
             done_keys = completed_node_keys(project)
             incomplete = [n for n in matches if str(n.get("id") or "").strip() not in done_keys]
             pick = incomplete[0] if incomplete else matches[0]
-            logger.warning(
-                "excel_gpt: slotIndex={} collides on {} nodes — fallback {} (incomplete={})",
+            logger.error(
+                "excel_gpt: slotIndex={} collides on {} nodes — fallback {} (incomplete={}). "
+                "Это legacy-граф: перенумеруйте ноды «ИИ-редактор сцен».",
                 slot,
                 len(matches),
                 pick.get("id"),

@@ -559,8 +559,7 @@ def _make_refresh_ctx_fn(
             return
         if changed:
             logger.info(
-                "[#{}] enrich_xlsx node={!r}: контекст нумерации обновлён после пачки "
-                "(scene_last={})",
+                "[#{}] enrich_xlsx node={!r}: контекст нумерации обновлён после пачки (scene_last={})",
                 project.id,
                 node_key,
                 (ctx.get("project_state") or {}).get("scene_last"),
@@ -943,13 +942,9 @@ def _should_skip_qc_gpt(frames_for_map, *, force_full: bool) -> bool:
 
 
 # Маппинг slot_idx (1..5) → (running_status, ready_status, step_code).
-_SLOT_MAP: dict[int, tuple[ProjectStatus, ProjectStatus, str]] = {
-    1: (ProjectStatus.enriching_1, ProjectStatus.enrich_1_ready, "enrich_1"),
-    2: (ProjectStatus.enriching_2, ProjectStatus.enrich_2_ready, "enrich_2"),
-    3: (ProjectStatus.enriching_3, ProjectStatus.enrich_3_ready, "enrich_3"),
-    4: (ProjectStatus.enriching_4, ProjectStatus.enrich_4_ready, "enrich_4"),
-    5: (ProjectStatus.enriching_5, ProjectStatus.enrich_5_ready, "enrich_5"),
-}
+# Канон — excel_gpt_node.SLOT_MAP (дефект F аудита: копия разъехалась).
+# Здесь только ИМПОРТ, чтобы usages SLOT_MAP[...] в этом файле работали.
+from app.services.excel_gpt_node import SLOT_MAP as _SLOT_MAP  # noqa: F401
 
 # Сколько раз пробуем round-trip, если ChatGPT не приложил файл в ответе.
 _MAX_RETRIES = 3

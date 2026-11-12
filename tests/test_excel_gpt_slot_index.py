@@ -138,12 +138,18 @@ def test_assign_slot_indices_fills_gap_by_position() -> None:
 
 
 def test_assign_slot_indices_duplicate_slots_fall_back_to_position() -> None:
-    """Дубль явных слотов → нумерация по X, слоты уникальны."""
+    """Дубль явных слотов НЕ чинится молча (дефект F).
+
+    Раньше ноды молча перенумеровывались по X — и нода 2 тихо становилась
+    нодой 1 (та самая подмена слота, что и в шаге D). Теперь дубль
+    доезжает до валидатора графа, который отвергает сохранение с текстом
+    «перенумеруйте ноды». Тест на HTTP 400 — в
+    tests/test_excel_gpt_slot_collision.py.
+    """
     nodes = [
         _node("n_a", slot=2, x=100.0),
         _node("n_b", slot=2, x=2000.0),
     ]
     after = assign_slot_indices(nodes)
     slots = [n["data"]["slotIndex"] for n in after]
-    assert sorted(slots) == [1, 2]
-    assert len(set(slots)) == 2
+    assert sorted(slots) == [2, 2]  # дубль сохранён — валидатор его увидит

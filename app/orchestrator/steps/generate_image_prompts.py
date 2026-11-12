@@ -71,7 +71,18 @@ def _frames_with_image_prompt(frames: list[Frame]) -> list[Frame]:
 
 
 async def _reload_frames(session: AsyncSession, project_id: int) -> list[Frame]:
-    return list(
+    """Живые (не архивные) кадры проекта.
+
+    Архивные кадры (номер ≥ 1 000 000, attrs.archived — их ставит
+    replace_all_frames при переразбивке сцены) в шаг img_pr НЕ входят:
+    промты им уже не нужны, их не просит модель, и их не ждёт шаг картинок.
+    Без фильтра шаг вечно падал «после apply-ops промты не заполнены»:
+    72 кадра заполнены, а 32 архивных — нет, и проверка готовности шага
+    требовала их заполнить (живой прогон #86, 12.11).
+    """
+    from app.services.db_v2 import frame_is_archived
+
+    rows = (
         (
             await session.execute(
                 select(Frame)
@@ -83,6 +94,7 @@ async def _reload_frames(session: AsyncSession, project_id: int) -> list[Frame]:
         .scalars()
         .all()
     )
+    return [fr for fr in rows if not frame_is_archived(fr)]
 
 
 async def _scene_fingerprint(session: AsyncSession, frames: list[Frame], numbers: set[int]) -> str:

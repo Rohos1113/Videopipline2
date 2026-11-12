@@ -14,6 +14,9 @@ from app.services.excel_gpt_node import (
     running_status_for_slot,
     slot_index_from_node,
 )
+from app.services.excel_gpt_node import (
+    SLOT_MAP as _EXCEL_GPT_SLOT_MAP,
+)
 
 HITL_NODE_TYPES: frozenset[str] = frozenset(
     {"hitl_hero", "hitl_images", "hitl_videos", "hitl_final", "hitl_gate", "hitl_style"}
@@ -66,11 +69,13 @@ WORK_NODES: dict[str, WorkNodeSpec] = {
     ),
     "hero": WorkNodeSpec("hero", "hero", ProjectStatus.generating_hero, ProjectStatus.hero_ready),
     "items": WorkNodeSpec("items", "items", ProjectStatus.generating_items, ProjectStatus.items_ready),
-    "enrich_1": WorkNodeSpec("enrich_1", "enrich_1", ProjectStatus.enriching_1, ProjectStatus.enrich_1_ready),
-    "enrich_2": WorkNodeSpec("enrich_2", "enrich_2", ProjectStatus.enriching_2, ProjectStatus.enrich_2_ready),
-    "enrich_3": WorkNodeSpec("enrich_3", "enrich_3", ProjectStatus.enriching_3, ProjectStatus.enrich_3_ready),
-    "enrich_4": WorkNodeSpec("enrich_4", "enrich_4", ProjectStatus.enriching_4, ProjectStatus.enrich_4_ready),
-    "enrich_5": WorkNodeSpec("enrich_5", "enrich_5", ProjectStatus.enriching_5, ProjectStatus.enrich_5_ready),
+    # Слоты excel_gpt: статусы и коды берём из канона excel_gpt_node.SLOT_MAP
+    # (дефект F аудита: три копии маппинга разъехались). Здесь — только
+    # legacy-имя ноды enrich_N как тип узла DAG.
+    **{
+        f"enrich_{slot}": WorkNodeSpec(f"enrich_{slot}", code, running, ready)
+        for slot, (running, ready, code) in _EXCEL_GPT_SLOT_MAP.items()
+    },
     "image_prompts": WorkNodeSpec(
         "image_prompts",
         "img_pr",
