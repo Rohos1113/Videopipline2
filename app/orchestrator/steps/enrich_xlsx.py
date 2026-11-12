@@ -1868,6 +1868,113 @@ async def _run_fw_skeleton_node(
     )
 
 
+async def _finalize_excel_gpt_api_path(
+    session: AsyncSession,
+    project: Project,
+    *,
+    node_key: str | None,
+    slot_idx: int,
+    running_status: ProjectStatus,
+    ready_status: ProjectStatus,
+    check_mode: bool,
+    output_mode: str,
+    api_res: Any,
+) -> None:
+    """Финализация excel_gpt по API-пути: meta, NodeRun, статус, цепочка.
+
+    Разделение «работа сделана» и «статус двигаем» — ради дефекта D.
+    Раньше при уходе статуса (юзер нажал ▶ на другой шаг, пока GPT
+    отвечал) был РАННИЙ RETURN: цепочка ``_after_excel_gpt_done`` не
+    выполнялась, и нода оставалась «висящей» — GPT отработал, NodeRun
+    закрыт, а storage-синк и excel_gpt→excel_gpt по стрелкам — нет.
+
+    Теперь: NodeRun закрыт и цепочка выполнена ВСЕГДА (работа-то
+    сделана), а статус двигаем только если он ещё наш (``enriching_N``).
+    """
+    meta = dict(project.meta or {})
+    completed = [int(x) for x in (meta.get("enrich_completed_slots") or []) if str(x).isdigit()]
+    if slot_idx not in completed:
+        completed.append(slot_idx)
+        completed.sort()
+        meta["enrich_completed_slots"] = completed
+    done_keys = [str(k) for k in (meta.get("excel_gpt_completed_keys") or [])]
+    if node_key not in done_keys:
+        done_keys.append(node_key)
+        meta["excel_gpt_completed_keys"] = done_keys
+    meta.pop("active_excel_gpt_node_key", None)
+    project.meta = meta
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(project, "meta")
+    await session.flush()
+    # Apply-ops уже в БД: закрыть NodeRun даже если юзер нажал ⏹ /
+    # ▶ другой шаг (иначе heal сотрёт overflow completed_keys).
+    await _complete_excel_gpt_noderun(session, project, node_key, slot_idx)
+
+    # Юзер мог ▶ другой шаг (split) пока GPT enrich ещё отвечал. Статус
+    # тогда НЕ наш — двигать его нельзя (юзер ушёл осознанно), но
+    # работа-то сделана: цепочка (storage-синк, vision-check,
+    # excel_gpt→excel_gpt по стрелкам) обязана отработать.
+    stale = project.status is not running_status
+    if stale:
+        logger.warning(
+            "[#{}] enrich_xlsx slot={}: статус уже {} (ждали {}) — "
+            "не пишем enrich ready (stale GPT), цепочка всё равно выполнена",
+            project.id,
+            slot_idx,
+            project.status.value,
+            running_status.value,
+        )
+    else:
+        await _harness_before_enrich_ready(session, project, check_mode=check_mode)
+        _apply_enrich_ready_status(
+            project,
+            running_status=running_status,
+            ready_status=ready_status,
+        )
+        await session.flush()
+
+    # Снапшот xlsx — до цепочки: excel_gpt→excel_gpt по стрелкам читает
+    # уже готовый файл.
+    if output_mode == "project_file" and any(
+        p.name == "project.xlsx" and p.exists() for p in api_res.output_paths
+    ):
+        try:
+            from app.services.node_xlsx_snapshot import snapshot_and_bind_node_xlsx
+
+            await snapshot_and_bind_node_xlsx(
+                session,
+                project,
+                node_key=node_key,
+                node_type="excel_gpt",
+            )
+            from app.services.node_xlsx_snapshot import release_upload_display_source
+
+            if release_upload_display_source(project, node_key):
+                flag_modified(project, "meta")
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "[#{}] enrich_xlsx API slot={} xlsx snapshot bind failed: {}",
+                project.id,
+                slot_idx,
+                e,
+            )
+    logger.info(
+        "[#{}] enrich_xlsx API done → {} gate={} files={}",
+        project.id,
+        ready_status.value,
+        api_res.gate_status,
+        [p.name for p in api_res.output_paths],
+    )
+    await _after_excel_gpt_done(
+        session,
+        project,
+        node_key=node_key,
+        slot_idx=slot_idx,
+        ready_status=ready_status,
+    )
+
+
 async def run(session: AsyncSession, project: Project, bot: Any = None) -> None:
     slot_idx = _resolve_slot_idx(project.status)
     if slot_idx is None:
@@ -3829,77 +3936,16 @@ async def run(session: AsyncSession, project: Project, bot: Any = None) -> None:
         if getattr(api_res, "reply_text", None):
             save_gpt_reply_text(project, node_key, api_res.reply_text)
         await session.flush()
-        meta = dict(project.meta or {})
-        completed = [int(x) for x in (meta.get("enrich_completed_slots") or []) if str(x).isdigit()]
-        if slot_idx not in completed:
-            completed.append(slot_idx)
-            completed.sort()
-            meta["enrich_completed_slots"] = completed
-        done_keys = [str(k) for k in (meta.get("excel_gpt_completed_keys") or [])]
-        if node_key not in done_keys:
-            done_keys.append(node_key)
-            meta["excel_gpt_completed_keys"] = done_keys
-        meta.pop("active_excel_gpt_node_key", None)
-        project.meta = meta
-        flag_modified(project, "meta")
-        await session.flush()
-        # Apply-ops уже в БД: закрыть NodeRun даже если юзер нажал ⏹ /
-        # ▶ другой шаг (иначе heal сотрёт overflow completed_keys).
-        await _complete_excel_gpt_noderun(session, project, node_key, slot_idx)
-        # Юзер мог ▶ другой шаг (split) пока GPT enrich ещё отвечал.
-        if project.status is not running_status:
-            logger.warning(
-                "[#{}] enrich_xlsx slot={}: статус уже {} (ждали {}) — "
-                "не пишем enrich ready (stale GPT), NodeRun закрыт",
-                project.id,
-                slot_idx,
-                project.status.value,
-                running_status.value,
-            )
-            return
-        await _harness_before_enrich_ready(session, project, check_mode=check_mode)
-        _apply_enrich_ready_status(
-            project,
-            running_status=running_status,
-            ready_status=ready_status,
-        )
-        await session.flush()
-        if output_mode == "project_file" and any(
-            p.name == "project.xlsx" and p.exists() for p in api_res.output_paths
-        ):
-            try:
-                from app.services.node_xlsx_snapshot import snapshot_and_bind_node_xlsx
-
-                await snapshot_and_bind_node_xlsx(
-                    session,
-                    project,
-                    node_key=node_key,
-                    node_type="excel_gpt",
-                )
-                from app.services.node_xlsx_snapshot import release_upload_display_source
-
-                if release_upload_display_source(project, node_key):
-                    flag_modified(project, "meta")
-            except Exception as e:  # noqa: BLE001
-                logger.warning(
-                    "[#{}] enrich_xlsx API slot={} xlsx snapshot bind failed: {}",
-                    project.id,
-                    slot_idx,
-                    e,
-                )
-        logger.info(
-            "[#{}] enrich_xlsx API done → {} gate={} files={}",
-            project.id,
-            ready_status.value,
-            api_res.gate_status,
-            [p.name for p in api_res.output_paths],
-        )
-        await _after_excel_gpt_done(
+        await _finalize_excel_gpt_api_path(
             session,
             project,
             node_key=node_key,
             slot_idx=slot_idx,
+            running_status=running_status,
             ready_status=ready_status,
+            check_mode=check_mode,
+            output_mode=output_mode,
+            api_res=api_res,
         )
         return
 
