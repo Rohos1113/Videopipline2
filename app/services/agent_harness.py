@@ -14,6 +14,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.services.db_v2 import ARCHIVE_NUMBER_FROM
 from app.services.plan_shot2 import _IMG_EXTENSIONS
 from app.services.xlsx_v8_import import (
     ROW_IMAGE_PROMPT_V8,
@@ -237,7 +238,13 @@ def _count_project_log_errors(project_id: int, slug: str) -> tuple[int, str]:
 def _load_frame_prompt_rows(
     project_id: int,
 ) -> tuple[list[tuple[int, str, str, str]], str]:
-    """Кадры: (number, voiceover, image_prompt, animation_prompt) + ошибка или ''."""
+    """Кадры: (number, voiceover, image_prompt, animation_prompt) + ошибка или ''.
+
+    Архивные кадры (номер ≥ 1 000 000 — их ставит replace_all_frames при
+    переразбивке сцены) не входят: промты им не нужны, и без фильтра гейт
+    требовал их заполнить (живой прогон #86, 12.11: img_pr=1/2
+    missing=[1000000]).
+    """
     db_file = _db_path()
     if not db_file.is_file():
         return [], ""
@@ -248,8 +255,8 @@ def _load_frame_prompt_rows(
             "COALESCE(voiceover_text, ''), "
             "COALESCE(image_prompt, ''), "
             "COALESCE(animation_prompt, '') "
-            "FROM frames WHERE project_id=? ORDER BY number",
-            (project_id,),
+            "FROM frames WHERE project_id=? AND number < ? ORDER BY number",
+            (project_id, ARCHIVE_NUMBER_FROM),
         ).fetchall()
         db.close()
     except Exception as e:  # noqa: BLE001
@@ -360,10 +367,14 @@ async def snapshot_db(session: Any, project_id: int) -> DbSnapshot:
 
     from app.models import Frame, NodeRun, WorkflowRun
 
+    # Архивные кадры (номер ≥ 1 000 000 — их ставит replace_all_frames при
+    # переразбивке сцены) не входят: промты им не нужны, а гейт по ним
+    # требовал заполнить (живой прогон #86, 12.11: img_pr=1/2
+    # missing=[1000000]).
     rows = (
         await session.execute(
             select(Frame.number, Frame.voiceover_text, Frame.image_prompt, Frame.animation_prompt)
-            .where(Frame.project_id == project_id)
+            .where(Frame.project_id == project_id, Frame.number < ARCHIVE_NUMBER_FROM)
             .order_by(Frame.number)
         )
     ).all()

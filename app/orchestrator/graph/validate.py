@@ -6,6 +6,7 @@ from copy import deepcopy
 from typing import Any
 
 from app.orchestrator.node_registry import is_work_node_type
+from app.services.excel_gpt_node import slot_collisions
 
 # Ветка «не ок» — допустимый обратный ход (проверка → починить → снова проверка).
 _FEEDBACK_EDGE_KINDS = frozenset({"fail"})
@@ -160,6 +161,15 @@ def validate_workflow_graph(
 
     norm_edges, norm_warnings, patches, soft_exclude = normalize_check_feedback_edges(nodes, edges)
     warnings.extend(norm_warnings)
+
+    # Коллизия слотов excel_gpt — ошибка графа, а не повод гадать в рантайме
+    # (дефект F аудита): две ноды на одном слоте означают, что одна из них
+    # работает под чужим статусом enrich_N. Сообщение говорит, что делать.
+    for slot, node_ids in slot_collisions(nodes):
+        errors.append(
+            f"слот {slot} назначен нескольким нодам «ИИ-редактор сцен»: "
+            f"{', '.join(node_ids)} — перенумеруйте ноды"
+        )
 
     out: dict[str, list[str]] = {nid: [] for nid in by_id}
     out_forward: dict[str, list[str]] = {nid: [] for nid in by_id}

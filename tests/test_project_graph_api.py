@@ -131,6 +131,32 @@ async def test_invalid_graph_is_rejected_with_reasons(client) -> None:
     assert (await client.get("/api/projects/1/graph")).json()["source"] == "default"
 
 
+async def test_duplicate_excel_gpt_slot_is_rejected(client) -> None:
+    """Две ноды «ИИ-редактор сцен» на одном слоте → 400 «перенумеруйте ноды».
+
+    Слот — связь ноды с шагом DAG. Две ноды на одном слоте означают, что
+    одна из них работает под чужим статусом enrich_N. Раньше дубль молча
+    перенумеровывался по позиции на холсте (дефект F аудита) — и нода 2
+    тихо становилась нодой 1.
+    """
+    g = (await client.get("/api/projects/1/graph")).json()
+    excel = [n for n in g["nodes"] if n["type"] == "excel_gpt"]
+    assert len(excel) >= 2, "в дефолтном графе должно быть ≥2 ноды «ИИ-редактор сцен»"
+    nodes = []
+    for n in g["nodes"]:
+        if n["id"] == excel[1]["id"]:
+            # Второй ноде отдаём слот первой — дубль.
+            n = {**n, "data": {**(n.get("data") or {}), "slotIndex": excel[0]["data"]["slotIndex"]}}
+        nodes.append(n)
+
+    res = await client.put("/api/projects/1/graph", json={"nodes": nodes, "edges": g["edges"]})
+    assert res.status_code == 400, res.text
+    errs = res.json()["detail"]["graph"]
+    assert any("перенумеруйте" in e for e in errs), errs
+    # Граф не изменился — отвергли до записи.
+    assert (await client.get("/api/projects/1/graph")).json()["source"] == "default"
+
+
 async def test_reset_to_default_and_proposal_endpoints(client) -> None:
     g = (await client.get("/api/projects/1/graph")).json()
     nodes = [n for n in g["nodes"] if n["type"] != "music"]
