@@ -69,17 +69,81 @@ def test_overflow_and_scene_agents_still_reserved() -> None:
     assert slot_index_from_node(overflow) == 0
 
 
-def test_assign_slot_indices_renumbers_by_position() -> None:
-    """Явный слот перебивается позицией: номера слотов = порядок по X.
+def test_assign_slot_indices_keeps_explicit_slots_on_move() -> None:
+    """Перетаскивание ноды НЕ переназначает слоты (дефект E).
 
-    Это текущее (осознанное) поведение: слоты назначаются слева направо
-    при каждом сохранении графа. Зафиксировано тестом, чтобы изменение
-    было явным, а не побочным.
+    Слот — связь ноды с шагом DAG, а не её место на холсте. Раньше нумерация
+    шла только по position.x, и нода 2, перетащенная левее ноды 1, становилась
+    слотом 1 — и работала под статусом чужого слота.
     """
     nodes = [
-        _node("n_excel_gpt_2", slot=2, x=100.0),
+        _node("n_excel_gpt_2", slot=2, x=100.0),  # перетащили левее
         _node("n_excel_gpt_1", slot=1, x=2000.0),
     ]
     after = assign_slot_indices(nodes)
     slots = {n["id"]: n["data"]["slotIndex"] for n in after}
-    assert slots == {"n_excel_gpt_2": 1, "n_excel_gpt_1": 2}
+    assert slots == {"n_excel_gpt_2": 2, "n_excel_gpt_1": 1}
+
+
+def test_assign_slot_indices_numbers_nodes_without_slot() -> None:
+    """Ноды без явного слота нумеруются по X — как раньше."""
+    nodes = [
+        _node("n_a", slot=None, x=100.0),
+        _node("n_b", slot=None, x=2000.0),
+    ]
+    after = assign_slot_indices(nodes)
+    slots = {n["id"]: n["data"]["slotIndex"] for n in after}
+    assert slots == {"n_a": 1, "n_b": 2}
+
+
+def test_assign_slot_indices_uses_free_slots_for_new_nodes() -> None:
+    """Новая нода без слота занимает СВОБОДНЫЙ слот, не занятый явным."""
+    nodes = [
+        _node("n_excel_gpt_1", slot=1, x=100.0),
+        _node("n_new", slot=None, x=2000.0),
+    ]
+    after = assign_slot_indices(nodes)
+    slots = {n["id"]: n["data"]["slotIndex"] for n in after}
+    assert slots == {"n_excel_gpt_1": 1, "n_new": 2}
+
+
+def test_assign_slot_indices_marks_overflow_when_slots_exhausted() -> None:
+    """Слотов больше нет — нода уходит в overflow (slotIndex нет, флаг есть)."""
+    nodes = [_node(f"n_{i}", slot=None, x=float(i * 100)) for i in range(7)]
+    after = assign_slot_indices(nodes)
+    by_id = {n["id"]: n for n in after}
+    for i in range(5):
+        assert by_id[f"n_{i}"]["data"]["slotIndex"] == i + 1
+    for i in (5, 6):
+        data = by_id[f"n_{i}"]["data"]
+        assert "slotIndex" not in data
+        assert data["slotOverflow"] is True
+
+
+def test_assign_slot_indices_fills_gap_by_position() -> None:
+    """Дырка в явных слотах (удалили среднюю ноду) → нумерация по X.
+
+    Дырка опасна для статусов: переход ``enrich_2_ready → enriching_3``
+    уводит в слот, которого на холсте нет. Поэтому при не-непрерывных
+    явных слотах возвращаемся к старой нумерации по X — слоты всегда 1..N.
+    """
+    nodes = [
+        _node("n_excel_gpt_1", slot=1, x=100.0),
+        _node("n_excel_gpt_3", slot=3, x=2000.0),  # слот 2 отсутствует
+    ]
+    after = assign_slot_indices(nodes)
+    slots = {n["id"]: n["data"]["slotIndex"] for n in after}
+    # Слоты непрерывны: 1 и 2.
+    assert sorted(slots.values()) == [1, 2]
+
+
+def test_assign_slot_indices_duplicate_slots_fall_back_to_position() -> None:
+    """Дубль явных слотов → нумерация по X, слоты уникальны."""
+    nodes = [
+        _node("n_a", slot=2, x=100.0),
+        _node("n_b", slot=2, x=2000.0),
+    ]
+    after = assign_slot_indices(nodes)
+    slots = [n["data"]["slotIndex"] for n in after]
+    assert sorted(slots) == [1, 2]
+    assert len(set(slots)) == 2
