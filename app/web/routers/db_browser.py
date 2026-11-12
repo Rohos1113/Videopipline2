@@ -3333,6 +3333,11 @@ async def _execute_orchestrator_reply(
 def _format_stream_error(e: Exception) -> str:
     msg = str(e)
     low = msg.lower()
+    if "llm_priority" in low or "тестовый запрос отложен" in low:
+        return (
+            "Сейчас работает плановый шаг проекта и занимает провайдера. "
+            "Тестовый запрос отложен — повторите после окончания шага."
+        )
     if "下架" in msg:
         return "Выбранная модель отключена (снята с обслуживания) провайдером 52pay. Пожалуйста, выберите другую модель в селекторе (например, GPT 6.1 Sol или Claude Sonnet 5)."
     if "model not register" in low or "not register" in low or "model_not_found" in low or "does not exist" in low:

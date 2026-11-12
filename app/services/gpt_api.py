@@ -1796,41 +1796,49 @@ async def _record_transport_call(
     t0 = time.monotonic()
     result: GptChatResult | None = None
     err_kind = ""
-    try:
-        result = await coro_factory()
-        return result
-    except GptApiError as e:
-        err_kind = str(
-            e.context.get("error_kind")
-            or (f"http_{e.context.get('status_code')}" if e.context.get("status_code") else "")
-            or "gpt_api_error"
-        )
-        raise
-    except httpx.TimeoutException:
-        err_kind = "timeout"
-        raise
-    except httpx.HTTPError:
-        err_kind = "network"
-        raise
-    except BaseException:
-        err_kind = "exception"
-        raise
-    finally:
-        acct = current_accounting()
-        await llm_ledger.record(
-            project_id=acct.project_id if acct else None,
-            node_key=acct.node_key if acct else "adhoc",
-            logical_call_id=llm_ledger.current_logical_call_id(),
-            model=use_model,
-            served_model=(result.served_model if result else ""),
-            relay=urlparse(url).netloc,
-            endpoint=endpoint,
-            usage=(result.usage if result else None),
-            result="ok" if result is not None else "error",
-            error_kind=err_kind,
-            response_id=(result.response_id if result else ""),
-            duration_ms=int((time.monotonic() - t0) * 1000),
-        )
+    # Плановый вызов занимает провайдера на время своего HTTP: ручные
+    # (вне обвязки шага) в это время ждут и уходят с внятным отказом.
+    from app.services import llm_priority
+
+    async with llm_priority.PriorityGate(
+        enabled=settings.llm_priority_enabled,
+        timeout_s=settings.llm_priority_wait_s,
+    ):
+        try:
+            result = await coro_factory()
+            return result
+        except GptApiError as e:
+            err_kind = str(
+                e.context.get("error_kind")
+                or (f"http_{e.context.get('status_code')}" if e.context.get('status_code') else "")
+                or "gpt_api_error"
+            )
+            raise
+        except httpx.TimeoutException:
+            err_kind = "timeout"
+            raise
+        except httpx.HTTPError:
+            err_kind = "network"
+            raise
+        except BaseException:
+            err_kind = "exception"
+            raise
+        finally:
+            acct = current_accounting()
+            await llm_ledger.record(
+                project_id=acct.project_id if acct else None,
+                node_key=acct.node_key if acct else "adhoc",
+                logical_call_id=llm_ledger.current_logical_call_id(),
+                model=use_model,
+                served_model=(result.served_model if result else ""),
+                relay=urlparse(url).netloc,
+                endpoint=endpoint,
+                usage=(result.usage if result else None),
+                result="ok" if result is not None else "error",
+                error_kind=err_kind,
+                response_id=((result.response_id or "") if result else ""),
+                duration_ms=int((time.monotonic() - t0) * 1000),
+            )
 
 
 async def _chat_responses_stream(
