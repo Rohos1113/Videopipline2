@@ -100,10 +100,10 @@ export function InspirationMenu({ value, onChange, className }: Props) {
             : "Вдохновение — каталог стилей"
         }
         className={cn(
-          "relative inline-flex h-9 w-9 items-center justify-center rounded-xl border backdrop-blur transition",
+          "relative inline-flex h-10 w-10 items-center justify-center rounded-xl border backdrop-blur transition",
           open
-            ? "border-[#2dd4bf]/60 bg-[#2dd4bf]/15 shadow-[0_0_18px_rgba(45,212,191,0.25)]"
-            : "border-white/10 bg-white/[0.04] hover:border-[#2dd4bf]/45 hover:bg-[#2dd4bf]/10",
+            ? "border-[#2dd4bf]/70 bg-[#2dd4bf]/20 shadow-[0_0_22px_rgba(45,212,191,0.35)]"
+            : "border-white/15 bg-white/[0.05] hover:border-[#2dd4bf]/50 hover:bg-[#2dd4bf]/12",
         )}
       >
         <PaletteGlyph active={open || hasStyle} />

@@ -3227,7 +3227,7 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
           >
             {/* Вдохновение: каталог стилей дока — иконка над фото */}
             {mediaType === "image" && (
-              <div className="mb-1.5 flex w-full max-w-full shrink-0 justify-end px-1">
+              <div className="mb-2 flex w-full max-w-full shrink-0 justify-center">
                 <InspirationMenu value={stylePreset} onChange={setStylePreset} />
               </div>
             )}
