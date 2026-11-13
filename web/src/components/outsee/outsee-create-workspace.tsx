@@ -82,6 +82,7 @@ import {
 } from "@/lib/outsee-catalog";
 import { estimateCreatePrice } from "@/lib/create-pricing";
 import { GenAssistantPanel } from "@/components/outsee/gen-assistant-panel";
+import { InspirationMenu } from "./inspiration-menu";
 import { VoiceLibraryModal, getVoiceById } from "./voice-library-modal";
 import { AudioTagsBar } from "./audio-tags-bar";
 import {
@@ -3215,6 +3216,21 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                 : "justify-start pt-2",
             )}
           >
+            {/* Вдохновение: готовые стили «Помощника» кнопкой над фото */}
+            {mediaType === "image" && (
+              <div className="mb-2 flex w-full max-w-full shrink-0 justify-center">
+                <InspirationMenu
+                  onApply={(style, core) => {
+                    const add = core.trim();
+                    if (!add) return;
+                    setPrompt((prev) => (prev.trim() ? `${prev.trim()}, ${add}` : add));
+                    toast.success(`Стиль «${style.name}» добавлен в промпт`, {
+                      description: "Промпт — в поле внизу. Можно править и запускать.",
+                    });
+                  }}
+                />
+              </div>
+            )}
             {selected?.preview_url &&
             selected.status !== "queued" &&
             selected.status !== "processing" &&
