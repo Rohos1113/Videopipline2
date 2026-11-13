@@ -144,6 +144,22 @@ ERROR_CATALOG: dict[str, ErrorSpec] = {
         "Промты картинок: у кадров нет данных сцены",
         "Сначала нужна работа с GPT (место, фон, действие), потом промты картинок.",
     ),
+    # excel_gpt: у ноды «ИИ-редактор сцен» нет входа — проверка ДО вызова
+    # модели (enrich_xlsx.require_excel_gpt_inputs). Повтор того же входа
+    # даст тот же отказ, поэтому звать модель бессмысленно.
+    "excel_gpt_no_input": ErrorSpec(
+        "excel_gpt_no_input",
+        "ИИ-редактор сцен: нет входа",
+        "Нужны кадры с закадром; для сквозной нумерации сцен — контекст проекта.",
+    ),
+    # Модель явно отказалась работать (конверт без данных + error/refusal):
+    # «missing_global_context» и т.п. Повтор с тем же входом даст тот же
+    # отказ, поэтому шаг падает сразу, без платного repair-ретрая.
+    "llm_model_refusal": ErrorSpec(
+        "llm_model_refusal",
+        "Модель отказалась работать",
+        "Не хватило данных на входе ноды — проверь вход (текст ответа модели).",
+    ),
     # ── Инфраструктура ──
     "infra_db_locked": ErrorSpec("infra_db_locked", "БД занята", "Параллельная запись — повтор."),
     # Этап 3: бюджет LLM прогона исчерпан — paused с meta.pause_reason.
@@ -173,6 +189,14 @@ def _match_code(exc: Exception) -> str:  # noqa: C901
 
     if name == "BudgetExhausted":
         return "budget_exhausted"
+
+    # Отказ модели и пустой вход ноды — по собственному тексту ошибки:
+    # оба случая детерминированы (повтор не поможет), и оба раньше уезжали
+    # в «Неизвестная ошибка» — причину не было видно в ноде.
+    if "модель отказалась работать" in low:
+        return "llm_model_refusal"
+    if "excel_gpt: нет входа" in low:
+        return "excel_gpt_no_input"
 
     # GptApiError / OutseeImageError несут context — используем его.
     ctx = getattr(exc, "context", None)
@@ -243,6 +267,9 @@ def describe_error(exc: Exception) -> tuple[str, str]:
     detail = str(exc).replace("\n", " ").strip()
     if code == "img_pr_no_scene_data":
         # Уже короткий текст для человека (кадры + что сделать), без имён кода.
+        return code, detail[:300] or spec.hint
+    if code in ("excel_gpt_no_input", "llm_model_refusal"):
+        # Текст ошибки сам объясняет, что делать (вход ноды / ответ модели).
         return code, detail[:300] or spec.hint
     if code == "unknown":
         return code, (detail[:300] or spec.title)

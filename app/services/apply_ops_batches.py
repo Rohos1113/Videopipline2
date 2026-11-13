@@ -1827,6 +1827,26 @@ def _is_budget_stop(exc: BaseException) -> bool:
     return isinstance(exc, (spend_guard.BudgetExhausted, spend_guard.PaidCallBlocked))
 
 
+def _is_input_refusal(exc: BaseException) -> bool:
+    """Модель отказалась из-за неполного входа — пачку не дробить и не пропускать.
+
+    Живой случай (#86, 11.11): модель ответила «missing_global_context» (в
+    контексте проекта нет нумерации сцен). Дробление пачки здесь не помогает —
+    вход у каждой половины тот же неполный, — а стоит денег: модель снова
+    откажется. Шаг должен остановиться с этой ошибкой и понятной причиной.
+    """
+    from app.contracts.errors import LlmContractError
+
+    seen: set[int] = set()
+    cur: BaseException | None = exc
+    while cur is not None and id(cur) not in seen:
+        if isinstance(cur, LlmContractError) and cur.kind == "refusal":
+            return True
+        seen.add(id(cur))
+        cur = cur.__cause__
+    return False
+
+
 def _pack_transport_failure(exc: BaseException) -> bool:
     """Обрыв сети. Контракт QC (пустой JSON, отказ, аудит) сюда не входит."""
     msg = str(exc)
@@ -3447,7 +3467,7 @@ async def _run_apply_ops_batched_kadry(
                 except ShotsGateError as e:
                     return str(e)
                 except Exception as e:  # noqa: BLE001
-                    if _is_budget_stop(e):
+                    if _is_budget_stop(e) or _is_input_refusal(e):
                         raise
                     return f"{type(e).__name__}: {e}"
 
@@ -3490,7 +3510,9 @@ async def _run_apply_ops_batched_kadry(
             return
         except Exception as exc:
             # Этап 3 (линия WebVideoPipeline): бюджет исчерпан — сразу наверх.
-            if allow_empty_ops or _is_budget_stop(exc):
+            # Отказ модели из-за неполного входа — тоже наверх: дробление пачки
+            # не даёт модели ничего нового, а стоит денег (тот же отказ).
+            if allow_empty_ops or _is_budget_stop(exc) or _is_input_refusal(exc):
                 raise
             nxt = next_split_level(level)
             keep_pack = shots_short_packs(footer_kind)

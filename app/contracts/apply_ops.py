@@ -132,6 +132,62 @@ def _payload_empty(data: dict[str, Any]) -> bool:
     return not any(data.get(k) for k in _ENVELOPE_KEYS)
 
 
+def apply_ops_refusal(data: dict[str, Any]) -> str:
+    """Явный отказ модели по контракту apply-ops: конверт без данных.
+
+    Модель вместо ops отдаёт ``{"error": "…", "message": …}`` — это отказ
+    работать, а не «всё чисто».
+
+    Не отказ:
+    * пустой конверт БЕЗ error/refusal (QC no-op это допускает);
+    * конверт, где данные есть (ops/characters/scenes) — объяснение при
+      обычном ответе отказом не считается;
+    * ``error``-объект (провайдерская ошибка в теле 200-ответа) — это не
+      сообщение модели о своей работе.
+    """
+    if not isinstance(data, dict):
+        return ""
+    if not _payload_empty(data):
+        return ""
+    for key in _REFUSAL_KEYS:
+        val = data.get(key)
+        if not isinstance(val, str) or not val.strip():
+            continue
+        reason = val.strip()
+        detail = str(data.get("message") or data.get("notes") or "").strip()
+        return f"{reason}: {detail}" if detail else reason
+    return ""
+
+
+# Отказ «вход неполный»: ремонтить бессмысленно — тот же вход даст тот же
+# отказ, а каждый вызов стоит денег. Маркеры зашиты в сами промты
+# (prompt_library, шаг excel_gpt):
+#   * 05_XLSX_agent_v8_DB: «Если project_state.scenes_assigned = 0 и
+#     frames_context пуст — верни {"error":"missing_global_context"}»;
+#   * «агент по созданию персонажей»: «Если нет реальных frame_uuid во
+#     входе: … отсутствует граф проекта с реальными frame_uuid».
+_INPUT_REFUSAL_MARKERS = (
+    "missing_global_context",
+    "реальных frame_uuid",
+)
+
+
+def apply_ops_input_refusal(data: dict[str, Any]) -> str:
+    """Отказ из-за неполного входа (его нельзя вылечить повтором).
+
+    Остальные отказы (модель ошиблась, перепутала формат) остаются
+    ремонтируемыми: repair-промпт даёт модели другой текст запроса, и она
+    часто отвечает нормально (см. test_project_file_empty_ops_refusal_retries).
+    """
+    reason = apply_ops_refusal(data)
+    if not reason:
+        return ""
+    low = reason.lower()
+    if any(marker in low for marker in _INPUT_REFUSAL_MARKERS):
+        return reason
+    return ""
+
+
 def empty_ops_message(report: str = "") -> str:
     """Текст ошибки пустого ответа; пояснение модели — внутрь, а не в лог."""
     msg = "пустой ops — нечего применять"
@@ -224,7 +280,12 @@ class ApplyOpsEnvelope(BaseModel):
 
 # strict=False: fields — словарь с динамическими ключами (алиасы),
 # в OpenAI strict-режиме невыразим (см. ResponseSchema.strict).
-APPLY_OPS = LlmContract(name="vp_apply_ops", model=ApplyOpsEnvelope, strict=False)
+APPLY_OPS = LlmContract(
+    name="vp_apply_ops",
+    model=ApplyOpsEnvelope,
+    strict=False,
+    detect_input_refusal=apply_ops_input_refusal,
+)
 
 
 class ApplyOpsEnvelopeAllowEmpty(ApplyOpsEnvelope):
@@ -234,4 +295,9 @@ class ApplyOpsEnvelopeAllowEmpty(ApplyOpsEnvelope):
 
 
 # Имя то же: метрики repair-rate и рекордер считают один контракт.
-APPLY_OPS_ALLOW_EMPTY = LlmContract(name="vp_apply_ops", model=ApplyOpsEnvelopeAllowEmpty, strict=False)
+APPLY_OPS_ALLOW_EMPTY = LlmContract(
+    name="vp_apply_ops",
+    model=ApplyOpsEnvelopeAllowEmpty,
+    strict=False,
+    detect_input_refusal=apply_ops_input_refusal,
+)
