@@ -680,6 +680,8 @@ export interface ProjectAsset {
   preview_url: string | null;
   label?: string;
   frame_id?: number | null;
+  frame_number?: number | null;
+  number?: number | null;
   meta?: Record<string, unknown>;
   voiceover?: string;
   description?: string | null;

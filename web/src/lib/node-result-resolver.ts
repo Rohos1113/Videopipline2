@@ -689,6 +689,9 @@ function computeNodeResult(
       for (const m of ctx.mediaImages) {
         if (m.preview_url) {
           if (m.frame_id != null) imgByFrameId.set(m.frame_id, m.preview_url);
+          const labelMatch = m.label?.match(/кадр\s*(\d+)/i);
+          const num = m.frame_number ?? m.number ?? (labelMatch ? Number(labelMatch[1]) : undefined);
+          if (num != null) imgByNumber.set(num, m.preview_url);
         }
       }
       if (withPrompt.length) {
@@ -697,7 +700,7 @@ function computeNodeResult(
             id: `frame_${f.id}`,
             label: `Кадр ${f.number}`,
             kind: "text" as const,
-            previewUrl: imgByFrameId.get(f.id) ?? null,
+            previewUrl: imgByFrameId.get(f.id) ?? imgByNumber.get(f.number) ?? null,
             content: f.animation_prompt,
             frameNumber: f.number,
           })),
