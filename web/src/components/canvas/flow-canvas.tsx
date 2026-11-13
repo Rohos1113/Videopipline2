@@ -380,6 +380,7 @@ export function FlowCanvas({
               status,
               progress: 0,
               progressText: null,
+              updatedAt: null,
               error: null,
             },
           };
@@ -403,6 +404,7 @@ export function FlowCanvas({
             status,
             progress,
             progressText,
+            updatedAt: nr.updated_at ?? null,
             error: nr.error ?? null,
             attempts: nr.attempts ?? 0,
             startedAt: nr.started_at ?? null,
@@ -464,6 +466,7 @@ export function FlowCanvas({
               status: to,
               progress: to === "running" ? n.data.progress : 0,
               progressText: to === "running" ? n.data.progressText : null,
+              updatedAt: to === "running" ? n.data.updatedAt : null,
               // Мгновенно показываем ошибку из WS (не ждём refetch);
               // на успехе/сбросе — очищаем.
               error:
@@ -1753,6 +1756,7 @@ function workflowToReactFlowNodes(
         status: (nr?.status ?? "pending") as PipelineNodeData["status"],
         progress: nr?.progress ?? 0,
         progressText: nr?.progress_text ?? null,
+        updatedAt: nr?.updated_at ?? null,
         error: nr?.error ?? null,
         attempts: nr?.attempts ?? 0,
       },
