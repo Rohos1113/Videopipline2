@@ -2191,6 +2191,21 @@ async def regenerate_hero_character(
     }
 
 
+def _item_file_number(path: Path) -> int | None:
+    """Номер предмета из имени файла `predmetN.png` / `predmetN_anything.png`.
+
+    Сравнивать номер нужно числом, а не префиксом строки: `predmet1*.png`
+    зацепил бы заодно `predmet10.png` … `predmet19.png`.
+    """
+    stem = path.stem
+    if not stem.startswith("predmet"):
+        return None
+    num_part, _, _tail = stem[len("predmet") :].partition("_")
+    if not num_part.isdigit():
+        return None
+    return int(num_part)
+
+
 async def _wipe_item_media(session: AsyncSession, p: Project, index: int) -> tuple[int, list[str]]:
     """Снести item_reference артефакты и файлы одного предмета (`predmetN`)."""
     removed_artifacts = 0
@@ -2218,8 +2233,8 @@ async def _wipe_item_media(session: AsyncSession, p: Project, index: int) -> tup
 
     items_dir = p.data_dir / "items"
     if items_dir.is_dir():
-        for f in items_dir.glob(f"predmet{index}*.png"):
-            if not f.is_file():
+        for f in items_dir.glob("predmet*"):
+            if not f.is_file() or _item_file_number(f) != index:
                 continue
             try:
                 f.unlink()
@@ -2271,17 +2286,19 @@ async def _shift_item_media(session: AsyncSession, p: Project, removed_index: in
     path_map: dict[str, str] = {}
     items_dir = p.data_dir / "items"
     if items_dir.is_dir():
-        for f in sorted(items_dir.glob("predmet*")):
+        # Сдвиг идёт от младшего номера к старшему: цель переименования уже
+        # освобождена (удалённый файл или только что сдвинутый), поэтому
+        # `predmet10` не наткнётся на ещё не переименованный `predmet9`.
+        files: list[tuple[int, Path, str]] = []
+        for f in items_dir.glob("predmet*"):
             if not f.is_file():
                 continue
-            stem = f.stem
-            rest = stem[len("predmet") :]
-            num_part, _, tail = rest.partition("_")
-            if not num_part.isdigit():
+            num = _item_file_number(f)
+            if num is None or num <= removed_index:
                 continue
-            num = int(num_part)
-            if num <= removed_index:
-                continue
+            _num_part, _, tail = f.stem[len("predmet") :].partition("_")
+            files.append((num, f, tail))
+        for num, f, tail in sorted(files, key=lambda item: item[0]):
             new_name = f"predmet{num - 1}" + (f"_{tail}" if tail else "") + f.suffix
             new_path = f.with_name(new_name)
             try:

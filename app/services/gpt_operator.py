@@ -1742,26 +1742,48 @@ def read_operator_reply(
         data_dir = None
     root = Path(data_dir) if data_dir else None
 
+    def _under_root(candidate: Path) -> Path | None:
+        """Путь только внутри папки проекта.
+
+        Путь к ответу лежит в meta, а meta правит клиент (PATCH проекта), так что
+        абсолютный путь из неё — это чтение произвольного файла на сервере.
+        """
+        if root is None:
+            return candidate
+        try:
+            resolved = candidate.resolve()
+            resolved.relative_to(root.resolve())
+        except (OSError, ValueError):
+            return None
+        return resolved
+
     candidates: list[Path] = []
     for raw in raw_paths:
         p = Path(raw)
         if not p.is_absolute() and root is not None:
             p = root / p
-        if p.suffix.lower() in {".txt", ".json", ".md", ".csv"}:
-            candidates.append(p)
+        if p.suffix.lower() not in {".txt", ".json", ".md", ".csv"}:
+            continue
+        inside = _under_root(p)
+        if inside is not None:
+            candidates.append(inside)
 
     # meta часто перезаписывается (canvas PATCH, clear step, смена раскладки) и путь
     # к ответу теряется. Тогда берём файл по конвенции папки ноды:
     # <project>/excel_gpt_uploads/<node_key>/gpt_reply.txt
     if root is not None:
-        folder = root / "excel_gpt_uploads" / node_key
-        for name in (
-            "gpt_reply.txt",
-            "gpt_reply_raw.txt",
-            "gpt_reply_pre_retry.txt",
-            "check_report.txt",
-        ):
-            candidates.append(folder / name)
+        safe_node = "".join(ch for ch in node_key if ch.isalnum() or ch in "_-")
+        if safe_node:
+            folder = root / "excel_gpt_uploads" / safe_node
+            for name in (
+                "gpt_reply.txt",
+                "gpt_reply_raw.txt",
+                "gpt_reply_pre_retry.txt",
+                "check_report.txt",
+            ):
+                inside = _under_root(folder / name)
+                if inside is not None:
+                    candidates.append(inside)
 
     def _rank(p: Path) -> int:
         if p.name == "gpt_reply.txt":
