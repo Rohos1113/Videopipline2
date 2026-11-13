@@ -1000,7 +1000,7 @@ function PosterTile({
     );
   const isTextNode = !media.length && !audio.length;
   const shown = media.slice(0, 4);
-  const blur = running ? "blur-md opacity-70" : "";
+  const blur = running ? "opacity-90" : "";
   let body: React.ReactNode;
   if (isPublish) {
     body = null;
