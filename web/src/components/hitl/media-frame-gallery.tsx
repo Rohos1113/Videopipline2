@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, PenLine, RotateCw, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { errorMessageFromUnknown } from "@/lib/error-message";
@@ -44,6 +44,12 @@ export function MediaFrameGallery({
   onFrameDecided?: () => void;
 }) {
   const qc = useQueryClient();
+  const proj = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => api.getProject(projectId),
+    enabled: Boolean(projectId),
+  });
+  const isPortrait = proj.data?.aspect_ratio === "9:16";
   const [editFrame, setEditFrame] = useState<number | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
 
@@ -129,18 +135,18 @@ export function MediaFrameGallery({
               </Badge>
               <span className="text-[9px] text-muted-foreground">{frame.status}</span>
             </div>
-            <div className="aspect-[9/16] max-h-48 bg-black/40">
+            <div className={cn("max-h-56 bg-black/40 flex items-center justify-center overflow-hidden", isPortrait ? "aspect-[9/16]" : "aspect-video")}>
               {kind === "videos" ? (
                 <video
                   src={frame.preview_url!}
                   controls
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain bg-black/60"
                 />
               ) : (
                 <img
                   src={frame.preview_url!}
                   alt={`Кадр ${frame.number}`}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain bg-black/60"
                 />
               )}
             </div>

@@ -1256,7 +1256,8 @@ function SceneImagesGalleryView({ projectId }: { projectId: number }) {
   const media = useQuery({
     queryKey: ["media-review", projectId, "images"],
     queryFn: () => api.listMediaReview(projectId, "images"),
-    refetchInterval: 5000,
+    refetchInterval: 3000,
+    refetchOnMount: "always",
   });
 
   if (media.isLoading) return <LoadingBlock />;
@@ -1279,7 +1280,8 @@ function SceneVideosGalleryView({ projectId }: { projectId: number }) {
   const media = useQuery({
     queryKey: ["media-review", projectId, "videos"],
     queryFn: () => api.listMediaReview(projectId, "videos"),
-    refetchInterval: 5000,
+    refetchInterval: 3000,
+    refetchOnMount: "always",
   });
 
   if (media.isLoading) return <LoadingBlock />;

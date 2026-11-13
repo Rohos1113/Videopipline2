@@ -535,27 +535,14 @@ export function NodeStudio({
     refetchInterval: open && generationRunning ? 2500 : false,
   });
 
-  useEffect(() => {
-    if (!open) return;
-    artifacts.refetch();
-    assets.refetch();
-    mediaImages.refetch();
-  }, [open, project.data?.status, project.data?.generation_active]);
-
-  const dbBrowser = useQuery({
-    queryKey: ["db-graph-project", projectId],
-    queryFn: () => api.dbGraph(projectId!),
-    enabled: open && projectId != null,
-  });
-
-  const isRunning = shouldShowStopBar(project.data?.status);
+  const isRunning = shouldShowStopBar(project.data?.status, project.data?.generation_active);
 
   const mediaImages = useQuery({
     queryKey: ["media-review", projectId, "images"],
     queryFn: () => api.listMediaReview(projectId!, "images"),
     enabled: open && projectId != null,
     refetchInterval:
-      open && isRunning && (nodeType === "images" || nodeType === "hitl_images") ? 5000 : false,
+      open && isRunning && (nodeType === "images" || nodeType === "hitl_images") ? 3000 : false,
   });
 
   const mediaVideos = useQuery({
@@ -563,7 +550,21 @@ export function NodeStudio({
     queryFn: () => api.listMediaReview(projectId!, "videos"),
     enabled: open && projectId != null,
     refetchInterval:
-      open && isRunning && (nodeType === "videos" || nodeType === "hitl_videos") ? 5000 : false,
+      open && isRunning && (nodeType === "videos" || nodeType === "hitl_videos") ? 3000 : false,
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    artifacts.refetch();
+    assets.refetch();
+    mediaImages.refetch();
+    mediaVideos.refetch();
+  }, [open, project.data?.status, project.data?.generation_active]);
+
+  const dbBrowser = useQuery({
+    queryKey: ["db-graph-project", projectId],
+    queryFn: () => api.dbGraph(projectId!),
+    enabled: open && projectId != null,
   });
 
   const mapMedia = useCallback(
