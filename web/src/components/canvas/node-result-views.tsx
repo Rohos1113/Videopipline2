@@ -940,7 +940,8 @@ export function FramePromptsView({ items }: { items: NodeResultItem[] }) {
             </div>
             <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-md border border-white/5 bg-black/40">
               <img
-                src={selected.previewUrl}
+                key={selected.id}
+                src={toThumbnailUrl(selected.previewUrl) ?? selected.previewUrl}
                 alt={selected.label}
                 className="h-full w-full object-contain"
               />

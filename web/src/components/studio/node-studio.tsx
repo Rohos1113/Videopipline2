@@ -539,6 +539,7 @@ export function NodeStudio({
     if (!open) return;
     artifacts.refetch();
     assets.refetch();
+    mediaImages.refetch();
   }, [open, project.data?.status, project.data?.generation_active]);
 
   const dbBrowser = useQuery({
@@ -577,6 +578,8 @@ export function NodeStudio({
           preview_url: r.preview_url,
           label: `Кадр ${r.number}`,
           frame_id: r.frame_id,
+          frame_number: r.number,
+          number: r.number,
           voiceover: r.voiceover_text,
         })),
     [],
