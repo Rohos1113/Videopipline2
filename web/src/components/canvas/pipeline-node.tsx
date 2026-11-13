@@ -26,7 +26,7 @@ import type { NodeRunStatus } from "@/lib/types";
 import { getNodeSpec, formatNodeTypeLabel, SD_AGENT_LABELS } from "@/lib/node-catalog";
 import { getNodeIcon } from "@/lib/node-icons";
 import { groupHue } from "@/lib/group-color";
-import { cn, parseUtcDate } from "@/lib/utils";
+import { cn, formatRelativeTime, parseUtcDate } from "@/lib/utils";
 import { toThumbnailUrl } from "@/lib/thumbnail-url";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -99,6 +99,7 @@ export interface PipelineNodeData extends Record<string, unknown> {
   status: NodeRunStatus;
   progress: number;
   progressText: string | null;
+  updatedAt?: string | null;
   error: string | null;
   attempts: number;
   startedAt?: string | null;
@@ -442,6 +443,7 @@ export function PipelineNode({ data, selected }: NodeProps) {
               status={d.status}
               progress={d.progress}
               progressText={d.progressText}
+              updatedAt={d.updatedAt}
               error={d.error}
               snapshot={resultSnapshot ?? null}
               groupId={d.groupId}
@@ -706,9 +708,10 @@ export function PipelineNode({ data, selected }: NodeProps) {
               {d.error && d.status === "failed" && (
                 <span className="line-clamp-2 text-[9px] text-destructive">{truncate(d.error, 48)}</span>
               )}
-              {d.progressText && d.status === "running" && (
+              {d.status === "running" && (d.progressText || d.updatedAt) && (
                 <span className="line-clamp-1 font-mono text-[9px] text-muted-foreground">
-                  {d.progressText}
+                  {d.progressText ?? "в работе"}
+                  {d.updatedAt ? ` · ${formatRelativeTime(d.updatedAt)}` : ""}
                 </span>
               )}
             </div>
@@ -913,6 +916,7 @@ function PosterTile({
   status,
   progress,
   progressText,
+  updatedAt,
   error,
   snapshot,
   model,
@@ -938,6 +942,7 @@ function PosterTile({
   status: NodeRunStatus;
   progress: number;
   progressText: string | null;
+  updatedAt?: string | null;
   error: string | null;
   snapshot: import("@/lib/node-result-resolver").NodeResultSnapshot | null;
   model: React.ReactNode;
@@ -975,6 +980,12 @@ function PosterTile({
   const [draftTitle, setDraftTitle] = useState(title);
   const bgInputRef = useRef<HTMLInputElement>(null);
   const running = status === "running";
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => setTick((t) => t + 1), 10000);
+    return () => clearInterval(timer);
+  }, [running]);
   const failed = status === "failed";
   const items = snapshot?.items ?? [];
   const has = !isPublish && !!snapshot?.hasResult && items.length > 0;
@@ -1225,8 +1236,15 @@ function PosterTile({
             <div className="h-full bg-white" style={{ width: `${Math.max(4, Math.min(100, progress || 0))}%` }} />
           </div>
         ) : null}
-        {running && progressText ? (
-          <div className="absolute bottom-1.5 right-2.5 font-mono text-[11px] text-white/70">{truncate(progressText, 36)}</div>
+        {running && (progressText || updatedAt) ? (
+          <div className="absolute bottom-1.5 right-2.5 flex items-center gap-1.5 font-mono text-[11px] text-white/70">
+            {progressText ? <span>{truncate(progressText, 28)}</span> : null}
+            {updatedAt ? (
+              <span className="text-[10px] text-white/50" title={`Обновлено: ${new Date(updatedAt).toLocaleString("ru-RU")}`}>
+                ({formatRelativeTime(updatedAt)})
+              </span>
+            ) : null}
+          </div>
         ) : null}
       <div className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-center gap-2 px-3 pb-1.5 pt-2 [&>*]:pointer-events-auto`}>
         {groupId ? (
