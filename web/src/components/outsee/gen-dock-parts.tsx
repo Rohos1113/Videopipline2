@@ -31,121 +31,29 @@ import {
   Zap,
 } from "lucide-react";
 import type { KieField } from "@/lib/api";
+import { REF_KIND_LABEL, refToken, type GenRef, type RefKind } from "@/lib/gen-dock-refs";
 import { cn } from "@/lib/utils";
 
 /** Изумрудный акцент студии; им помечены активные элементы окна генерации. */
 export const GEN_ACCENT = "#2dd4bf";
 
-export type RefKind = "image" | "video" | "audio";
-
-export type GenRef = {
-  /** Уникальный ключ: `<field>:<index>`. */
-  id: string;
-  /** Имя поля KIE-модели, из которого пришёл референс. */
-  field: string;
-  url: string;
-  /** Фактическое имя (имя загруженного файла), а не «Реф #N». */
-  name: string;
-  kind: RefKind;
-  /** Порядковый номер внутри своей категории, с 1. */
-  categoryIndex: number;
-  /** Всего слотов в категории (для счётчика «N/M»). */
-  categoryMax: number;
-};
-
-const KIND_BY_FIELD_KIND: Record<string, RefKind> = {
-  images: "image",
-  videos: "video",
-  audios: "audio",
-};
-
-export const REF_KIND_LABEL: Record<RefKind, string> = {
-  image: "Фото",
-  video: "Видео",
-  audio: "Аудио",
-};
-
-/** Имя файла без расширения — то, что уходит в промт после «@». */
-export function refToken(name: string): string {
-  const base = (name || "").split(/[\\/]/).pop() || name || "ref";
-  const dot = base.lastIndexOf(".");
-  const raw = dot > 0 ? base.slice(0, dot) : base;
-  return raw.replace(/\s+/g, "_").slice(0, 40) || "ref";
-}
-
-/** Имя из URL, когда файл пришёл ссылкой: последний сегмент пути. */
-export function nameFromUrl(url: string): string {
-  try {
-    const clean = url.split("?")[0] ?? url;
-    const seg = clean.split("/").filter(Boolean).pop();
-    return seg ? decodeURIComponent(seg) : url;
-  } catch {
-    return url;
-  }
-}
+// Чистая логика имён референсов живёт в lib/gen-dock-refs.ts (там её покрывают
+// юнит-тесты); здесь — только UI-детали дока. Реэкспорт оставлен, чтобы
+// существующие импорты из "./gen-dock-parts" не менялись.
+export {
+  REF_KIND_LABEL,
+  framesFromKieValues,
+  nameFromUrl,
+  refToken,
+  refsFromKieFields,
+  type GenRef,
+  type RefKind,
+} from "@/lib/gen-dock-refs";
 
 export function refKindIcon(kind: RefKind, className = "h-3 w-3") {
   if (kind === "video") return <Film className={className} />;
   if (kind === "audio") return <Music className={className} />;
   return <ImageIcon className={className} />;
-}
-
-/**
- * Собирает референсы из значений KIE-модели. Параллельно с URL держим имена:
- * `names[field][i]` — фактическое имя i-го вложения (после загрузки файла).
- */
-export function refsFromKieFields(
-  fields: KieField[],
-  values: Record<string, unknown>,
-  names: Record<string, string[]>,
-): GenRef[] {
-  const out: GenRef[] = [];
-  for (const f of fields) {
-    const kind = KIND_BY_FIELD_KIND[f.kind];
-    if (!kind) continue;
-    const raw = values[f.name];
-    const urls = Array.isArray(raw) ? raw.filter((u): u is string => typeof u === "string" && !!u) : [];
-    const fieldNames = names[f.name] || [];
-    urls.forEach((url, i) => {
-      out.push({
-        id: `${f.name}:${i}`,
-        field: f.name,
-        url,
-        name: fieldNames[i] || nameFromUrl(url),
-        kind,
-        categoryIndex: i + 1,
-        categoryMax: f.max_items ?? 99,
-      });
-    });
-  }
-  return out;
-}
-
-/** Кадры «первый / последний» в режиме Первый+Последний. */
-export function framesFromKieValues(
-  fields: KieField[],
-  values: Record<string, unknown>,
-  names: Record<string, string[]>,
-): GenRef[] {
-  const out: GenRef[] = [];
-  const add = (field: string, kind: RefKind) => {
-    const raw = values[field];
-    const urls = Array.isArray(raw) ? raw.filter((u): u is string => typeof u === "string" && !!u) : [];
-    urls.forEach((url, i) => {
-      out.push({
-        id: `${field}:${i}`,
-        field,
-        url,
-        name: (names[field] || [])[i] || nameFromUrl(url),
-        kind,
-        categoryIndex: i + 1,
-        categoryMax: 1,
-      });
-    });
-  };
-  if (fields.some((f) => f.name === "first_frame_url")) add("first_frame_url", "image");
-  if (fields.some((f) => f.name === "last_frame_url")) add("last_frame_url", "image");
-  return out;
 }
 
 /** Одна квадратная плитка референса: 68×68, номер категории, метка типа, удаление. */

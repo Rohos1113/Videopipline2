@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { errorMessageFromUnknown } from "@/lib/error-message";
+import { slotIndexFromItem } from "@/lib/node-result-slots";
 import { toThumbnailUrl } from "@/lib/thumbnail-url";
 import { api } from "@/lib/api";
 import type { NodeResultItem, NodeResultSnapshot } from "@/lib/node-result-resolver";
@@ -1050,16 +1051,9 @@ function HeroCharacterCard({ projectId, entity }: { projectId: number; entity: i
  * Персонажи: результаты сеткой по 2 в ряд. Пока картинки нет — на её месте
  * рамка 16:9 с подписью `empty`; когда картинка появилась, она показывается
  * в своём исходном формате (без обрезки и без принудительных пропорций).
+ *
+ * Правило номера слота живёт в lib/node-result-slots.ts — там его покрывают тесты.
  */
-function heroSlotIndex(item: NodeResultItem, fallback: number): number {
-  const raw = `${item.filePath ?? ""} ${item.label ?? ""} ${item.previewUrl ?? ""}`;
-  const m = raw.match(/c(\d{1,3})\.(?:png|jpe?g|webp)/i);
-  if (m) return Math.max(0, parseInt(m[1], 10) - 1);
-  if (typeof item.frameNumber === "number" && item.frameNumber > 0) {
-    return item.frameNumber - 1;
-  }
-  return fallback;
-}
 
 function HeroResultsView({
   projectId,
@@ -1082,7 +1076,7 @@ function HeroResultsView({
 
   const byIndex = new Map<number, NodeResultItem>();
   items.forEach((item, i) => {
-    const idx = heroSlotIndex(item, i);
+    const idx = slotIndexFromItem(item, i);
     if (!byIndex.has(idx)) byIndex.set(idx, item);
   });
   const maxItemIdx = byIndex.size ? Math.max(...Array.from(byIndex.keys())) + 1 : 0;
