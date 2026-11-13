@@ -360,6 +360,46 @@ async def _pause_img_pr_no_source(session: AsyncSession, project: Project, error
     return "pause_infra"
 
 
+async def _pause_model_refusal(session: AsyncSession, project: Project, error: Exception, err_code: str) -> str:
+    """Модель явно отказалась работать — пауза, без повтора модели.
+
+    Живой случай (#86, 11.11): нода «ИИ-редактор сцен» получила неполный
+    вход, модель ответила отказом («missing_global_context»), контракт отклонил
+    ответ — и шаг ушёл в длинные ПЛАТНЫЕ ретраи: тот же вход даёт тот же
+    отказ, а в ноде вместо причины светилась «Неизвестная ошибка».
+
+    Отказ детерминирован, поэтому повтор не чинит ничего, а только жжёт
+    бюджет. Ставим паузу с текстом ответа модели: человек правит вход ноды и
+    жмёт ▶.
+    """
+    from app.services.project_control import pause_project as pause_project_svc
+    from app.services.run_sync import mark_running_node_failed
+
+    running = project.status
+    reason = str(error).strip()
+    fs = _failure_state(project)
+    fs["last_error"] = reason
+    fs["last_error_code"] = err_code
+    fs["last_running"] = running.value
+    fs.pop("sleep_until", None)
+    _save_failure_state(project, fs)
+    await mark_running_node_failed(
+        session,
+        project,
+        error,
+        initiator="worker",
+        error_code=err_code,
+    )
+    await pause_project_svc(session, project)
+    await session.flush()
+    logger.warning(
+        "[#{}] модель отказалась работать — пауза, без повтора: {}",
+        project.id,
+        reason[:200],
+    )
+    return "pause_infra"
+
+
 async def record_step_failure(
     session: AsyncSession,
     project: Project,
@@ -525,6 +565,11 @@ async def record_step_failure(
     # «Нет исходных данных» у img_pr: повтор платный и даст тот же ответ — пауза.
     if err_code_early == "img_pr_no_scene_data" or _no_source_error(error) is not None:
         return await _pause_img_pr_no_source(session, project, error, "img_pr_no_scene_data")
+
+    # Модель отказалась работать (вход неполный): тот же вход даст тот же
+    # отказ, а каждый вызов — деньги. Пауза с причиной вместо тихих ретраев.
+    if err_code_early == "llm_model_refusal":
+        return await _pause_model_refusal(session, project, error, "llm_model_refusal")
 
     running = project.status
     step = step_by_running_status(running)

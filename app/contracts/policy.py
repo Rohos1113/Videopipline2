@@ -276,9 +276,12 @@ async def run_with_contract(
     хранит только ответ, и причину пустого ответа не восстановить.
 
     Raises:
-        LlmContractError: лимит исчерпан (fail-closed). Транспортные
-        ошибки (GptApiError и пр.) пролетают наверх без изменений —
-        это не брак формата, их ретраит транспорт/step_failure_policy.
+        LlmContractError: лимит исчерпан (fail-closed). Отказ модели
+        (``kind="refusal"``) — тоже fail-closed, но сразу: ремонтить отказ
+        бессмысленно (тот же вход → тот же отказ), поэтому repair-попытки
+        не тратим. Транспортные ошибки (GptApiError и пр.) пролетают наверх
+        без изменений — это не брак формата, их ретраит
+        транспорт/step_failure_policy.
     """
     parse_fails = 0
     validate_fails = 0
@@ -316,6 +319,12 @@ async def run_with_contract(
             if e.kind == "parse":
                 parse_fails += 1
                 exhausted = parse_fails > parse_limit
+            elif e.kind == "refusal":
+                # Отказ модели работать (напр. «missing_global_context»):
+                # повтор с тем же входом даст тот же отказ, а каждый вызов —
+                # деньги. Ремонт тут не помогает — падаем сразу, причину
+                # отдаём наверх (см. error_catalog: llm_model_refusal).
+                exhausted = True
             else:
                 validate_fails += 1
                 exhausted = validate_fails > validate_limit
@@ -355,6 +364,18 @@ async def run_with_contract(
                     validate_fails=validate_fails,
                     ok=False,
                 )
+                if e.kind == "refusal":
+                    # Отказ: текст модели — это и есть причина, её и отдаём.
+                    raise LlmContractError(
+                        f"{label or contract.name}: {e}",
+                        kind="refusal",
+                        contract=contract.name,
+                        detail={
+                            **e.detail,
+                            "attempts": attempts,
+                            "rejected_paths": [str(p) for p in rejected],
+                        },
+                    ) from e
                 raise LlmContractError(
                     f"{label or contract.name}: repair-лимит исчерпан "
                     f"(attempts={attempts}, parse_fails={parse_fails}, "

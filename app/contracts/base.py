@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Generic, TypeVar
 
@@ -60,10 +61,25 @@ class LlmContract(Generic[TModel]):
     model: type[TModel]
     strict: bool = False
     schema_override: dict[str, Any] | None = None
+    # Детектор отказа из-за НЕПОЛНОГО входа: конверт без данных + error/refusal,
+    # где модель сказала, что входа/контекста не хватило. Такой отказ не
+    # ремонтируется (тот же вход даст тот же отказ), поэтому контракт роняет
+    # шаг сразу (kind="refusal"), без платного repair-ретрая.
+    # Не задан — отказы не выделяются (как раньше).
+    detect_input_refusal: Callable[[dict[str, Any]], str] | None = None
 
     def parse(self, text: str) -> ParsedReply[TModel]:
         data = extract_json_payload(text, contract=self.name)
         meta = {k: data.pop(k) for k in _META_KEYS if k in data}
+        if self.detect_input_refusal is not None:
+            reason = self.detect_input_refusal(data)
+            if reason:
+                raise LlmContractError(
+                    f"модель отказалась работать: {reason}",
+                    kind="refusal",
+                    contract=self.name,
+                    detail={"refusal": reason},
+                )
         try:
             payload = self.model.model_validate(data)
         except ValidationError as e:

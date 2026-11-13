@@ -594,6 +594,74 @@ def require_frames_for_db_sot(project_id: int | None, node_key: str | None, fram
     )
 
 
+# Ключи, в которых кадр несёт исходный материал для сцены. Если в payload'е
+# нет ни одного из них — модели нечего описывать: она ответит пустым ops,
+# контракт отклонит, и шаг уйдёт в платные ретраи.
+_INPUT_CONTENT_KEYS = (
+    "voiceover_text",
+    "vo_shot",
+    "закадр_шота",
+    "meaning",
+    "кадры",
+    "биты",
+    "main_action",
+    "главное_действие",
+)
+
+
+def _row_has_content(row: dict) -> bool:
+    """Есть ли в строке кадра хоть что-то, из чего модель строит сцену."""
+    return any(str(row.get(k) or "").strip() for k in _INPUT_CONTENT_KEYS)
+
+
+def require_excel_gpt_inputs(
+    *,
+    project_id: int | None,
+    node_key: str | None,
+    db_ctx: dict | None,
+    needs_scene_context: bool = False,
+    needs_voiceover: bool = True,
+) -> None:
+    """Fail-fast: у ноды «ИИ-редактор сцен» нет входа — ДО вызова модели.
+
+    Живой случай (#86, 11.11): нода собрала payload и позвала модель, но вход
+    был неполным — модель честно отказалась («missing_global_context»), ответ
+    не прошёл контракт, и шаг ушёл в длинные ПЛАТНЫЕ ретраи вместо внятной
+    причины (в логах — «Неизвестная ошибка»).
+
+    Тот же приём, что у ``require_frames_for_db_sot`` (кадров нет → понятный
+    fail до модели), но по СОДЕРЖИМОМУ payload'а:
+
+    * кадров нет — модели нечего описывать;
+    * у кадров нет закадра/смысла — модель не сможет написать сцену;
+    * для сквозной нумерации сцен нужен контекст проекта (``frames_context``):
+      без него модель отвечает «missing_global_context» (отказ, а не пустой
+      ops) — это и был живой случай.
+
+    Проверка бесплатная (счёт по собранному payload'у) и срабатывает ДО
+    платного вызова модели.
+    """
+    ctx = db_ctx if isinstance(db_ctx, dict) else {}
+    frames = [row for row in (ctx.get("frames") or []) if isinstance(row, dict)]
+    if not frames:
+        raise RuntimeError(
+            f"excel_gpt: нет входа — #{project_id} {node_key}: в payload ноды нет ни одного "
+            "кадра. Сначала нужен шаг разбивки на кадры (сплит закадра), модель не вызывалась"
+        )
+    if needs_scene_context and not (ctx.get("frames_context") or []):
+        raise RuntimeError(
+            f"excel_gpt: нет входа — #{project_id} {node_key}: нет контекста проекта "
+            "(frames_context) для сквозной нумерации сцен. Без него модель отвечает "
+            "«missing_global_context» и отказывается работать — модель не вызывалась"
+        )
+    if needs_voiceover and not any(_row_has_content(row) for row in frames):
+        raise RuntimeError(
+            f"excel_gpt: нет входа — #{project_id} {node_key}: у кадров нет закадра "
+            "(voiceover_text) и смысла — модели нечего описывать. Сначала нужен шаг "
+            "разбивки на кадры (сплит закадра), модель не вызывалась"
+        )
+
+
 def _is_scene_analytics_prompt(variant: str | None, master: str | None) -> bool:
     return any(m in _prompt_blob(variant, master) for m in _SCENE_ANALYTICS_MARKERS)
 
@@ -2721,6 +2789,16 @@ async def run(session: AsyncSession, project: Project, bot: Any = None) -> None:
                     "items": item_cards,
                     "item_descriptions": item_descs,
                 }
+                # H3: тот же fail-fast, что и в основной ветке excel_gpt —
+                # пустой payload модель не спасёт (см. require_excel_gpt_inputs).
+                # Закадр здесь не проверяем: у этих нод свой контракт
+                # (characters/scenes), а не ops по кадрам.
+                require_excel_gpt_inputs(
+                    project_id=project.id,
+                    node_key=node_key,
+                    db_ctx=db_ctx,
+                    needs_voiceover=False,
+                )
             else:
                 require_frames_for_db_sot(project.id, node_key, frames_for_map)
                 gpt_frames = list(frames_for_map)
@@ -2786,6 +2864,16 @@ async def run(session: AsyncSession, project: Project, bot: Any = None) -> None:
                     # модель не видит уже присвоенные scene_NN и отвечает
                     # «missing_global_context» (отказ работать с фрагментом).
                     with_scene_context=_needs_scene_numbering_context(variant, master, node_key),
+                )
+                # H3: явная проверка входа ДО вызова модели — пустой payload
+                # модель не спасёт, а её отказ обернётся платными ретраями.
+                require_excel_gpt_inputs(
+                    project_id=project.id,
+                    node_key=node_key,
+                    db_ctx=db_ctx,
+                    needs_scene_context=_needs_scene_numbering_context(variant, master, node_key),
+                    # QC-нода проверяет уже готовую сцену — закадр ей не нужен.
+                    needs_voiceover=not _is_shots_qc_node(variant, master, node_key),
                 )
                 if vo_markup:
                     overlay = {
