@@ -1421,6 +1421,47 @@ def _node_already_succeeded_for_project(project: Project, nr: NodeRun) -> bool:
     return bool(ready is not None and project.status == ready)
 
 
+def _format_duration_ru(seconds: int) -> str:
+    """Форматировать длительность для логов: 45 с, 12 мин, 1 ч 15 мин."""
+    if seconds < 60:
+        return f"{max(0, seconds)} с"
+    mins = seconds // 60
+    if mins < 60:
+        return f"{mins} мин"
+    hours = mins // 60
+    rem_mins = mins % 60
+    return f"{hours} ч {rem_mins} мин" if rem_mins else f"{hours} ч"
+
+
+def _log_running_node_progress(
+    project_id: int,
+    nr: NodeRun,
+    now: datetime,
+) -> None:
+    """Информационный heartbeat в фоновом реконсайлере (задача 5а).
+
+    Пример:
+    [#86] нода 'n_excel_gpt_2': running 12 мин, последний прогресс 3 мин назад, в работе: пачка 2/3
+    """
+    started = nr.started_at or nr.created_at or now
+    running_sec = max(0, int((now - started).total_seconds()))
+    running_str = _format_duration_ru(running_sec)
+
+    updated = nr.updated_at or started
+    idle_sec = max(0, int((now - updated).total_seconds()))
+    idle_str = _format_duration_ru(idle_sec)
+
+    progress_str = f", {nr.progress_text.strip()}" if nr.progress_text and nr.progress_text.strip() else ""
+    logger.info(
+        "[#{}] нода '{}': running {}, последний прогресс {} назад{}",
+        project_id,
+        nr.node_key,
+        running_str,
+        idle_str,
+        progress_str,
+    )
+
+
 async def _reconcile_stale_node_runs(
     *,
     initiator: str,
@@ -1508,6 +1549,8 @@ async def _reconcile_stale_node_runs(
                     continue
                 if require_no_live_task:
                     if live:
+                        if nr.status == NodeRunStatus.running and run.project_id is not None:
+                            _log_running_node_progress(run.project_id, nr, now)
                         continue
                     if nr.started_at is not None and now - nr.started_at < grace:
                         continue
