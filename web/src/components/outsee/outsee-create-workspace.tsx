@@ -110,6 +110,7 @@ import {
   kieFamilyMode,
   kieFamilyModes,
   kieFileFieldsIn,
+  kieFieldsKnown,
   kieMainTextName,
   kieModeOptions,
   settingDefaultPairs,
@@ -1335,6 +1336,15 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     [kieModel, kieModeId],
   );
   const kieTextField = useMemo(() => kieMainTextName(kieModeFields), [kieModeFields]);
+  /**
+   * Схема полей режима известна? «Настройки неизвестны» пишем только при
+   * fields_known === false (или пустых полях без флага), иначе — «нет
+   * дополнительных настроек» (все поля файловые/промпт).
+   */
+  const kieModeFieldsKnown = useMemo(
+    () => kieFieldsKnown(kieModel, kieModeId),
+    [kieModel, kieModeId],
+  );
 
   // ---- Seedance (KIE): плитки референсов, режим Omni / Первый+Последний ----
   const seedanceIsKie = mediaType === "video" && kieActive && isSeedanceModel(kieModel);
@@ -4555,6 +4565,7 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                       modes={kieModeOptionList}
                       modeId={kieMode?.id ?? null}
                       onModeChange={kieModeOptionList.length > 0 ? switchKieMode : undefined}
+                      fieldsKnown={kieModeFieldsKnown}
                       extras={
                         seedanceIsKie ? (
                           <>

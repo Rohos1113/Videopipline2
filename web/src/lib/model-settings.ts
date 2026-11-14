@@ -483,6 +483,22 @@ export function kieEffectivePricing(
   return mode?.pricing ?? model?.pricing ?? null;
 }
 
+/**
+ * Схема полей режима известна? Контракт отдаёт fields_known: false — схему не
+ * знаем («настройки неизвестны»); true — полей может не быть вовсе («нет
+ * дополнительных настроек»). Если флага нет, считаем схему известной, когда
+ * поля вообще есть; пустой fields без флага — неизвестная схема.
+ */
+export function kieFieldsKnown(
+  model: KieModelSpec | null | undefined,
+  modeId?: string | null,
+): boolean {
+  const mode = kieFamilyMode(model, modeId);
+  const raw = mode?.fields_known ?? model?.fields_known;
+  if (typeof raw === "boolean") return raw;
+  return kieEffectiveFields(model, modeId).length > 0;
+}
+
 /** Главное текстовое поле модели из списка полей (prompt/text/dialogue). */
 export function kieMainTextName(fields: KieField[]): string | null {
   const f = fields.find(

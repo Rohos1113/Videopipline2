@@ -101,6 +101,11 @@ export interface KieModeSpec {
   api?: string;
   desc?: string;
   fields: KieField[];
+  /**
+   * Схема полей известна. false — контракт не знает полей режима
+   * (UI пишет «настройки неизвестны»); true при пустых fields — полей нет.
+   */
+  fields_known?: boolean;
   pricing: KiePricing;
   constraints?: string[];
 }
@@ -120,6 +125,8 @@ export interface KieModelSpec {
   brand?: string;
   result: "video" | "image" | "audio" | "text";
   fields: KieField[];
+  /** Схема полей семейства известна (см. KieModeSpec.fields_known). */
+  fields_known?: boolean;
   pricing: KiePricing;
   /** Семейство: несколько режимов в одной карточке (нет у старых записей). */
   modes?: KieModeSpec[];

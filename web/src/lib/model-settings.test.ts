@@ -19,6 +19,7 @@ import {
   kieEffectivePricing,
   kieFamilyMode,
   kieFamilyModes,
+  kieFieldsKnown,
   kieFileFieldsIn,
   kieMainTextName,
   kieModeOptions,
@@ -86,6 +87,36 @@ test("kieSettingDescriptors: kind поля превращается в kind ко
   assert.equal(byName(descriptors, "style")?.kind, "text");
   assert.equal(byName(descriptors, "voice_id")?.kind, "voice");
   assert.equal(byName(descriptors, "stability")?.kind, "range");
+});
+
+test("kieFieldsKnown: известная схема без настроек ≠ неизвестная схема", () => {
+  // kling-avatar/omnihuman/recraft: поля есть (только файлы/промпт) — схема известна.
+  const fileOnly = model({
+    modes: [
+      mode("avatar-pro", {
+        fields: [field("image_url", "images"), field("audio_url", "audios"), field("prompt", "textarea")],
+      }),
+    ],
+  });
+  assert.equal(kieFieldsKnown(fileOnly, "avatar-pro"), true);
+
+  // Режим с пустыми полями и без флага — схему не знаем.
+  const empty = model({ modes: [mode("x", { fields: [] })] });
+  assert.equal(kieFieldsKnown(empty, "x"), false);
+
+  // Явный контракт fields_known=false главнее наличия полей.
+  const unknown = model({
+    modes: [
+      {
+        id: "y",
+        label: "Y",
+        fields: [field("resolution", "select", { options: ["720p"] })],
+        pricing: pricing({ unit: "gen", default: 1 }),
+        fields_known: false,
+      },
+    ],
+  });
+  assert.equal(kieFieldsKnown(unknown, "y"), false);
 });
 
 test("kieSettingDescriptors: подсказка опции только из данных, без карты разрешений", () => {

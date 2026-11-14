@@ -833,6 +833,7 @@ export function ModelSettingsDock({
   modes = [],
   modeId,
   onModeChange,
+  fieldsKnown,
   priceLabel,
 }: {
   settings: ModelSettingDescriptor[];
@@ -851,6 +852,12 @@ export function ModelSettingsDock({
   modes?: ModelSettingModeOption[];
   modeId?: string | null;
   onModeChange?: (id: string) => void;
+  /**
+   * Схема полей режима/модели известна (fields_known). false — реально
+   * неизвестная схема («настройки неизвестны»); true/undefined — полей просто
+   * нет («нет дополнительных настроек»).
+   */
+  fieldsKnown?: boolean;
   /** Цена за текущие настройки — в шапке панели, пересчитывается на лету. */
   priceLabel?: string;
 }) {
@@ -890,6 +897,26 @@ export function ModelSettingsDock({
   const showModeBadge = modes.length > 1 && Boolean(onModeChange);
   const showModeSection = modes.length > 0 && Boolean(onModeChange);
   const activeMode = modes.find((m) => m.id === modeId) ?? modes[0] ?? null;
+
+  /**
+   * Текст пустой панели. «Настройки неизвестны» — только когда схема реально
+   * неизвестна (fields_known === false). Если схема известна, а полей-настроек
+   * нет (все поля файловые/промпт) — честное «нет дополнительных настроек».
+   */
+  const emptyNote: { attr: "no-fields" | "no-settings"; text: string } = !showModeSection
+    ? {
+        attr: "no-settings",
+        text: "У этой модели нет отдельных настроек — доступны только промпт и файлы.",
+      }
+    : fieldsKnown === false
+      ? {
+          attr: "no-fields",
+          text: "Настройки этого режима неизвестны — доступны только промпт и файлы.",
+        }
+      : {
+          attr: "no-settings",
+          text: "У этого режима нет дополнительных настроек — только промпт и файлы.",
+        };
 
   return (
     <div className="inline-flex flex-wrap items-center gap-1.5">
@@ -1004,12 +1031,10 @@ export function ModelSettingsDock({
 
             {!sections.length && (
               <p
-                data-params-note="no-fields"
+                data-params-note={emptyNote.attr}
                 className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2 text-[11px] leading-snug text-white/45"
               >
-                {showModeSection
-                  ? "Настройки этого режима неизвестны — доступны только промпт и файлы."
-                  : "У этой модели нет отдельных настроек — доступны только промпт и файлы."}
+                {emptyNote.text}
               </p>
             )}
 
