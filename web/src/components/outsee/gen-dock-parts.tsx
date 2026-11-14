@@ -682,7 +682,10 @@ function SettingControl({
   if (d.kind === "toggle") {
     const on = settingIsOn(value);
     return (
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2">
+      <div
+        data-setting-option={on ? "on" : "off"}
+        className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2"
+      >
         <span className="text-[11px] leading-tight text-white/75">{d.hint || d.label}</span>
         <ToggleSwitch on={on} label={d.label} onToggle={() => onChange(d.name, !on)} />
       </div>
@@ -700,6 +703,7 @@ function SettingControl({
               key={n}
               type="button"
               data-duration={n}
+              data-setting-option={String(n)}
               onClick={() => onChange(d.name, d.valueType === "string" ? String(n) : n)}
               className={cn(
                 "h-8 rounded-lg border text-[11px] font-medium tabular-nums transition",
@@ -739,6 +743,7 @@ function SettingControl({
         </button>
         <input
           type="number"
+          data-setting-option={Number.isFinite(num) ? String(num) : ""}
           value={Number.isFinite(num) ? String(num) : ""}
           min={d.min}
           max={d.max}
@@ -765,6 +770,7 @@ function SettingControl({
       <div className="flex items-center gap-2">
         <input
           type="range"
+          data-setting-option={String(num)}
           min={d.min ?? 0}
           max={d.max ?? 1}
           step={d.step ?? 0.01}
@@ -783,6 +789,7 @@ function SettingControl({
     return (
       <button
         type="button"
+        data-setting-option="voice"
         onClick={onOpenVoiceModal}
         className="inline-flex h-8 w-full items-center gap-1.5 rounded-lg border border-[#2dd4bf]/40 bg-[#2dd4bf]/10 px-2 text-[12px] font-medium text-[#2dd4bf] transition hover:border-[#2dd4bf]/60 hover:bg-[#2dd4bf]/20"
       >
@@ -797,6 +804,7 @@ function SettingControl({
 
   return (
     <input
+      data-setting-option="text"
       value={String(value ?? "")}
       onChange={(e) => onChange(d.name, e.target.value)}
       placeholder={d.hint || "—"}
@@ -959,6 +967,7 @@ export function ModelSettingsDock({
                       key={m.id}
                       type="button"
                       data-mode-option={m.id}
+                      data-setting-option={m.id}
                       title={m.hint || m.label}
                       onClick={() => onModeChange?.(m.id)}
                       className={OPTION_CLASS(m.id === (activeMode?.id ?? ""))}
@@ -974,14 +983,15 @@ export function ModelSettingsDock({
               <PaneSection key={section.title} title={section.title}>
                 <div className="space-y-1.5">
                   {section.items.map((d) => (
-                    <SettingControl
-                      key={d.name}
-                      descriptor={d}
-                      value={modelSettingValue(d, values)}
-                      onChange={onChange}
-                      onOpenVoiceModal={onOpenVoiceModal}
-                      formatVoice={formatVoice}
-                    />
+                    <div key={d.name} data-setting-name={d.name} data-setting-kind={d.kind}>
+                      <SettingControl
+                        descriptor={d}
+                        value={modelSettingValue(d, values)}
+                        onChange={onChange}
+                        onOpenVoiceModal={onOpenVoiceModal}
+                        formatVoice={formatVoice}
+                      />
+                    </div>
                   ))}
                 </div>
               </PaneSection>

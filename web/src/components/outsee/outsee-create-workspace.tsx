@@ -1920,20 +1920,38 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
         ? videoModel.price
         : audioModel.price;
 
+  // Клиентская цена outsee: токены каталога × $0.10 × 1.25, только доллары.
+  const outseePrice = useMemo(
+    () =>
+      kieActive
+        ? null
+        : estimateCreatePrice({
+            media: mediaType,
+            model: activeSlug,
+            resolution: mediaType === "video" ? videoResolution : resolution,
+            duration: Number(duration) || 10,
+            size: soraSize,
+            catalogPrice: currentCatalogPrice,
+          }),
+    [
+      kieActive,
+      mediaType,
+      activeSlug,
+      videoResolution,
+      resolution,
+      duration,
+      soraSize,
+      currentCatalogPrice,
+    ],
+  );
+
   const basePriceLabel = kieActive
     ? kiePrice
       ? kiePrice.pending || kiePrice.usd == null
         ? "цена уточняется"
         : formatUsd(kiePrice.usd)
       : "—"
-    : estimateCreatePrice({
-        media: mediaType,
-        model: activeSlug,
-        resolution,
-        duration: Number(duration) || 10,
-        size: soraSize,
-        catalogPrice: currentCatalogPrice,
-      }).label;
+    : (outseePrice?.label ?? "—");
 
   const priceLabel = useMemo(() => {
     if ((mediaType === "image" || mediaType === "video") && batchCount > 1) {
@@ -1941,10 +1959,13 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
         if (kiePrice.pending || kiePrice.usd == null) return "цена уточняется";
         return `${formatUsd(kiePrice.usd * batchCount)} (x${batchCount})`;
       }
+      if (outseePrice && outseePrice.usdClient > 0) {
+        return `${formatUsd(outseePrice.usdClient * batchCount)} (x${batchCount})`;
+      }
       return `${basePriceLabel} (x${batchCount})`;
     }
     return basePriceLabel;
-  }, [basePriceLabel, mediaType, batchCount, kieActive, kiePrice]);
+  }, [basePriceLabel, mediaType, batchCount, kieActive, kiePrice, outseePrice]);
 
   useEffect(() => {
     if (mediaType === "image") {
@@ -2967,9 +2988,9 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
   if (!open) return null;
 
   const TypeIcon = ({ id }: { id: OutseeMediaType }) => {
-    if (id === "video") return <Video className="h-5 w-5 shrink-0" strokeWidth={1.7} />;
-    if (id === "audio") return <Music className="h-5 w-5 shrink-0" strokeWidth={1.7} />;
-    return <ImageIcon className="h-5 w-5 shrink-0" strokeWidth={1.7} />;
+    if (id === "video") return <Video className="h-7 w-7 shrink-0" strokeWidth={1.7} />;
+    if (id === "audio") return <Music className="h-7 w-7 shrink-0" strokeWidth={1.7} />;
+    return <ImageIcon className="h-7 w-7 shrink-0" strokeWidth={1.7} />;
   };
 
   return (
@@ -3531,7 +3552,8 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
 
           {/* prompt dock + vertical type toggle */}
           <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 lg:px-5 lg:pb-4">
-            <div className="flex items-end gap-2">
+            {/* Зазор слева и справа от колонки кнопок одинаковый: px-3/px-5 = gap-3/gap-5. */}
+            <div className="flex items-end gap-3 lg:gap-5">
               {/* cs-typetoggle */}
               <div className="flex shrink-0 flex-col gap-2">
                 {/* Вдохновение — каталог стилей, тот же, что в помощнике над промптом */}
@@ -3548,18 +3570,17 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                         setModelOpen(false);
                       }}
                       aria-pressed={active}
+                      aria-label={t.label}
+                      title={t.label}
                       data-media-type={t.id}
                       className={cn(
-                        "flex w-[104px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border px-3 py-3 transition-all duration-200",
+                        "flex h-[68px] w-[96px] shrink-0 items-center justify-center rounded-xl border p-0 transition-all duration-200",
                         active
                           ? "border-[#2dd4bf] bg-[#2dd4bf]/15 text-[#2dd4bf] shadow-[0_0_18px_rgba(45,212,191,0.25)]"
                           : "border-white/10 bg-[#16161b]/90 text-white/45 hover:border-white/20 hover:bg-[#1e1e24] hover:text-white",
                       )}
                     >
                       <TypeIcon id={t.id} />
-                      <span className="w-full whitespace-nowrap text-center font-mono text-[11px] leading-none font-bold uppercase tracking-[0.08em]">
-                        {t.label}
-                      </span>
                     </button>
                   );
                 })}
@@ -4534,7 +4555,9 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                     {kieActive && kieCreditsQ.data?.credits != null && (
                       <div
                         className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-[#16161b] px-2.5 font-mono text-[11px] text-white/60"
-                        title={`Баланс kie.ai: ${kieCreditsQ.data.credits.toFixed(0)} кр × $${(kieCatalogQ.data?.credit_usd ?? 0.005).toFixed(3)}`}
+                        title={`Баланс kie.ai: ${formatUsd(
+                          kieCreditsQ.data.credits * (kieCatalogQ.data?.credit_usd ?? 0.005),
+                        )}`}
                       >
                         {formatUsd(
                           kieCreditsQ.data.credits * (kieCatalogQ.data?.credit_usd ?? 0.005),
@@ -4546,7 +4569,7 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                       title={
                         kieActive
                           ? "kie.ai: цена с наценкой студии 25%, пересчитывается по настройкам."
-                          : "1 токен = $0.10 (10¢). Цена за выбранные параметры."
+                          : "Цена в долларах с наценкой студии 25% за выбранные параметры."
                       }
                     >
                       <Coins className="h-3 w-3 text-[#2dd4bf]" strokeWidth={2.5} />
@@ -5655,13 +5678,21 @@ function ModelPickerPopover({
         letter: null as string | null,
         isKie: false,
         isTop: Boolean(m.isTop || m.slug === "veo-3-1-lite"),
-        priceLabel: m.price ? m.price : null,
-        priceUsd: null as number | null,
+        // «от $X» — по минимальным настройкам (1K / 5с), только доллары с наценкой.
+        priceLabel: null as string | null,
+        priceUsd:
+          estimateCreatePrice({
+            media: mediaType,
+            model: m.slug,
+            resolution: "1K",
+            duration: 5,
+            catalogPrice: m.price,
+          }).usdClient || null,
         pricePending: false,
       }));
 
     return [...kieItems, ...remainingBaseItems];
-  }, [filteredModels, filteredKie, creditUsd]);
+  }, [filteredModels, filteredKie, creditUsd, mediaType]);
 
   const topItems = useMemo(() => unifiedItems.filter((i) => i.isTop), [unifiedItems]);
   const otherItems = useMemo(() => unifiedItems.filter((i) => !i.isTop), [unifiedItems]);

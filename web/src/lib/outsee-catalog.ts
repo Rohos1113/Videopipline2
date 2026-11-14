@@ -336,7 +336,7 @@ export const OUTSEE_VIDEO_MODELS: OutseeVideoModel[] = [
     slug: "topaz-video-upscale",
     studioId: null,
     displayName: "Topaz Video Upscale",
-    description: "AI-апскейл видео до 4K · Starlight · Proteus · Astra · от 5 ток",
+    description: "AI-апскейл видео до 4K · Starlight · Proteus · Astra · от $0.63",
     icon: "/icons/topaz.svg",
     price: "от 5",
     advanced: true,
