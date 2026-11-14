@@ -446,10 +446,11 @@ def test_legacy_ids_still_resolve_and_build_same_payload() -> None:
     assert kbody["model"] == "kling-3.0/video"
     assert kbody["input"]["sound"] is True
 
-    flux = kc.get_model("flux-2-pro")
-    assert flux is not None
-    fbody = kc.build_payload(flux, {"prompt": "cat", "image_urls": ["https://x/a.png"]})
-    assert fbody["model"] == "flux-2/pro-image-to-image"
+    topaz = kc.get_model("topaz-image-upscale")
+    assert topaz is not None
+    tbody = kc.build_payload(topaz, {"image_url": "https://x/a.png", "target": "4k"})
+    assert tbody["model"] == "topaz/image-upscale"
+    assert tbody["input"]["target"] == "4k"
 
     nano = kc.get_model("nano-banana-2")
     assert nano is not None
@@ -921,7 +922,11 @@ def test_every_price_rule_resolves_to_its_price() -> None:
     skipped = 0
     for kie_id, rec in prices["models"].items():
         entry = index.get(kie_id)
-        assert entry is not None, f"kie_id {kie_id} без режима в families"
+        if entry is None:
+            # аудио-запись без семейства (Suno music video): в curated-каталоге
+            # её нет, режим для неё не строится — проверять нечего
+            skipped += 1
+            continue
         family = kc.get_family(kie_id)
         mode = kc.get_mode(family, entry[1])
         assert family is not None and mode is not None
@@ -958,8 +963,10 @@ def test_every_price_rule_resolves_to_its_price() -> None:
             if est.get("approx"):
                 problems.append((kie_id, rule.get("when"), "approx вместо точного матча"))
     assert not problems, problems[:5]
-    assert tested >= 480, f"прогон выродился: проверено {tested} правил"
-    assert skipped <= 60, f"слишком много невыразимых правил: {skipped}"
+    # curated-каталог 36 семей / 86 режимов: после сокращения состава правил
+    # стало меньше (было 487), но каждое оставшееся обязано резолвиться точно
+    assert tested >= 200, f"прогон выродился: проверено {tested} правил"
+    assert skipped <= 30, f"слишком много невыразимых правил: {skipped}"
 
 
 @needs_data
@@ -985,9 +992,9 @@ def test_with_video_false_rule_is_kept_in_generated_data() -> None:
         ("veo-3-1", "generate", {"model": "veo3_fast", "resolution": "1080p"}, {"mode": "fast", "resolution": "1080p"}),
         ("veo-3-1", "generate", {"model": "veo3", "resolution": "4k"}, {"mode": "quality", "resolution": "4K"}),
         ("veo-3-1", "extend", {"model": "quality"}, {"mode": "quality"}),
-        # GPT Image 1.5: mode=high/medium → то же поле quality
-        ("gpt-image-1-5", "t2i", {"quality": "high", "aspect_ratio": "1:1"}, {"mode": "high"}),
-        ("gpt-image-1-5", "t2i", {"quality": "medium", "aspect_ratio": "1:1"}, {"mode": "medium"}),
+        # GPT Image 2: разрешение задаёт тариф
+        ("gpt-image-2", "t2i", {"resolution": "1K", "aspect_ratio": "1:1"}, {"resolution": "1K"}),
+        ("gpt-image-2", "t2i", {"resolution": "2K", "aspect_ratio": "1:1"}, {"resolution": "2K"}),
         # Kling 2.6: звук и длительность
         ("kling-2-6", "i2v", {"duration": 10, "sound": False}, {"duration": "10", "sound": False}),
         ("kling-2-6", "i2v", {"duration": 10, "sound": True}, {"duration": "10", "sound": True}),
@@ -1007,12 +1014,12 @@ def test_with_video_false_rule_is_kept_in_generated_data() -> None:
         # Flux Kontext: тир в имени модели
         ("flux-1-kontext", "edit", {"model": "flux-kontext-max"}, {"mode": "max"}),
         ("flux-1-kontext", "edit", {"model": "flux-kontext-pro"}, {"mode": "pro"}),
-        # Seedance 1.5 pro: звук меняет цену
+        # Seedance 2.0: видео-референс на входе — отдельный тариф
         (
-            "seedance-1-5",
-            "pro",
-            {"resolution": "720p", "generate_audio": True, "duration": 1},
-            {"resolution": "720p", "sound": True},
+            "seedance-2-0",
+            "standard",
+            {"resolution": "1080p", "reference_video_urls": ["https://example.com/a.mp4"]},
+            {"resolution": "1080p", "_has_videos": True},
         ),
         # Апскейл: разрешение выводится из фактора (4x → 4K)
         ("kie-image-upscale", "upscale", {"upscale_factor": "4"}, {"resolution": "4K", "max_mp": 16.78}),
@@ -1040,7 +1047,7 @@ def test_expensive_setting_changes_price() -> None:
     pairs = [
         (("veo-3-1", "generate"), {"model": "veo3_lite", "resolution": "720p"}, {"model": "veo3", "resolution": "4k"}),
         (("veo-3-1", "extend"), {"model": "fast"}, {"model": "quality"}),
-        (("gpt-image-1-5", "t2i"), {"quality": "medium", "aspect_ratio": "1:1"}, {"quality": "high", "aspect_ratio": "1:1"}),
+        (("gpt-image-2", "t2i"), {"resolution": "1K", "aspect_ratio": "1:1"}, {"resolution": "4K", "aspect_ratio": "1:1"}),
         (("kling-2-6", "i2v"), {"duration": 5, "sound": False}, {"duration": 10, "sound": True}),
         (
             ("kling-3-0", "omni-i2v"),
@@ -1049,9 +1056,9 @@ def test_expensive_setting_changes_price() -> None:
         ),
         (("flux-1-kontext", "edit"), {"model": "flux-kontext-pro"}, {"model": "flux-kontext-max"}),
         (
-            ("seedance-1-5", "pro"),
-            {"resolution": "720p", "generate_audio": False, "duration": 1},
-            {"resolution": "720p", "generate_audio": True, "duration": 1},
+            ("kling-3-0", "video"),
+            {"mode": "std", "sound": False, "duration": 5},
+            {"mode": "pro", "sound": True, "duration": 5},
         ),
     ]
     for (family_id, mode_id), cheap_values, pricey_values in pairs:
@@ -1082,15 +1089,16 @@ def test_unresolvable_rule_falls_back_to_default_with_note() -> None:
 
 
 @needs_data
-def test_from_resolution_field_drives_price() -> None:
-    """from_resolution — такое же условие, как resolution, когда для него есть поле."""
-    family = kc.get_family("grok-imagine/upscale")
+def test_max_mp_condition_matches_derived_resolution() -> None:
+    """max_mp — не поле формы, а вычисляемое условие: должно разрешаться из resolution."""
+    family = kc.get_family("minimax-h3-image")
     assert family is not None
-    from_480 = kc.estimate_usd(family, "upscale", {"resolution": "1080p", "from_resolution": "480P"})
-    from_720 = kc.estimate_usd(family, "upscale", {"resolution": "1080p", "from_resolution": "720P"})
-    assert from_480["breakdown"]["matched_rule"] == {"from_resolution": "480P", "resolution": "1080p"}
-    assert from_720["breakdown"]["matched_rule"] == {"from_resolution": "720P", "resolution": "1080p"}
-    assert from_480["usd_client"] > from_720["usd_client"]
+    two_k = kc.estimate_usd(family, "t2i", {"prompt": "x", "resolution": "2K"})
+    four_k = kc.estimate_usd(family, "t2i", {"prompt": "x", "resolution": "4K"})
+    assert two_k["breakdown"]["matched_rule"] == {"max_mp": 4.5, "resolution": "2K"}
+    assert four_k["breakdown"]["matched_rule"] == {"max_mp": 20, "resolution": "4K"}
+    assert four_k["usd_client"] > two_k["usd_client"]
+    assert two_k["approx"] is False and four_k["approx"] is False
 
 
 @needs_data
@@ -1268,14 +1276,18 @@ def test_nearest_tariff_hailuo_standard_mode() -> None:
 
 
 @needs_data
-def test_nearest_tariff_runway_two_axis_price() -> None:
-    """runway/generate: 10с+1080p не должен стоить дешевле 5с+720p."""
-    family = kc.get_family("runway")
+def test_kling_video_price_matrix_is_complete() -> None:
+    """kling-3-0/video: все комбинации режим×звук в прайсе — approx не включается."""
+    family = kc.get_family("kling-3-0")
     assert family is not None
-    cheap = kc.estimate_usd(family, "generate", {"duration": 5, "resolution": "720p"})
-    ten_1080 = kc.estimate_usd(family, "generate", {"duration": 10, "resolution": "1080p"})
-    assert cheap["usd_client"] == pytest.approx(0.075, abs=0.0002)
-    assert ten_1080["usd_client"] == pytest.approx(0.1875, abs=0.0002)
-    assert ten_1080["approx"] is True
-    assert ten_1080["breakdown"]["matched_rule"] == {"duration": "10", "resolution": "720p"}
-    assert ten_1080["usd_client"] >= cheap["usd_client"]
+    prices: dict[tuple[str, bool], float] = {}
+    for mode_value in ("std", "pro"):
+        for sound in (False, True):
+            est = kc.estimate_usd(family, "video", {"mode": mode_value, "sound": sound, "duration": 5})
+            assert est["approx"] is False, (mode_value, sound)
+            assert est["breakdown"]["matched_rule"]["sound"] is sound
+            prices[(mode_value, sound)] = est["usd_client"]
+    assert prices[("pro", False)] > prices[("std", False)]
+    assert prices[("pro", True)] > prices[("pro", False)]
+    assert prices[("std", True)] > prices[("std", False)]
+

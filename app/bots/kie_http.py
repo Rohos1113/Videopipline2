@@ -498,8 +498,6 @@ VIDEO_GENERATOR_TO_KIE_ID: dict[str, str] = {
     "seedance-2-0-overseas": "seedance-2-0-overseas",
     "seedance_2_5": "seedance-2-5",
     "seedance-2-5": "seedance-2-5",
-    "seedance_1_5_pro": "seedance-1-5-pro",
-    "seedance-1-5-pro": "seedance-1-5-pro",
     "kling_3_0": "kling-3-0",
     "kling-3-0": "kling-3-0",
     "kling_3": "kling-3-0",
@@ -511,10 +509,6 @@ VIDEO_GENERATOR_TO_KIE_ID: dict[str, str] = {
     "kling-3-0-omni-t2v": "kling-3-0-omni-t2v",
     "hailuo_2_3_i2v": "hailuo-2-3-i2v",
     "hailuo-2-3-i2v": "hailuo-2-3-i2v",
-    "wan_2_7_t2v": "wan-2-7-t2v",
-    "wan-2-7-t2v": "wan-2-7-t2v",
-    "wan_2_7_i2v": "wan-2-7-i2v",
-    "wan-2-7-i2v": "wan-2-7-i2v",
     "topaz_video_upscale": "topaz-video-upscale",
     "topaz-video-upscale": "topaz-video-upscale",
     "kling_2_6": "kling-2-6",
@@ -523,8 +517,6 @@ VIDEO_GENERATOR_TO_KIE_ID: dict[str, str] = {
 
 # Маппинг генераторов картинок на ID модели в kie_catalog
 IMAGE_GENERATOR_TO_KIE_ID: dict[str, str] = {
-    "flux_2_pro": "flux-2-pro",
-    "flux-2-pro": "flux-2-pro",
     "seedream_5_pro": "seedream-5-pro",
     "seedream-5-pro": "seedream-5-pro",
     "qwen3_image": "qwen3-image",
