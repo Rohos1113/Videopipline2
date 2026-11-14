@@ -760,3 +760,322 @@ def test_generate_endpoint_family_mode_payload(
         assert est["usd_client"] == pytest.approx(est["usd_kie"] * 1.25, abs=0.01)
     if mode.get("api") == "jobs":
         assert captured["payload"]["model"] == mode["kie_id"]
+
+
+# --- правило цены ↔ поля режима (P0: when-ключи из прайса) -----------------
+# Прайс описывает условия через mode/resolution/sound/with_video/duration/upscale/
+# max_mp; они должны находить поле формы и сравниваться нормализованно, а не
+# молча падать в default. Здесь data-driven прогон по ВСЕМ правилам прайса.
+
+_VIDEO_WHEN_KEYS = frozenset({"with_video", "_has_videos", "has_videos", "has_video", "video_input"})
+_IMAGE_WHEN_KEYS = frozenset({"with_images", "_has_images", "has_images", "has_image"})
+_STRICT_WHEN_KEYS = frozenset({"from_resolution", "source_resolution", "token_kind"})
+_TOKENS_UNITS = frozenset({"1m_tokens", "tokens"})
+_MP_UNITS = frozenset({"mp", "megapixel"})
+
+
+def _docs_prices() -> dict[str, Any]:
+    return json.loads(PRICES_JSON.read_text(encoding="utf-8"))
+
+
+def _docs_modes_by_kie() -> dict[str, tuple[str, str]]:
+    doc = json.loads(FAMILIES_JSON.read_text(encoding="utf-8"))
+    return {m["kie_id"]: (f["id"], m["id"]) for f in doc["families"] for m in f["modes"]}
+
+
+def _when_eq(want: Any, got: Any) -> bool:
+    if isinstance(want, bool):
+        return kc._as_bool(got) == want
+    return kc._values_match(want, got, "tier") or kc._values_match(want, got, "resolution")
+
+
+def _rule_fits(rule: dict[str, Any], chosen: dict[str, Any]) -> bool:
+    """Тестовый оракул: подходит ли правило к собранной конфигурации."""
+    for key, want in (rule.get("when") or {}).items():
+        k = str(key).strip().lower()
+        if k in _VIDEO_WHEN_KEYS or k in _IMAGE_WHEN_KEYS:
+            if k not in chosen or bool(chosen[k]) != bool(want):
+                return False
+            continue
+        if k not in chosen or not _when_eq(want, chosen[k]):
+            return False
+    return True
+
+
+def _coerce_field_value(spec: dict[str, Any], field_name: str, want: Any) -> Any:
+    field = next(f for f in spec.get("fields") or [] if f["name"] == field_name)
+    if isinstance(want, bool):
+        return want
+    for option in [str(o) for o in field.get("options") or []]:
+        for kind in ("tier", "resolution", "upscale"):
+            if kc._values_match(want, option, kind):
+                return option
+    if field.get("kind") == "number":
+        num = kc._num(want)
+        if num is None:
+            return want
+        return int(num) if float(num).is_integer() else num
+    return str(want)
+
+
+def _with_probe(spec: dict[str, Any], values: dict[str, Any], kind: str) -> dict[str, Any] | None:
+    """Копия values с файлом нужного вида: видео/картинка для *_has_* правил."""
+    for field in spec.get("fields") or []:
+        name = str(field.get("name") or "")
+        if field.get("kind") != kind and not (kind == "videos" and "video" in name):
+            continue
+        probe = dict(values)
+        probe[name] = ["https://example.com/a.png"]
+        merged = kc.normalize_values(spec, probe)
+        has = (
+            kc._has_video_input(merged, spec)
+            if kind == "videos"
+            else kc._has_files(merged, spec, {"images"})
+        )
+        if has:
+            return probe
+    return None
+
+
+def _values_for_rule(
+    family: dict[str, Any],
+    mode_id: str,
+    rule: dict[str, Any],
+    unit: str | None,
+) -> tuple[dict[str, Any], dict[str, Any]] | None:
+    """Собрать конфигурацию режима под правило; None — форма такого не умеет."""
+    spec = kc.mode_spec(family, mode_id)
+    values = dict(kc.defaults_for_mode(family, mode_id))
+    chosen: dict[str, Any] = {}
+    for key, want in (rule.get("when") or {}).items():
+        k = str(key).strip().lower()
+        if k == "max_mp":
+            chosen[k] = want
+            continue
+        if k in _VIDEO_WHEN_KEYS or k in _IMAGE_WHEN_KEYS:
+            chosen[k] = bool(want)
+            if bool(want):
+                probe = _with_probe(spec, values, "videos" if k in _VIDEO_WHEN_KEYS else "images")
+                if probe is None:
+                    return None
+                values = probe
+            continue
+        if k in _STRICT_WHEN_KEYS:
+            strict = kc._when_candidate_fields(spec, k, want, strict=True)
+            if not strict:
+                return None
+            field = strict[0]
+        else:
+            field = kc._find_rule_field(spec, k, want)
+        if field is None and k in ("mode", "tier"):
+            hint = " ".join(str(spec.get(x) or "") for x in ("id", "kie_id", "label"))
+            if hint.strip() and kc._values_match(want, hint, "tier"):
+                chosen[k] = want
+                continue
+        if field is None and k == "resolution":
+            factor = kc._RESOLUTION_TO_FACTOR.get(str(want).strip().casefold())
+            factor_field = next(
+                (f["name"] for f in spec.get("fields") or [] if f["name"] in kc._UPSCALE_FIELD_CANDIDATES),
+                None,
+            )
+            if factor and factor_field:
+                values[factor_field] = factor
+                chosen[k] = str(want)
+                continue
+        if field is None:
+            return None
+        values[field] = _coerce_field_value(spec, field, want)
+        chosen[k] = values[field]
+    if unit in _MP_UNITS:
+        for size_name in ("image_size", "size"):
+            size_field = next((f for f in spec.get("fields") or [] if f["name"] == size_name), None)
+            if size_field and (size_field.get("options") or []) and not values.get(size_name):
+                values[size_name] = str(size_field["options"][0])
+                break
+    return values, chosen
+
+
+@needs_data
+def test_every_price_rule_resolves_to_its_price() -> None:
+    """Каждое правило прайса, выразимое настройками режима, даёт свою цену.
+
+    Пропускаются правила, которые форма не может включить, и это не регрессия:
+      * unit=tokens — цена по токенам считается только по факту (known=False);
+      * from_resolution/token_kind — свойство исходника, а не настройка;
+      * значение условия не входит в options поля (768p/1K/360p/15с и т.п.);
+      * тир зашит в kie_id другого режима (hailuo 2.3: правила обоих режимов в одной
+        записи прайса, но каждый режим использует только свои).
+    """
+    prices = _docs_prices()
+    index = _docs_modes_by_kie()
+    problems: list[tuple[Any, ...]] = []
+    tested = 0
+    skipped = 0
+    for kie_id, rec in prices["models"].items():
+        entry = index.get(kie_id)
+        assert entry is not None, f"kie_id {kie_id} без режима в families"
+        family = kc.get_family(kie_id)
+        mode = kc.get_mode(family, entry[1])
+        assert family is not None and mode is not None
+        rules = rec.get("rules") or []
+        unit = str(rec.get("unit") or "")
+        if unit in _TOKENS_UNITS:
+            est = kc.estimate_usd(family, mode["id"], kc.defaults_for_mode(family, mode["id"]))
+            assert est["known"] is False, (kie_id, est["usd_client"])
+            skipped += len(rules)
+            continue
+        for rule in rules:
+            built = _values_for_rule(family, mode["id"], rule, unit)
+            if built is None:
+                skipped += 1
+                continue
+            values, chosen = built
+            expected = rule
+            for cand in rules:
+                if _rule_fits(cand, chosen) and (
+                    expected is None or len(cand.get("when") or {}) > len(expected.get("when") or {})
+                ):
+                    expected = cand
+            est = kc.estimate_usd(family, mode["id"], values)
+            unit_price = est.get("unit_usd_client")
+            exp_price = kc._num(expected.get("usd_client"))
+            tested += 1
+            if not est["known"] or unit_price is None or exp_price is None:
+                problems.append((kie_id, rule.get("when"), "цена неизвестна", est["note"]))
+                continue
+            if abs(float(unit_price) - float(exp_price)) > 0.0002:
+                problems.append(
+                    (kie_id, rule.get("when"), float(unit_price), float(exp_price), expected.get("when"))
+                )
+    assert not problems, problems[:5]
+    assert tested >= 480, f"прогон выродился: проверено {tested} правил"
+    assert skipped <= 60, f"слишком много невыразимых правил: {skipped}"
+
+
+@needs_data
+def test_with_video_false_rule_is_kept_in_generated_data() -> None:
+    """with_video=false — тоже условие цены; генератор не должен его выбрасывать."""
+    flags: set[bool] = set()
+    for family in FAMILIES:
+        for mode in family["modes"]:
+            for rule in (mode.get("pricing") or {}).get("usd_rules") or []:
+                when = rule.get("when") or {}
+                for key in _VIDEO_WHEN_KEYS:
+                    if key in when:
+                        flags.add(bool(when[key]))
+    assert flags == {True, False}, flags
+
+
+@needs_data
+@pytest.mark.parametrize(
+    ("family_id", "mode_id", "values", "want_when"),
+    [
+        # Veo 3.1: тир берётся из поля model, разрешение — из resolution
+        ("veo-3-1", "generate", {"model": "veo3_lite", "resolution": "720p"}, {"mode": "lite", "resolution": "720p"}),
+        ("veo-3-1", "generate", {"model": "veo3_fast", "resolution": "1080p"}, {"mode": "fast", "resolution": "1080p"}),
+        ("veo-3-1", "generate", {"model": "veo3", "resolution": "4k"}, {"mode": "quality", "resolution": "4K"}),
+        ("veo-3-1", "extend", {"model": "quality"}, {"mode": "quality"}),
+        # GPT Image 1.5: mode=high/medium → то же поле quality
+        ("gpt-image-1-5", "t2i", {"quality": "high", "aspect_ratio": "1:1"}, {"mode": "high"}),
+        ("gpt-image-1-5", "t2i", {"quality": "medium", "aspect_ratio": "1:1"}, {"mode": "medium"}),
+        # Kling 2.6: звук и длительность
+        ("kling-2-6", "i2v", {"duration": 10, "sound": False}, {"duration": "10", "sound": False}),
+        ("kling-2-6", "i2v", {"duration": 10, "sound": True}, {"duration": "10", "sound": True}),
+        # Kling 3.0 Omni: sound в прайсе = toggle audio в форме
+        (
+            "kling-3-0",
+            "omni-i2v",
+            {"resolution": "1080p", "audio": True, "duration": 5},
+            {"resolution": "1080p", "sound": True},
+        ),
+        (
+            "kling-3-0",
+            "omni-i2v",
+            {"resolution": "720p", "audio": False, "duration": 5},
+            {"resolution": "720p", "sound": False},
+        ),
+        # Flux Kontext: тир в имени модели
+        ("flux-1-kontext", "edit", {"model": "flux-kontext-max"}, {"mode": "max"}),
+        ("flux-1-kontext", "edit", {"model": "flux-kontext-pro"}, {"mode": "pro"}),
+        # Seedance 1.5 pro: звук меняет цену
+        (
+            "seedance-1-5",
+            "pro",
+            {"resolution": "720p", "generate_audio": True, "duration": 1},
+            {"resolution": "720p", "sound": True},
+        ),
+        # Апскейл: разрешение выводится из фактора (4x → 4K)
+        ("kie-image-upscale", "upscale", {"upscale_factor": "4"}, {"resolution": "4K", "max_mp": 16.78}),
+    ],
+)
+def test_price_rule_selected_for_live_settings(
+    family_id: str,
+    mode_id: str,
+    values: dict[str, Any],
+    want_when: dict[str, Any],
+) -> None:
+    """Регрессии аудита: раньше эти настройки не влияли на цену вовсе."""
+    family = kc.get_family(family_id)
+    assert family is not None
+    est = kc.estimate_usd(family, mode_id, values)
+    assert est["known"] is True
+    assert est["breakdown"]["matched_rule"] == want_when
+    assert est["unit_usd_client"] is not None
+    assert "ориентировочно" not in (est["note"] or "")
+
+
+@needs_data
+def test_expensive_setting_changes_price() -> None:
+    """Дорогая настройка в каждом из 6 случаев аудита реально поднимает цену."""
+    pairs = [
+        (("veo-3-1", "generate"), {"model": "veo3_lite", "resolution": "720p"}, {"model": "veo3", "resolution": "4k"}),
+        (("veo-3-1", "extend"), {"model": "fast"}, {"model": "quality"}),
+        (("gpt-image-1-5", "t2i"), {"quality": "medium", "aspect_ratio": "1:1"}, {"quality": "high", "aspect_ratio": "1:1"}),
+        (("kling-2-6", "i2v"), {"duration": 5, "sound": False}, {"duration": 10, "sound": True}),
+        (
+            ("kling-3-0", "omni-i2v"),
+            {"resolution": "720p", "audio": False, "duration": 5},
+            {"resolution": "1080p", "audio": True, "duration": 5},
+        ),
+        (("flux-1-kontext", "edit"), {"model": "flux-kontext-pro"}, {"model": "flux-kontext-max"}),
+        (
+            ("seedance-1-5", "pro"),
+            {"resolution": "720p", "generate_audio": False, "duration": 1},
+            {"resolution": "720p", "generate_audio": True, "duration": 1},
+        ),
+    ]
+    for (family_id, mode_id), cheap_values, pricey_values in pairs:
+        family = kc.get_family(family_id)
+        assert family is not None
+        cheap = kc.estimate_usd(family, mode_id, cheap_values)
+        pricey = kc.estimate_usd(family, mode_id, pricey_values)
+        assert cheap["usd_client"] is not None and pricey["usd_client"] is not None, (family_id, mode_id)
+        assert pricey["usd_client"] > cheap["usd_client"], (family_id, mode_id, cheap, pricey)
+        assert "ориентировочно" not in (cheap["note"] or "") + (pricey["note"] or "")
+
+
+@needs_data
+def test_unresolvable_rule_falls_back_to_default_with_note() -> None:
+    """from_resolution — свойство исходника, а не настройка: default + «ориентировочно»."""
+    family = kc.get_family("grok-imagine/upscale")
+    assert family is not None
+    mode = kc.get_mode(family, "upscale")
+    assert mode is not None
+    est = kc.estimate_usd(family, "upscale", {"resolution": "1080p"})
+    assert est["known"] is True
+    assert est["breakdown"]["matched_rule"] is None
+    assert "ориентировочно" in est["note"]
+    default = kc._num(mode["pricing"]["usd_default_client"])
+    assert default is not None
+    assert est["unit_usd_client"] == pytest.approx(default, abs=0.0002)
+
+
+@needs_data
+def test_resolution_derived_from_upscale_factor() -> None:
+    """Если разрешения в форме нет, оно выводится из фактора апскейла."""
+    family = kc.get_family("kie-image-upscale")
+    assert family is not None
+    for factor, resolution in (("2", "2K"), ("4", "4K"), ("8", "8K")):
+        est = kc.estimate_usd(family, "upscale", {"upscale_factor": factor})
+        assert est["breakdown"]["matched_rule"] is not None, factor
+        assert est["breakdown"]["matched_rule"]["resolution"] == resolution

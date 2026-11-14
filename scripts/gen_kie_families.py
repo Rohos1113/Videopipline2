@@ -159,9 +159,8 @@ def _norm_when(when: Any) -> dict[str, Any]:
         k = str(key).strip()
         alias = _WHEN_ALIASES.get(k.lower())
         if alias:
-            if isinstance(val, bool) and not val:
-                continue
-            out[alias] = True if val is True else str(val)
+            # bool-флаги важны оба: with_video=false — это тоже условие цены
+            out[alias] = val if isinstance(val, bool) else str(val)
             continue
         out[k] = val
     return out

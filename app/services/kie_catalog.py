@@ -1687,6 +1687,13 @@ def mode_spec(
     kie_id = str(md.get("kie_id") or "")
     api = str(md.get("api") or "jobs")
     media = str(md.get("media") or fam.get("media") or "video")
+    fields = md.get("fields") or []
+    if not fields:
+        # у старых записей схемы в docs нет, но в каталоге студии поля уже были —
+        # берём их, чтобы цена зависела от настроек, а форма не оставалась пустой
+        legacy = _LEGACY_BY_KIE.get(kie_id)
+        if legacy and legacy.get("fields"):
+            fields = legacy["fields"]
     spec: dict[str, Any] = {
         "id": kie_id or str(md.get("id") or ""),
         "family_id": fam.get("id"),
@@ -1698,7 +1705,7 @@ def mode_spec(
         "api": api,
         "model": kie_id,
         "result": media,
-        "fields": md.get("fields") or [],
+        "fields": fields,
         "constraints": md.get("constraints") or [],
         "pricing": md.get("pricing") or {},
         "is_family_mode": True,
@@ -1866,10 +1873,16 @@ def estimate_usd(
             return _unknown_quote("цена уточняется")
         token_multiplier = tokens / 1_000_000
     matched: dict[str, Any] | None = None
+    best_score = -1
     for rule in pricing.get("usd_rules") or []:
-        if _match_usd_rule(rule.get("when") or {}, merged, spec):
+        when = rule.get("when") or {}
+        if not _match_usd_rule(when, merged, spec):
+            continue
+        # specificity: правило с большим числом условий точнее общего
+        score = len(when)
+        if score > best_score:
             matched = rule
-            break
+            best_score = score
     if matched is not None:
         base_kie = _num(matched.get("usd_kie"))
         base_client = _num(matched.get("usd_client"))
@@ -2085,14 +2098,23 @@ def validate_mode_values(
     return errors
 
 
-_TIER_FIELD_CANDIDATES = ("tier", "model", "quality", "rendering_speed", "mode", "speed", "quality_tier")
+_TIER_FIELD_CANDIDATES = (
+    "tier",
+    "mode",
+    "model",
+    "quality",
+    "rendering_speed",
+    "speed",
+    "quality_tier",
+)
 _RESOLUTION_FIELD_CANDIDATES = (
     "resolution",
     "output_resolution",
     "video_resolution",
-    "quality",
+    "video_quality",
     "image_size",
     "size",
+    "quality",
 )
 _AUDIO_FIELD_CANDIDATES = (
     "audio",
@@ -2105,6 +2127,35 @@ _AUDIO_FIELD_CANDIDATES = (
 )
 _UPSCALE_FIELD_CANDIDATES = ("upscale_factor", "upscale", "scale", "factor")
 _FROM_RES_FIELD_CANDIDATES = ("from_resolution", "source_resolution", "input_resolution")
+_DURATION_FIELD_CANDIDATES = (
+    "duration",
+    "duration_seconds",
+    "duration_s",
+    "output_duration",
+    "video_duration",
+)
+
+# Синонимы ключей when из прайса → поля формы режима.
+# Разрешение правил общее: сначала поле с тем же именем, потом синонимы,
+# потом любое поле, чьи options принимают нужное значение.
+_WHEN_KEY_ALIASES: dict[str, tuple[str, ...]] = {
+    "sound": _AUDIO_FIELD_CANDIDATES,
+    "audio": _AUDIO_FIELD_CANDIDATES,
+    "has_audio": _AUDIO_FIELD_CANDIDATES,
+    "mode": _TIER_FIELD_CANDIDATES,
+    "tier": _TIER_FIELD_CANDIDATES,
+    "resolution": _RESOLUTION_FIELD_CANDIDATES,
+    "duration": _DURATION_FIELD_CANDIDATES,
+    "upscale": _UPSCALE_FIELD_CANDIDATES,
+    "scale": _UPSCALE_FIELD_CANDIDATES,
+    "from_resolution": _FROM_RES_FIELD_CANDIDATES,
+    "source_resolution": _FROM_RES_FIELD_CANDIDATES,
+}
+_TIER_KEYS = frozenset({"mode", "tier"})
+_VIDEO_FLAG_KEYS = frozenset({"with_video", "_has_videos", "has_videos", "has_video", "video_input"})
+_IMAGE_FLAG_KEYS = frozenset({"with_images", "_has_images", "has_images", "has_image"})
+# ключи, которым нужен внешний контекст (токены/апскейл источника): правило не применяем
+_UNRESOLVED_ONLY_KEYS = frozenset({"token_kind", "from_resolution", "source_resolution"})
 
 # тир в правилах цены может не совпадать буквально со значением поля (veo3_lite ↔ lite)
 _TIER_ALIASES: dict[str, set[str]] = {
@@ -2114,7 +2165,9 @@ _TIER_ALIASES: dict[str, set[str]] = {
     "fast": {"fast", "turbo", "veo3_fast"},
     "turbo": {"turbo", "fast"},
     "max": {"max", "quality", "veo3", "high"},
-    "standard": {"standard", "std"},
+    "medium": {"medium", "balanced", "standard", "std", "normal"},
+    "standard": {"standard", "std", "balanced", "medium"},
+    "balanced": {"balanced", "medium", "standard", "std"},
     "high": {"high", "quality", "pro"},
 }
 
@@ -2137,6 +2190,16 @@ def _as_bool(val: Any) -> bool:
     return str(val).strip().lower() in ("true", "1", "yes", "on")
 
 
+def _comparator(key: str) -> str:
+    """Чем сравнивать значения when: тир, разрешение, число, bool."""
+    k = str(key).strip().lower()
+    if k in _TIER_KEYS:
+        return "tier"
+    if k == "sound" or k == "audio":
+        return "audio"
+    return k
+
+
 def _looks_like_resolution(field: dict[str, Any]) -> bool:
     options = [str(o) for o in (field.get("options") or [])]
     if not options:
@@ -2148,48 +2211,59 @@ def _looks_like_resolution(field: dict[str, Any]) -> bool:
     return hits >= max(1, len(options) // 2)
 
 
-def _find_rule_field(spec: dict[str, Any], key: str) -> str | None:
-    """Какое поле режима отвечает за условие правила цены (resolution → quality и т.п.)."""
+def _cond_present(merged: dict[str, Any], name: str) -> bool:
+    if name not in merged:
+        return False
+    val = merged[name]
+    if val is None:
+        return False
+    if isinstance(val, str) and not val.strip():
+        return False
+    return True
+
+
+def _when_candidate_fields(
+    spec: dict[str, Any],
+    key: str,
+    want: Any = None,
+    strict: bool = False,
+) -> list[str]:
+    """Поля режима, которые могут отвечать за условие when (сначала точное имя).
+
+    strict=True — только имена/синонимы ключа, без смыслового поиска по options.
+    """
     fields = spec.get("fields") or []
+    known = [str(f.get("name") or "") for f in fields]
+    out: list[str] = []
 
-    def _by_names(names: tuple[str, ...], need_resolution: bool = False) -> str | None:
-        for name in names:
-            for field in fields:
-                if field.get("name") != name:
-                    continue
-                if need_resolution and not _looks_like_resolution(field):
-                    continue
-                return str(name)
-        return None
+    def add(name: Any) -> None:
+        text = str(name or "")
+        if text and text in known and text not in out:
+            out.append(text)
 
-    if key == "resolution":
-        found = _by_names(_RESOLUTION_FIELD_CANDIDATES, need_resolution=True)
-        if found:
-            return found
+    k = str(key).strip().lower()
+    add(k)
+    for alias in _WHEN_KEY_ALIASES.get(k, ()):
+        add(alias)
+    if want is not None and not strict and not isinstance(want, bool):
+        comp = _comparator(k)
         for field in fields:
-            if _looks_like_resolution(field):
-                return str(field.get("name") or "")
-        return None
-    if key == "tier":
-        return _by_names(_TIER_FIELD_CANDIDATES)
-    if key == "audio":
-        found = _by_names(_AUDIO_FIELD_CANDIDATES)
-        if found:
-            return found
-        for field in fields:
-            name = str(field.get("name") or "").lower()
-            if field.get("kind") == "toggle" and ("audio" in name or "sound" in name):
-                return str(field.get("name") or "")
-        return None
-    if key == "upscale":
-        return _by_names(_UPSCALE_FIELD_CANDIDATES)
-    if key == "from_resolution":
-        return _by_names(_FROM_RES_FIELD_CANDIDATES)
-    return None
+            options = [str(o) for o in (field.get("options") or [])]
+            if not options:
+                continue
+            if any(_values_match(want, opt, comp) for opt in options):
+                add(field.get("name"))
+    return out
+
+
+def _find_rule_field(spec: dict[str, Any], key: str, want: Any = None) -> str | None:
+    """Какое поле режима отвечает за условие правила цены (первое подходящее)."""
+    candidates = _when_candidate_fields(spec, key, want)
+    return candidates[0] if candidates else None
 
 
 def _values_match(want: Any, got: Any, key: str = "") -> bool:
-    """Сравнение значения правила с настройкой: регистр, числа, bool, «1K/2K», тиры."""
+    """Сравнение значения правила с настройкой: регистр, числа, bool, 1K/2K, тиры, 4K↔4k."""
     if isinstance(want, bool):
         return _as_bool(got) == want
     if want is None:
@@ -2201,6 +2275,8 @@ def _values_match(want: Any, got: Any, key: str = "") -> bool:
     w_cf, g_cf = w.casefold(), g.casefold()
     if w_cf == g_cf:
         return True
+    if key == "audio":
+        return _as_bool(want) == _as_bool(got)
     if "/" in w:
         parts = [p.strip() for p in w.split("/") if p.strip()]
         if any(p.casefold() == g_cf for p in parts):
@@ -2217,7 +2293,7 @@ def _values_match(want: Any, got: Any, key: str = "") -> bool:
     if key in ("upscale", "scale") and w_cf.rstrip("x") == g_cf.rstrip("x"):
         return True
     if key == "tier":
-        if w_cf in g_cf:
+        if not w_cf.isdigit() and w_cf in g_cf:
             return True
         if w_cf in set(re.split(r"[^a-z0-9]+", g_cf)):
             return True
@@ -2246,35 +2322,97 @@ def _has_video_input(merged: dict[str, Any], spec: dict[str, Any]) -> bool:
     return False
 
 
+_FACTOR_TO_RESOLUTION = {"1": "1k", "2": "2k", "4": "4k", "8": "8k"}
+_RESOLUTION_TO_FACTOR = {v: k for k, v in _FACTOR_TO_RESOLUTION.items()}
+
+
+def _derived_resolution(spec: dict[str, Any], merged: dict[str, Any]) -> str | None:
+    """Разрешение, если в форме его нет явно: вывести из фактора апскейла (2 → 2K)."""
+    for field in spec.get("fields") or []:
+        name = str(field.get("name") or "")
+        if name == "resolution" or (
+            _looks_like_resolution(field) and _cond_present(merged, name)
+        ):
+            if _cond_present(merged, name):
+                return str(merged.get(name))
+    for name in _UPSCALE_FIELD_CANDIDATES:
+        if not _cond_present(merged, name):
+            continue
+        factor = str(merged.get(name)).strip().casefold().rstrip("x")
+        if factor in _FACTOR_TO_RESOLUTION:
+            return _FACTOR_TO_RESOLUTION[factor]
+    return None
+
+
+def _output_megapixels(spec: dict[str, Any], merged: dict[str, Any]) -> float | None:
+    mp = _megapixels(merged)
+    if mp is not None:
+        return mp
+    resolution = _derived_resolution(spec, merged)
+    if resolution is None:
+        return None
+    return _RESOLUTION_MP.get(resolution.strip().casefold())
+
+
+def _condition_status(
+    spec: dict[str, Any],
+    merged: dict[str, Any],
+    key: str,
+    want: Any,
+) -> str:
+    """Статус одного условия when: match / no / unresolved."""
+    k = str(key).strip().lower()
+    if k in _VIDEO_FLAG_KEYS:
+        expected = _as_bool(want)
+        return "match" if _has_video_input(merged, spec) == expected else "no"
+    if k in _IMAGE_FLAG_KEYS:
+        expected = _as_bool(want)
+        return "match" if _has_files(merged, spec, {"images"}) == expected else "no"
+    if k == "max_mp":
+        mp = _output_megapixels(spec, merged)
+        cap = _num(want)
+        if mp is None or cap is None:
+            return "unresolved"
+        return "match" if mp <= cap + 1e-6 else "no"
+    if k in _UNRESOLVED_ONLY_KEYS:
+        # источник данных (качество апскейла/тип токенов) — только явно совпадающее поле,
+        # никакого смыслового поиска: resolution ≠ from_resolution
+        field = _find_rule_field(spec, k, want)
+        strict = _when_candidate_fields(spec, k, None, strict=True)
+        if field is None or field not in strict:
+            return "unresolved"
+    comp = _comparator(k)
+    candidates = _when_candidate_fields(spec, k, want)
+    present = False
+    for name in candidates:
+        if not _cond_present(merged, name):
+            continue
+        present = True
+        if _values_match(want, merged.get(name), comp):
+            return "match"
+    if present:
+        return "no"
+    if k == "resolution":
+        # разрешение может не иметь своего поля: выводим из фактора апскейла (2x → 2K)
+        derived = _derived_resolution(spec, merged)
+        if derived is not None:
+            return "match" if _values_match(want, derived, "resolution") else "no"
+    if k in _TIER_KEYS or k == "resolution":
+        # условие может быть зашито в самом id модели (hailuo ...-pro / ...-standard)
+        hint = " ".join(str(spec.get(x) or "") for x in ("id", "kie_id", "label"))
+        if hint.strip() and _values_match(want, hint, comp):
+            return "match"
+    return "unresolved"
+
+
 def _match_usd_rule(
     when: dict[str, Any],
     merged: dict[str, Any],
     spec: dict[str, Any],
 ) -> bool:
-    """Совпадение правила цены: ключи правил = реальные поля (или их алиасы)."""
+    """Совпадение правила цены: все условия when должны разрешиться и совпасть."""
     for key, want in (when or {}).items():
-        if key == "_has_videos":
-            if _has_video_input(merged, spec) != bool(want):
-                return False
-            continue
-        if key == "_has_images":
-            if _has_files(merged, spec, {"images"}) != bool(want):
-                return False
-            continue
-        if key in ("token_kind", "max_mp"):
-            # цена по токенам/мегапикселям из значений формы не выводится — default
-            return False
-        field_name = key if key in merged else _find_rule_field(spec, key)
-        if field_name is None:
-            # условие может быть зашито в самом id модели (hailuo ...-pro / ...-standard)
-            model_hint = str(spec.get("id") or "")
-            if key in ("tier", "resolution") and model_hint and _values_match(want, model_hint, key):
-                continue
-            return False
-        got = merged.get(field_name)
-        if got is None or (isinstance(got, str) and not got.strip()):
-            return False
-        if not _values_match(want, got, key):
+        if _condition_status(spec, merged, str(key), want) != "match":
             return False
     return True
 
