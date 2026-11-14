@@ -102,6 +102,8 @@ import {
   familyModeSummary,
   familyPriceFromUsd,
   formatUsd,
+  dropDuplicatePresets,
+  outseePresetFamilyIds,
   isKieFieldVisible,
   kieEffectiveFields,
   kieFamilyMode,
@@ -1140,6 +1142,8 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     setInstrumental(Boolean(s.instrumental));
     setPrompt("");
     setSoraSize(s.sora_size === "large" ? "large" : "small");
+    // Режим семейства: валидность проверит эффект сброса при смене модели.
+    if (typeof s.kie_mode_id === "string" && s.kie_mode_id) setKieModeId(s.kie_mode_id);
     setSettingsHydrated(true);
   }, [open, settingsQ.data, settingsHydrated]);
 
@@ -1292,23 +1296,35 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
   const dockChips = dockChipsForModel(activeSlug, mediaType);
 
   // ---- KIE: модель выбрана из общего пикера (slug "kie:<id>") ----
-  const kieModels = useMemo(
-    () =>
-      (kieCatalogQ.data?.models ?? []).filter((m) => {
-        const id = m.id.toLowerCase();
-        // GPT Image 2, Nano Banana 2, Veo 3.1 Lite — строго Outsee
-        if (id.includes("veo") || id.includes("gpt-image") || id.includes("banana")) {
-          return false;
-        }
-        return true;
-      }),
-    [kieCatalogQ.data],
-  );
+  /**
+   * Все семейства каталога — источник правды для Create (KIE): никаких
+   * скрытых подстрок. Раньше veo/gpt-image/banana уводились «строго в Outsee»,
+   * из-за чего 10 реальных семейств пропадали из пикера.
+   */
+  const kieModels = useMemo(() => kieCatalogQ.data?.models ?? [], [kieCatalogQ.data]);
   const kieModel = useMemo(() => {
     if (!activeSlug.startsWith("kie:")) return null;
     return kieModels.find((m) => m.id === activeSlug.slice(4)) ?? null;
   }, [activeSlug, kieModels]);
   const kieActive = kieModel != null;
+
+  /**
+   * Пресет outsee, у которого есть KIE-семья, в пикере скрыт (одна строка на
+   * модель). Если такой slug остался выбранным (дефолт/старые настройки) —
+   * переводим выбор на «kie:<семья>», иначе строка не подсветится и генерация
+   * уйдёт не туда.
+   */
+  useEffect(() => {
+    const ids = new Set(kieModels.map((m) => m.id.toLowerCase()));
+    if (mediaType === "image" && !imageSlug.startsWith("kie:")) {
+      const fam = outseePresetFamilyIds(imageSlug).find((id) => ids.has(id));
+      if (fam) setImageSlug(`kie:${fam}`);
+    } else if (mediaType === "video" && !videoSlug.startsWith("kie:")) {
+      const fam = outseePresetFamilyIds(videoSlug).find((id) => ids.has(id));
+      if (fam) setVideoSlug(`kie:${fam}`);
+    }
+  }, [mediaType, imageSlug, videoSlug, kieModels]);
+
   /** Режимы семейства (шаг 8): пусто у старых плоских моделей каталога. */
   const kieModes = useMemo(() => kieFamilyModes(kieModel), [kieModel]);
   const kieMode = useMemo(() => kieFamilyMode(kieModel, kieModeId), [kieModel, kieModeId]);
@@ -1466,15 +1482,42 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
   };
 
   /**
+   * Значения для полей режима: только их дефолты. Старые values НЕ переносим
+   * (иначе цена и payload тянутся от предыдущего режима), исключение — файлы
+   * и референсы, которые новый режим реально поддерживает.
+   */
+  const valuesForFields = (
+    fields: ReturnType<typeof kieEffectiveFields>,
+    prev: Record<string, unknown>,
+  ): Record<string, unknown> => {
+    const next: Record<string, unknown> = {};
+    for (const f of fields) {
+      if (f.default !== undefined) next[f.name] = f.default;
+    }
+    const fileNames = new Set(kieFileFieldsIn(fields).map((f) => f.name));
+    for (const [k, v] of Object.entries(prev)) {
+      if (!fileNames.has(k)) continue;
+      if (v === undefined || v === null) continue;
+      next[k] = v;
+    }
+    return next;
+  };
+
+  /**
    * Переключение режима семейства: значения чужих полей убираем, чтобы в
    * payload не уехало поле, которого у выбранного режима нет.
    */
   const switchKieMode = (modeId: string) => {
     const nextMode = kieFamilyMode(kieModel, modeId);
-    const nextFields =
-      nextMode && nextMode.fields?.length ? nextMode.fields : (kieModel?.fields ?? []);
+    // Режим с пустыми fields не подменяем полями семейства: иначе значения
+    // уходили бы в мёртвые ключи (backend поля режима не берёт).
+    const nextFields = nextMode
+      ? (nextMode.fields ?? [])
+      : (kieModel?.fields ?? []);
+    // Кэш оценки от прошлого режима не должен подставляться новому.
+    qc.removeQueries({ predicate: (query) => query.queryKey[0] === "kie-estimate" });
     setKieModeId(nextMode?.id ?? null);
-    setKieValues((prev) => valuesForMode(prev, nextFields));
+    setKieValues((prev) => valuesForFields(nextFields, prev));
     setKieRefNames(
       (prev) => valuesForMode(prev, nextFields) as Record<string, string[]>,
     );
@@ -1486,10 +1529,10 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
 
   /** Семейство/каталог сменились — активный режим сбрасывается на первый. */
   useEffect(() => {
+    // Режим из сохранённых настроек мог прийти от другого семейства.
+    if (kieModes.some((m) => m.id === kieModeId)) return;
     setKieModeId(kieModes[0]?.id ?? null);
-    // Режимы пересоздаются при смене семейства; сам массив в зависимостях дал бы цикл.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kieModel?.id]);
+  }, [kieModel?.id, kieModeId, kieModes]);
 
   /** Опции селектора режима для дока. */
   const kieModeOptionList = useMemo(() => kieModeOptions(kieModel), [kieModel]);
@@ -1822,6 +1865,11 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     staleTime: 15_000,
   });
 
+  /**
+   * Цена текущего режима. Приоритет: серверный estimate, но только если
+   * ответ относится к ТЕКУЩЕМУ семейству/режиму (иначе из-за кэша в шапке
+   * залипала цена прошлого режима). null/0 и `known:false` — «цена уточняется».
+   */
   const kiePrice = useMemo(() => {
     if (!kieModel || !kieCatalogQ.data) return null;
     const local = estimateSettingsUsd({
@@ -1830,27 +1878,46 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
       values: kieEstimateValues,
       creditUsd: kieCatalogQ.data.credit_usd,
     });
-    // Контракт estimate: главный usd_client, но принимаем и usd как синоним.
-    const serverUsd = kieEstimateQ.data?.usd_client ?? kieEstimateQ.data?.usd;
-    if (typeof serverUsd === "number" && serverUsd > 0) {
-      return { usd: serverUsd as number | null, usdKie: local.usd_kie, pending: false };
+    const est = kieEstimateQ.data;
+    const estFamily = est?.family_id ?? null;
+    const estMode = est?.mode_id ?? null;
+    const estFresh =
+      Boolean(est) &&
+      (!estFamily || estFamily === kieModel.id) &&
+      (!estMode || estMode === (kieModeId ?? ""));
+    const serverUsd =
+      estFresh && typeof est?.usd_client === "number"
+        ? est.usd_client
+        : estFresh && typeof est?.usd === "number"
+          ? est.usd
+          : null;
+    // Контракт: usd_client = null (или known:false) — цену посчитать нельзя.
+    const explicitlyUnknown =
+      estFresh && (est?.known === false || est?.usd_client === null);
+    if (estFresh && explicitlyUnknown) {
+      return { usd: null, usdKie: est?.usd_kie ?? local.usd_kie, pending: true };
     }
+    if (estFresh && serverUsd != null && serverUsd > 0) {
+      return { usd: serverUsd, usdKie: est?.usd_kie ?? local.usd_kie, pending: false };
+    }
+    const localUsd =
+      local.usd_client != null && local.usd_client > 0 ? local.usd_client : null;
     return {
-      usd: local.usd_client,
+      usd: localUsd,
       usdKie: local.usd_kie,
-      pending: local.source === "pending" || local.usd_client == null,
+      pending: local.source === "pending" || localUsd == null,
     };
   }, [kieModel, kieModeId, kieEstimateValues, kieCatalogQ.data, kieEstimateQ.data]);
 
   useEffect(() => {
-    // Сохраняем совместимые поля при смене модели KIE
-    setKieValues((prev) => {
-      const next: Record<string, unknown> = {};
-      if (prev.aspect_ratio) next.aspect_ratio = prev.aspect_ratio;
-      if (prev.resolution) next.resolution = prev.resolution;
-      if (prev.quality) next.quality = prev.quality;
-      return next;
-    });
+    // Смена модели: values — дефолты активного режима новой модели (файлы
+    // переносим, только если новый режим их поддерживает). Иначе в payload и
+    // цену попадают чужие поля от предыдущей модели.
+    setKieValues((prev) => valuesForFields(kieModeFields, prev));
+    setKieRefNames((prev) => valuesForMode(prev, kieModeFields) as Record<string, string[]>);
+    // Кэш estimate прошлых моделей/режимов сбрасываем: цена не должна залипать.
+    qc.removeQueries({ predicate: (query) => query.queryKey[0] === "kie-estimate" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSlug]);
 
   // Трим каталога Create: outsee — только GPT Image 2 / Nano Banana 2 /
@@ -2159,6 +2226,8 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     image_provider: "outsee",
     video_provider: "outsee",
     sora_size: soraSize,
+    // Режим семейства KIE переживает перезагрузку страницы.
+    kie_mode_id: kieModeId,
   });
 
   const saveGlobal = useMutation({
@@ -2437,7 +2506,8 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
           const payloadFields = (() => {
             const base = effectiveKieModel ?? kieModel;
             const mode = payloadModeId ? kieFamilyMode(base, payloadModeId) : null;
-            return mode && mode.fields?.length ? mode.fields : (base?.fields ?? []);
+            // Режим с пустыми fields не подменяем полями семейства (см. switchKieMode).
+            return mode ? (mode.fields ?? []) : (base?.fields ?? []);
           })();
           const storedVals = (retryParams.values && typeof retryParams.values === "object"
             ? retryParams.values
@@ -2450,7 +2520,11 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
 
           const textField = effectiveKieModel ? kieMainTextName(payloadFields) : kieTextField;
           if (textField) vals[textField] = text;
-          else if (retry) {
+          else if (!payloadFields.length) {
+            // Режим без известных полей: только промпт, если он есть. Остальные
+            // ключи режима неизвестны — мёртвых значений в payload не будет.
+            if (text.trim()) vals["prompt"] = text;
+          } else if (retry) {
             const pField = Object.keys(vals).find((k) => k.toLowerCase().includes("prompt")) || "prompt";
             vals[pField] = text;
           }
@@ -2483,7 +2557,9 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                 vals[aspectField.name] = match || strVal;
               }
             }
-          } else if (targetAspect) {
+          } else if (targetAspect && kieFields.length > 0) {
+            // Фолбэк только для моделей, у которых поля есть, но аспекта среди
+            // них нет. Режимам с неизвестными полями мёртвый ключ не шлём.
             vals["aspect_ratio"] = targetAspect.includes(":") ? targetAspect : targetAspect.replace("_", ":");
           }
 
@@ -2640,7 +2716,12 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
             }
           }
           void api.putOutseeCreateSettings(settingsPayload()).catch(() => undefined);
-          const res = await api.kieGenerate({ model_id: modelId, values: vals });
+          const res = await api.kieGenerate({
+            model_id: modelId,
+            // Режим семейства (шаг 8): model_id — семейство, mode — режим.
+            ...(payloadModeId ? { mode: payloadModeId } : {}),
+            values: vals,
+          });
           return {
             job_id: res.job.job_id,
             history_id: res.job.history_id,
@@ -2988,9 +3069,9 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
   if (!open) return null;
 
   const TypeIcon = ({ id }: { id: OutseeMediaType }) => {
-    if (id === "video") return <Video className="h-7 w-7 shrink-0" strokeWidth={1.7} />;
-    if (id === "audio") return <Music className="h-7 w-7 shrink-0" strokeWidth={1.7} />;
-    return <ImageIcon className="h-7 w-7 shrink-0" strokeWidth={1.7} />;
+    if (id === "video") return <Video className="h-[22px] w-[22px] shrink-0" strokeWidth={1.7} />;
+    if (id === "audio") return <Music className="h-[22px] w-[22px] shrink-0" strokeWidth={1.7} />;
+    return <ImageIcon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.7} />;
   };
 
   return (
@@ -3551,9 +3632,9 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
           </div>
 
           {/* prompt dock + vertical type toggle */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 lg:px-5 lg:pb-4">
-            {/* Зазор слева и справа от колонки кнопок одинаковый: px-3/px-5 = gap-3/gap-5. */}
-            <div className="flex items-end gap-3 lg:gap-5">
+          <div className="absolute bottom-0 left-0 right-0 z-10 pb-3 pl-1.5 pr-3 lg:pb-4 lg:pl-2.5 lg:pr-5">
+            {/* Зазор слева и справа от колонки кнопок одинаковый: pl-1.5/lg:pl-2.5 = gap-1.5/lg:gap-2.5. */}
+            <div className="flex items-end gap-1.5 lg:gap-2.5">
               {/* cs-typetoggle */}
               <div className="flex shrink-0 flex-col gap-2">
                 {/* Вдохновение — каталог стилей, тот же, что в помощнике над промптом */}
@@ -3574,7 +3655,7 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                       title={t.label}
                       data-media-type={t.id}
                       className={cn(
-                        "flex h-[68px] w-[96px] shrink-0 items-center justify-center rounded-xl border p-0 transition-all duration-200",
+                        "flex h-[54px] w-[77px] shrink-0 items-center justify-center rounded-xl border p-0 transition-all duration-200",
                         active
                           ? "border-[#2dd4bf] bg-[#2dd4bf]/15 text-[#2dd4bf] shadow-[0_0_18px_rgba(45,212,191,0.25)]"
                           : "border-white/10 bg-[#16161b]/90 text-white/45 hover:border-white/20 hover:bg-[#1e1e24] hover:text-white",
@@ -4468,7 +4549,7 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                       }}
                       modes={kieModeOptionList}
                       modeId={kieMode?.id ?? null}
-                      onModeChange={kieModeOptionList.length > 1 ? switchKieMode : undefined}
+                      onModeChange={kieModeOptionList.length > 0 ? switchKieMode : undefined}
                       extras={
                         seedanceIsKie ? (
                           <>
@@ -5538,11 +5619,6 @@ function ModelPickerPopover({
         : "Аудио движки и режимы";
   const models = pickerModelsForType(mediaType);
   const kieForType = kieModels.filter((m) => {
-    const id = m.id.toLowerCase();
-    // GPT Image 2, Nano Banana 2, Veo 3.1 Lite — строго через Outsee!
-    if (id.includes("veo") || id.includes("gpt-image") || id.includes("banana")) {
-      return false;
-    }
     const media =
       m.media || (m.category === "video" ? "video" : m.category === "image" ? "image" : "audio");
     return media === mediaType;
@@ -5630,13 +5706,19 @@ function ModelPickerPopover({
       }
     }
 
+    // Вкладка целиком (не результат поиска): иначе при поиске пресеты-дубли
+    // «всплывали» обратно, потому что их семья не попадала в filteredKie.
+    const kieIdSet = new Set<string>();
+    for (const m of kieForType) {
+      const rawId = m.id.toLowerCase();
+      kieIdSet.add(rawId);
+      kieIdSet.add(rawId.replace(/[-_]/g, ""));
+    }
+
     // Build authoritative KIE items first
-    const kieModelIds = new Set<string>();
     const kieItems = filteredKie.map((m) => {
       const rawId = m.id.toLowerCase();
       const cleanId = rawId.replace(/[-_]/g, "");
-      kieModelIds.add(rawId);
-      kieModelIds.add(cleanId);
       // Цена в долларах с наценкой студии 25%: «от $X» по семейству/режимам.
       const familyUsd = familyPriceFromUsd({ model: m, creditUsd });
 
@@ -5666,7 +5748,9 @@ function ModelPickerPopover({
       .filter((m) => {
         const s = m.slug.toLowerCase();
         const c = s.replace(/[-_]/g, "");
-        return !kieModelIds.has(s) && !kieModelIds.has(c);
+        if (kieIdSet.has(s) || kieIdSet.has(c)) return false;
+        // Одна модель — одна строка пикера: пресет с KIE-семьёй не показываем.
+        return !outseePresetFamilyIds(m.slug).some((fam) => kieIdSet.has(fam));
       })
       .map((m) => ({
         slug: m.slug,
@@ -5692,7 +5776,7 @@ function ModelPickerPopover({
       }));
 
     return [...kieItems, ...remainingBaseItems];
-  }, [filteredModels, filteredKie, creditUsd, mediaType]);
+  }, [filteredModels, filteredKie, kieForType, creditUsd, mediaType]);
 
   const topItems = useMemo(() => unifiedItems.filter((i) => i.isTop), [unifiedItems]);
   const otherItems = useMemo(() => unifiedItems.filter((i) => !i.isTop), [unifiedItems]);

@@ -893,13 +893,13 @@ export function ModelSettingsDock({
     else sections.push({ title: d.section, items: [d] });
   }
 
-  const showModes = modes.length > 1 && Boolean(onModeChange);
+  const showModeBadge = modes.length > 1 && Boolean(onModeChange);
+  const showModeSection = modes.length > 0 && Boolean(onModeChange);
   const activeMode = modes.find((m) => m.id === modeId) ?? modes[0] ?? null;
-  if (!settings.length && !extras && !showModes) return null;
 
   return (
     <div className="inline-flex flex-wrap items-center gap-1.5">
-      {showModes && activeMode && (
+      {showModeBadge && activeMode && (
         <button
           type="button"
           data-mode-badge={activeMode.id}
@@ -912,6 +912,27 @@ export function ModelSettingsDock({
         </button>
       )}
       <div ref={boxRef} className="relative inline-flex flex-wrap items-center gap-1.5">
+        {/* Постоянная кнопка «Параметры»: панель доступна у любой модели,
+            даже если у неё нет ни одного чипа-настройки. */}
+        <button
+          type="button"
+          data-action="open-params"
+          data-params-button="true"
+          aria-label="Параметры"
+          aria-expanded={open}
+          title="Все настройки модели и цена"
+          onClick={togglePanel}
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-medium transition",
+            open
+              ? "border-[#2dd4bf]/55 bg-[#2dd4bf]/12 text-[#2dd4bf]"
+              : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:border-white/20 hover:text-white",
+          )}
+        >
+          <SlidersHorizontal className="h-3 w-3" />
+          <span>Параметры</span>
+        </button>
+
         {settings.map((d) => {
           const value = modelSettingValue(d, values);
           const isVoice = d.kind === "voice";
@@ -928,16 +949,6 @@ export function ModelSettingsDock({
             </span>
           );
         })}
-
-        {!settings.length && showModes && (
-          <ParamChip
-            icon={<SlidersHorizontal className="h-3 w-3" />}
-            value="Параметры"
-            title="Настройки режима"
-            active={open}
-            onClick={togglePanel}
-          />
-        )}
 
         {open && (
           <div
@@ -959,7 +970,7 @@ export function ModelSettingsDock({
               )}
             </div>
 
-            {showModes && (
+            {showModeSection && (
               <PaneSection title="Режим">
                 <div className="grid grid-cols-2 gap-1.5">
                   {modes.map((m) => (
@@ -996,6 +1007,17 @@ export function ModelSettingsDock({
                 </div>
               </PaneSection>
             ))}
+
+            {!sections.length && (
+              <p
+                data-params-note="no-fields"
+                className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2 text-[11px] leading-snug text-white/45"
+              >
+                {showModeSection
+                  ? "Настройки этого режима неизвестны — доступны только промпт и файлы."
+                  : "У этой модели нет отдельных настроек — доступны только промпт и файлы."}
+              </p>
+            )}
 
             <div className="mt-3 flex items-center justify-between border-t border-white/[0.08] pt-2">
               {onReset ? (

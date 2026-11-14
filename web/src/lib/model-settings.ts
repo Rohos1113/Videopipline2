@@ -458,13 +458,19 @@ export function kieFamilyMode(
   return modes.find((m) => m.id === modeId) ?? modes[0] ?? null;
 }
 
-/** Поля активного режима (или самой модели, если режимов нет). */
+/**
+ * Поля активного режима (или самой модели, если режимов нет).
+ *
+ * Режим с пустыми fields НЕ подменяется полями семейства: backend такие поля
+ * не берёт, и пользователь видел бы настройки, которых у режима нет
+ * (duration/resolution/seed и т.п. уходили бы в никуда).
+ */
 export function kieEffectiveFields(
   model: KieModelSpec | null | undefined,
   modeId?: string | null,
 ): KieField[] {
   const mode = kieFamilyMode(model, modeId);
-  if (mode && Array.isArray(mode.fields) && mode.fields.length) return mode.fields;
+  if (mode) return Array.isArray(mode.fields) ? mode.fields : [];
   return model?.fields ?? [];
 }
 
@@ -536,6 +542,46 @@ export function kieModeOptions(
   }));
 }
 
+/**
+ * Пресеты каталога outsee → id семейств KIE. Если семья есть в каталоге KIE,
+ * строка-пресет в пикере не нужна: KIE — источник правды (поля, режимы, цена),
+ * а пресет показывал бы ту же модель второй раз с урезанными настройками.
+ */
+export const OUTSEE_PRESET_FAMILIES: Record<string, string[]> = {
+  "flux-2-pro": ["flux-2-pro"],
+  "seedream-5-pro": ["seedream-5-pro"],
+  "nano-banana-2": ["nano-banana-2"],
+  "qwen3-image": ["qwen3-image"],
+  "gpt-image-2": ["gpt-image-2"],
+  "topaz-image-upscale": ["topaz-image-upscale"],
+  "seedance-2-0-fast": ["seedance-2-0"],
+  "seedance-2-0-mini": ["seedance-2-0"],
+  "veo-3-1-lite": ["veo-3-1"],
+  "omni-flash": ["gemini-omni-flash-1-1", "gemini-omni-flash-1-2"],
+  "kling-3-0-turbo": ["kling-3-0"],
+  "kling-2-6": ["kling-2-6"],
+  "topaz-video-upscale": ["topaz-video-upscale"],
+};
+
+/** Семейства KIE, которые заменяют пресет outsee (пусто — пресет уникален). */
+export function outseePresetFamilyIds(slug: string): string[] {
+  return OUTSEE_PRESET_FAMILIES[slug.trim().toLowerCase()] ?? [];
+}
+
+/**
+ * Убирает пресеты, у которых уже есть семья в каталоге KIE: одна модель —
+ * одна строка в пикере. Пресеты без KIE-семейства (Suno 5.5, ElevenLabs) остаются.
+ */
+export function dropDuplicatePresets<T extends { slug: string }>(
+  presets: T[],
+  familyIds: Iterable<string>,
+): T[] {
+  const ids = new Set(Array.from(familyIds, (id) => String(id).toLowerCase()));
+  return presets.filter(
+    (p) => !outseePresetFamilyIds(p.slug).some((fam) => ids.has(fam)),
+  );
+}
+
 /** Значения, которые переживают переключение режима: совпадают по имени поля. */
 export function valuesForMode(
   values: ModelSettingValues,
@@ -564,7 +610,7 @@ export type UsdEstimate = {
 };
 
 /** Единицы, для которых каталог не даёт пересчёта в UI: «цена уточняется». */
-const PENDING_UNITS = new Set(["tokens", "megapixel"]);
+const PENDING_UNITS = new Set(["tokens", "megapixel", "unknown"]);
 
 function round4(value: number): number {
   return Math.round(value * 10000) / 10000;
@@ -591,10 +637,12 @@ export function formatUsd(usd: number | null | undefined): string {
   return `$${usd.toFixed(2)}`;
 }
 
-/** Подпись цены для дока: либо «$X», либо «цена уточняется» (tokens/megapixel). */
+/** Подпись цены для дока: либо «$X», либо «цена уточняется» (tokens/megapixel/unknown). */
 export function formatEstimateUsd(estimate: UsdEstimate | null | undefined): string {
   if (!estimate) return "—";
-  if (estimate.source === "pending" || estimate.usd_client == null) return "цена уточняется";
+  if (estimate.source === "pending" || estimate.usd_client == null || estimate.usd_client <= 0) {
+    return "цена уточняется";
+  }
   return formatUsd(estimate.usd_client);
 }
 
@@ -749,8 +797,19 @@ export function estimateSettingsUsd(args: {
   if (credits === undefined) credits = pricing.default ?? 0;
   const totalCredits = round2(credits * multiplier);
   const usdKie = round4(totalCredits * creditUsd);
+  const usdClient = round4(usdKie * markup);
+  if (!(usdClient > 0)) {
+    // Нулевая цена = каталог не знает цену (unit unknown / пустые правила и дефолты).
+    // Показывать $0.00 нельзя — клиент решит, что бесплатно.
+    return {
+      usd_client: null,
+      usd_kie: usdKie > 0 ? usdKie : null,
+      credits: totalCredits > 0 ? totalCredits : null,
+      source: "pending",
+    };
+  }
   return {
-    usd_client: round4(usdKie * markup),
+    usd_client: usdClient,
     usd_kie: usdKie,
     credits: totalCredits,
     source: "credits",

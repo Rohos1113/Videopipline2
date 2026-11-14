@@ -80,14 +80,15 @@ export interface KieUsdRule {
 }
 
 export interface KiePricing {
-  unit: "gen" | "sec" | "1k_chars" | "image" | "tokens" | "megapixel";
+  /** "unknown" — backend не смог определить единицу, цену в UI не считаем. */
+  unit: "gen" | "sec" | "1k_chars" | "image" | "tokens" | "megapixel" | "unknown";
   rules: KiePricingRule[];
   default: number;
   note?: string;
-  /** Цены в $: правила, дефолт по генерации и цена kie.ai без наценки. */
+  /** Цены в $: правила, дефолт по генерации и цена kie.ai без наценки (null — нет цены). */
   usd_rules?: KieUsdRule[];
-  usd_default_client?: number;
-  usd_default_kie?: number;
+  usd_default_client?: number | null;
+  usd_default_kie?: number | null;
 }
 
 /** Режим семейства kie.ai: один эндпоинт/тип задачи со своими полями и ценой. */
@@ -2942,12 +2943,17 @@ export const api = {
     values: Record<string, unknown>;
   }) =>
     http<{
-      /** Контракт шага 8: usd_client главный, usd — допустимый синоним. */
-      usd_client?: number;
-      usd?: number;
-      usd_kie?: number;
+      /** Ответ относится к этому семейству/режиму — защита от залипания цены. */
+      family_id?: string;
+      mode_id?: string;
+      /** Контракт шага 8: usd_client главный (null — цена неизвестна), usd — синоним. */
+      usd_client?: number | null;
+      usd?: number | null;
+      usd_kie?: number | null;
       credits?: number | null;
       unit?: string;
+      /** false — backend цену посчитать не смог (unit unknown и т.п.). */
+      known?: boolean;
       note?: string;
       breakdown?: { when?: Record<string, unknown>; credits?: number; usd_kie?: number }[];
     }>(`/api/kie-create/estimate`, {

@@ -4,6 +4,7 @@ import { test } from "node:test";
 import type { KieField, KieModeSpec, KieModelSpec } from "./api.ts";
 import {
   STUDIO_MARKUP,
+  dropDuplicatePresets,
   durationNumbers,
   estimateSettingsUsd,
   familyModeSummary,
@@ -23,6 +24,7 @@ import {
   kieOptionMeta,
   kieSettingDescriptors,
   modelSettingValue,
+  outseePresetFamilyIds,
   outseeSettingDescriptors,
   settingDefaultPairs,
   settingIsOn,
@@ -342,12 +344,18 @@ test("kieEffectiveFields/kieEffectivePricing: поля и цена выбран�
   assert.equal(kieEffectivePricing(model({ pricing: pricing({ default: 7 }) }), null)?.default, 7);
 });
 
-test("режим без своих полей использует поля модели (обратная совместимость)", () => {
+test("режим без своих полей НЕ подменяется полями модели (настройки не выдумываем)", () => {
   const family = model({
     fields: [field("seed", "number")],
     modes: [mode("only", { fields: [] })],
   });
-  assert.deepEqual(kieEffectiveFields(family, "only").map((f) => f.name), ["seed"]);
+  // Backend поля режима в payload/estimate не берёт: показывать их нельзя.
+  assert.deepEqual(kieEffectiveFields(family, "only"), []);
+  // У плоской модели без modes свои поля остаются как были.
+  assert.deepEqual(
+    kieEffectiveFields(model({ fields: [field("seed", "number")] }), null).map((f) => f.name),
+    ["seed"],
+  );
 });
 
 test("kieMainTextName/kieFileFieldsIn: главный текст и файлы из полей режима", () => {
@@ -577,4 +585,71 @@ test("familyPriceFromUsd: price_from_usd из каталога, иначе ми�
   const flat = model({ pricing: pricing({ default: 10 }) });
   assert.equal(familyPriceFromUsd({ model: flat, creditUsd: 0.005 }), 0.0625);
   assert.equal(familyPriceFromUsd({ model: null }), null);
+});
+
+test("dropDuplicatePresets: пресеты с KIE-семьёй убираются, уникальные остаются", () => {
+  const presets = [
+    { slug: "flux-2-pro" },
+    { slug: "seedance-2-0-fast" },
+    { slug: "veo-3-1-lite" },
+    { slug: "kling-2-6" },
+    { slug: "gpt-image-2" },
+    { slug: "suno-5-5" },
+    { slug: "elevenlabs-v4" },
+  ];
+  const families = [
+    "flux-2-pro",
+    "seedance-2-0",
+    "veo-3-1",
+    "kling-2-6",
+    "gpt-image-2",
+    "suno-music",
+  ];
+  assert.deepEqual(
+    dropDuplicatePresets(presets, families).map((p) => p.slug),
+    ["suno-5-5", "elevenlabs-v4"],
+  );
+  // Каталог без этих семей (старый backend) — пресеты остаются как были.
+  assert.equal(dropDuplicatePresets(presets, []).length, presets.length);
+});
+
+test("outseePresetFamilyIds: соответствие пресетов семействам KIE", () => {
+  assert.deepEqual(outseePresetFamilyIds("seedance-2-0-fast"), ["seedance-2-0"]);
+  assert.deepEqual(outseePresetFamilyIds("seedance-2-0-mini"), ["seedance-2-0"]);
+  assert.deepEqual(outseePresetFamilyIds("veo-3-1-lite"), ["veo-3-1"]);
+  assert.deepEqual(outseePresetFamilyIds("kling-3-0-turbo"), ["kling-3-0"]);
+  assert.deepEqual(outseePresetFamilyIds("omni-flash"), [
+    "gemini-omni-flash-1-1",
+    "gemini-omni-flash-1-2",
+  ]);
+  assert.deepEqual(outseePresetFamilyIds("suno-5-5"), []);
+  assert.deepEqual(outseePresetFamilyIds("не-существует"), []);
+});
+
+test("нулевая/неизвестная цена — «цена уточняется», а не $0.00", () => {
+  // ideogram-v3/remix и gemini-omni/character: unit unknown, правил и дефолтов нет.
+  const unknown = model({
+    modes: [
+      mode("remix", {
+        pricing: {
+          unit: "unknown",
+          rules: [],
+          default: 0,
+          usd_rules: [],
+          usd_default_client: null,
+          usd_default_kie: null,
+        },
+      }),
+    ],
+  });
+  const est = estimateSettingsUsd({ model: unknown, modeId: "remix", creditUsd: 0.005 });
+  assert.equal(est.usd_client, null);
+  assert.equal(est.source, "pending");
+  assert.equal(formatEstimateUsd(est), "цена уточняется");
+
+  // Явный ноль в готовом UsdEstimate тоже не должен рисоваться как $0.00.
+  assert.equal(
+    formatEstimateUsd({ usd_client: 0, usd_kie: 0, credits: null, source: "usd" }),
+    "цена уточняется",
+  );
 });
