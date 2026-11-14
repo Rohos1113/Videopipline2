@@ -1119,6 +1119,118 @@ def build(api_models, id_to_schema, csv_by_id, catalog_mod, prices):
 
 
 # ---------------------------------------------------------------------------
+# 6b. Дефолты полей, участвующих в правилах цены
+# ---------------------------------------------------------------------------
+
+# Порядок как в app/services/kie_catalog.py (_WHEN_KEY_ALIASES): ключ when → поля формы.
+PRICE_KEY_FIELDS = {
+    "color": (),
+    "resolution": ("resolution", "output_resolution", "video_resolution", "video_quality",
+                   "image_size", "size", "quality"),
+    "duration": ("duration", "duration_seconds", "duration_s", "output_duration", "video_duration"),
+    "sound": ("audio", "sound", "generate_audio", "enable_audio", "generate_audio_switch",
+              "sound_effects", "with_audio"),
+    "audio": ("audio", "sound", "generate_audio", "enable_audio", "generate_audio_switch",
+              "sound_effects", "with_audio"),
+    "has_audio": ("audio", "sound", "generate_audio", "enable_audio", "generate_audio_switch",
+                  "sound_effects", "with_audio"),
+    "mode": ("tier", "mode", "model", "quality", "rendering_speed", "speed", "quality_tier"),
+    "tier": ("tier", "mode", "model", "quality", "rendering_speed", "speed", "quality_tier"),
+    "upscale": ("upscale_factor", "upscale", "scale", "factor"),
+    "scale": ("upscale_factor", "upscale", "scale", "factor"),
+    "from_resolution": ("from_resolution", "source_resolution", "input_resolution"),
+    "source_resolution": ("from_resolution", "source_resolution", "input_resolution"),
+}
+# тир в правилах может означать разрешение, а поле называться тиром: std=720p, pro=1080p
+RES_TIER_ALIASES = {
+    "720p": {"720p", "hd", "std", "standard"},
+    "1080p": {"1080p", "fullhd", "fhd", "pro"},
+    "4k": {"4k", "2160p", "uhd", "ultra", "4K"},
+}
+
+
+def _norm_opt(value) -> str:
+    return str(value).strip().lower()
+
+
+def _option_matches_rule(option, rule_value, key: str) -> bool:
+    a, b = _norm_opt(option), _norm_opt(rule_value)
+    if a == b:
+        return True
+    if key in ("resolution", "from_resolution"):
+        return a in RES_TIER_ALIASES.get(b, set()) or b in RES_TIER_ALIASES.get(a, set())
+    return False
+
+
+def _rule_values_by_key(mode: dict) -> dict[str, list]:
+    out: dict[str, list] = {}
+    for rule in mode["pricing"]["rules"]:
+        for key, value in (rule.get("when") or {}).items():
+            out.setdefault(str(key), []).append(value)
+    return out
+
+
+def _find_price_field(mode: dict, key: str, rule_values: list) -> dict | None:
+    """Поле формы, которое бэкенд сопоставит ключу when (имя → синонимы → значения опций)."""
+    names = {f["name"]: f for f in mode["fields"]}
+    for cand in PRICE_KEY_FIELDS.get(key, ()):
+        field = names.get(cand)
+        if field:
+            return field
+    if key not in ("resolution", "mode", "tier"):
+        return None
+    # разрешение/тир может жить в поле с другими значениями (Kling: mode std/pro/4K)
+    for field in mode["fields"]:
+        if field.get("kind") != "select":
+            continue
+        opts = field.get("options") or []
+        if any(_option_matches_rule(opt, rv, key) for opt in opts for rv in rule_values
+               if not isinstance(rv, bool)):
+            return field
+    return None
+
+
+def fill_price_field_defaults(families: list[dict]) -> list[dict]:
+    """Дефолты полям, без которых /estimate не находит правило цены и берёт fallback.
+
+    Правило: если поле участвует в when-правиле цены и его default=null, ставим
+    toggle → false, select → первый option, но только если это значение реально
+    присутствует в правилах (иначе дефолт не имеет цены и его не выдумываем).
+    """
+    fixes: list[dict] = []
+    for fam in families:
+        for mode in fam["modes"]:
+            rule_values = _rule_values_by_key(mode)
+            if not rule_values:
+                continue
+            for key, values in rule_values.items():
+                field = _find_price_field(mode, key, values)
+                if field is None or field.get("default") is not None:
+                    continue
+                kind = field.get("kind")
+                if kind == "toggle":
+                    default = False
+                elif kind == "select" and (field.get("options") or []):
+                    first = field["options"][0]
+                    default = first.get("id") if isinstance(first, dict) else first
+                else:
+                    continue
+                priced = any(_option_matches_rule(default, v, key) for v in values)
+                if not priced:
+                    continue
+                field["default"] = default
+                fixes.append({
+                    "kie_id": mode["kie_id"], "family": fam["id"], "field": field["name"],
+                    "kind": kind, "default": default, "rule_key": key,
+                    "rule_values": sorted({_norm_opt(v) for v in values if not isinstance(v, bool)}),
+                    "reason": ("поле участвует в when-правиле цены, default был null: "
+                               + ("toggle → false" if kind == "toggle" else "select → первый option")
+                               + ", значение есть в правилах"),
+                })
+    return fixes
+
+
+# ---------------------------------------------------------------------------
 # 7. Сверки
 # ---------------------------------------------------------------------------
 
@@ -1517,6 +1629,24 @@ def write_md(families, checks, generated):
         add("|---|---|---|")
         for d in prc["mismatches"]:
             add(f"| `{d['kie_id']}` | {d['csv']} | {d['mine']} |")
+    dfl = checks.get("defaults") or {}
+    if dfl.get("filled"):
+        add("")
+        add("### Сверка 4 — дефолты полей, от которых зависит цена")
+        add("")
+        add(f"- Поставлено дефолтов: **{dfl['filled']}** у **{dfl['modes']}** режимов "
+            "(было `default: null`). Правило: `toggle` → `false`, `select` → первый option, и только "
+            "если это значение реально есть в правилах цены; остальным полям дефолт не выдумываем.")
+        add("- Зачем: бэкенд сопоставляет правило по значению поля. Пока значение `null`, правило "
+            "`when` не разрешается и `/estimate` берёт fallback-цену — в UI она расходится с "
+            "выбранной настройкой (например, Kling 3.0 Omni 1080p: $0.47 вместо $0.63 из-за `audio:null`).")
+        add("")
+        add("| id | поле | тип | новый дефолт | ключ правила |")
+        add("|---|---|---|---|---|")
+        for f in dfl["fields"]:
+            add(f"| `{f['kie_id']}` | {f['field']} | {f['kind']} | "
+                f"{'false' if f['default'] is False else '`' + str(f['default']) + '`'} | "
+                f"{f['rule_key']} |")
     add("")
     add("## 3. Семейства по брендам — видео")
     add("")
@@ -1665,7 +1795,15 @@ def _brand_table(add, families, media):
 def main():
     api_models, id_to_schema, rows, csv_by_id, catalog_mod, catalog_sha, prices = load_sources()
     families, catalog_by_model = build(api_models, id_to_schema, csv_by_id, catalog_mod, prices)
+    default_fixes = fill_price_field_defaults(families)
     checks = run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema, prices)
+    checks["defaults"] = {
+        "filled": len(default_fixes),
+        "modes": len({f["kie_id"] for f in default_fixes}),
+        "fields": default_fixes,
+        "note": ("дефолты поставлены только полям из when-правил цены, у которых default был null; "
+                 "toggle → false, select → первый option, и только если значение есть в правилах"),
+    }
     generated = "2026-11-14"
     checks["catalog_snapshot"] = {"git_blob_sha": catalog_sha,
                                   "entries": len(catalog_mod.MODELS)}

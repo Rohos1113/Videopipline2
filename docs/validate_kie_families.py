@@ -33,6 +33,61 @@ UNITS = {"sec", "gen", "image", "mp", "1m_tokens", "1k_chars", "unknown",
 MIN_KIE_IDS = 182
 MIN_SCHEMA_MODES = 175
 
+# Ключ when из прайса → поля формы (как app/services/kie_catalog.py _WHEN_KEY_ALIASES).
+PRICE_FIELD_CANDIDATES = {
+    "resolution": ("resolution", "output_resolution", "video_resolution", "video_quality",
+                   "image_size", "size", "quality"),
+    "duration": ("duration", "duration_seconds", "duration_s", "output_duration", "video_duration"),
+    "sound": ("audio", "sound", "generate_audio", "enable_audio", "generate_audio_switch",
+              "sound_effects", "with_audio"),
+    "audio": ("audio", "sound", "generate_audio", "enable_audio", "generate_audio_switch",
+              "sound_effects", "with_audio"),
+    "has_audio": ("audio", "sound", "generate_audio", "enable_audio", "generate_audio_switch",
+                  "sound_effects", "with_audio"),
+    "mode": ("tier", "mode", "model", "quality", "rendering_speed", "speed", "quality_tier"),
+    "tier": ("tier", "mode", "model", "quality", "rendering_speed", "speed", "quality_tier"),
+    "upscale": ("upscale_factor", "upscale", "scale", "factor"),
+    "from_resolution": ("from_resolution", "source_resolution", "input_resolution"),
+    "source_resolution": ("from_resolution", "source_resolution", "input_resolution"),
+}
+TIER_TO_RES = {"720p": {"720p", "std", "standard"}, "1080p": {"1080p", "pro"}}
+defaults_issues: list[dict] = []
+
+
+def _norm(v) -> str:
+    return str(v).strip().lower()
+
+
+def _priced(option, value, key: str) -> bool:
+    a, b = _norm(option), _norm(value)
+    if a == b:
+        return True
+    if key in ("resolution", "from_resolution"):
+        return a in TIER_TO_RES.get(b, set()) or b in TIER_TO_RES.get(a, set())
+    return False
+
+
+def check_price_defaults(kid: str, mode: dict, issues: list[dict]) -> None:
+    """У полей из when-правил цены default не должен быть null (иначе правило не находится)."""
+    rule_values: dict[str, list] = {}
+    for rule in (mode.get("pricing") or {}).get("rules") or []:
+        for key, value in (rule.get("when") or {}).items():
+            rule_values.setdefault(str(key), []).append(value)
+    if not rule_values:
+        return
+    names = {f.get("name"): f for f in mode.get("fields") or []}
+    for key, values in rule_values.items():
+        field = next((names[c] for c in PRICE_FIELD_CANDIDATES.get(key, ()) if c in names), None)
+        if field is None or field.get("default") is not None:
+            continue
+        if field.get("kind") == "toggle" and any(isinstance(v, bool) for v in values):
+            issues.append({"kie_id": kid, "field": field.get("name"), "key": key})
+        elif field.get("kind") == "select" and (field.get("options") or []):
+            first = field["options"][0]
+            first = first.get("id") if isinstance(first, dict) else first
+            if any(_priced(first, v, key) for v in values if not isinstance(v, bool)):
+                issues.append({"kie_id": kid, "field": field.get("name"), "key": key})
+
 failures: list[str] = []
 notes: list[str] = []
 
@@ -146,6 +201,24 @@ def main() -> int:
                                                   f"{sorted(FIELD_KEYS - set(f))}")
                 check(bool(f.get("name")), f"mode {kid}: поле без name")
                 check(bool(f.get("kind")), f"mode {kid}: поле {f.get('name')} без kind")
+            check_price_defaults(kid, mode, defaults_issues)
+
+    # --- сверка дефолтов полей цены (task-19) ---
+    check(not defaults_issues,
+          f"дефолтов полей цены не хватает у {len(defaults_issues)}: "
+          + ", ".join(f"{x['kie_id']}:{x['field']}" for x in defaults_issues[:10]))
+    kling_audio = next((m for f in families for m in f.get("modes") or []
+                        if m.get("kie_id") == "kling-3.0-omni/image-to-video"), None)
+    if kling_audio is not None:
+        audio = next((x for x in kling_audio.get("fields") or [] if x.get("name") == "audio"), None)
+        check(audio is not None and audio.get("default") is False,
+              "kling-3.0-omni/image-to-video: у audio должен быть default false")
+    kling26 = next((m for f in families for m in f.get("modes") or []
+                    if m.get("kie_id") == "kling-2.6/image-to-video"), None)
+    if kling26 is not None:
+        sound = next((x for x in kling26.get("fields") or [] if x.get("name") == "sound"), None)
+        check(sound is not None and sound.get("default") is False,
+              "kling-2.6/image-to-video: у sound должен быть default false")
 
     # --- сверка 1: покрытие живого API ---
     check(len(kie_ids) >= MIN_KIE_IDS,

@@ -6,7 +6,7 @@
   "source_table": "docs/kie-ai-models.csv",
   "source_catalog": "app/services/kie_catalog.py @ HEAD",
   "source_prices": "docs/kie-prices-usd.json (первичен по деньгам: unit/rules/default)",
-  "catalog_git_blob_sha": "556db12240d0d55a616974e670e5cd1b0e1f7e07",
+  "catalog_git_blob_sha": "89307571cb56834f9595378c108ae15cbb900423",
   "credit_usd": 0.005,
   "counts": {
    "api_models_total": 251,
@@ -992,8 +992,671 @@
     "rules_mismatch": [],
     "ok": true
    },
+   "defaults": {
+    "filled": 50,
+    "modes": 45,
+    "fields": [
+     {
+      "kie_id": "bytedance/seedance-2-5-draft",
+      "family": "seedance-2-5",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1080p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "480p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "gemini-omni-video",
+      "family": "gemini-omni",
+      "field": "duration",
+      "kind": "select",
+      "default": "4",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "4",
+       "6",
+       "8"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "google/gemini-omni-flash-1-1",
+      "family": "gemini-omni-flash-1-1",
+      "field": "duration",
+      "kind": "select",
+      "default": "4",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "4",
+       "6",
+       "8"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "hailuo/02-image-to-video-standard",
+      "family": "hailuo-02",
+      "field": "resolution",
+      "kind": "select",
+      "default": "512P",
+      "rule_key": "resolution",
+      "rule_values": [
+       "512p",
+       "768p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "hailuo/2-3-image-to-video-pro",
+      "family": "hailuo-2-3",
+      "field": "duration",
+      "kind": "select",
+      "default": "6",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "6"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "hailuo/2-3-image-to-video-pro",
+      "family": "hailuo-2-3",
+      "field": "resolution",
+      "kind": "select",
+      "default": "768P",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "768p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "hailuo/2-3-image-to-video-standard",
+      "family": "hailuo-2-3",
+      "field": "duration",
+      "kind": "select",
+      "default": "6",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "6"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "hailuo/2-3-image-to-video-standard",
+      "family": "hailuo-2-3",
+      "field": "resolution",
+      "kind": "select",
+      "default": "768P",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "768p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling/v2-1-master-text-to-video",
+      "family": "kling-2-1",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "5"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling/v2-1-master-image-to-video",
+      "family": "kling-2-1",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "5"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling/v2-1-pro",
+      "family": "kling-2-1",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "5"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling/v2-1-standard",
+      "family": "kling-2-1",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "5"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling/v2-5-turbo-text-to-video-pro",
+      "family": "kling-2-5-turbo",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "5"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling/v2-5-turbo-image-to-video-pro",
+      "family": "kling-2-5-turbo",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "5"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling-2.6/image-to-video",
+      "family": "kling-2-6",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "rule_key": "duration",
+      "rule_values": [
+       "10",
+       "5"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling-2.6/image-to-video",
+      "family": "kling-2-6",
+      "field": "sound",
+      "kind": "toggle",
+      "default": false,
+      "rule_key": "sound",
+      "rule_values": [],
+      "reason": "поле участвует в when-правиле цены, default был null: toggle → false, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling-2.6/motion-control",
+      "family": "kling-2-6",
+      "field": "mode",
+      "kind": "select",
+      "default": "720p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling-3.0/video",
+      "family": "kling-3-0",
+      "field": "mode",
+      "kind": "select",
+      "default": "std",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "4k",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling-3.0/video",
+      "family": "kling-3-0",
+      "field": "sound",
+      "kind": "toggle",
+      "default": false,
+      "rule_key": "sound",
+      "rule_values": [],
+      "reason": "поле участвует в when-правиле цены, default был null: toggle → false, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling-3.0-omni/image-to-video",
+      "family": "kling-3-0",
+      "field": "audio",
+      "kind": "toggle",
+      "default": false,
+      "rule_key": "sound",
+      "rule_values": [],
+      "reason": "поле участвует в when-правиле цены, default был null: toggle → false, значение есть в правилах"
+     },
+     {
+      "kie_id": "kling-3.0-omni/reference-to-video",
+      "family": "kling-3-0",
+      "field": "audio",
+      "kind": "toggle",
+      "default": false,
+      "rule_key": "sound",
+      "rule_values": [],
+      "reason": "поле участвует в when-правиле цены, default был null: toggle → false, значение есть в правилах"
+     },
+     {
+      "kie_id": "pixverse-v6/text-to-video",
+      "family": "pixverse-v6",
+      "field": "quality",
+      "kind": "select",
+      "default": "360p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "360p",
+       "540p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "pixverse-v6/image-to-video",
+      "family": "pixverse-v6",
+      "field": "quality",
+      "kind": "select",
+      "default": "360p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "360p",
+       "540p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "pixverse-v6-max/text-to-video",
+      "family": "pixverse-v6",
+      "field": "quality",
+      "kind": "select",
+      "default": "360p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "360p",
+       "540p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "pixverse-v6-max/image-to-video",
+      "family": "pixverse-v6",
+      "field": "quality",
+      "kind": "select",
+      "default": "360p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "360p",
+       "540p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "pixverse-v6/transition",
+      "family": "pixverse-v6",
+      "field": "quality",
+      "kind": "select",
+      "default": "360p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "360p",
+       "540p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "pixverse-v6/extend",
+      "family": "pixverse-v6",
+      "field": "quality",
+      "kind": "select",
+      "default": "360p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "360p",
+       "540p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "pixverse-v6/extend",
+      "family": "pixverse-v6",
+      "field": "generate_audio_switch",
+      "kind": "toggle",
+      "default": false,
+      "rule_key": "sound",
+      "rule_values": [],
+      "reason": "поле участвует в when-правиле цены, default был null: toggle → false, значение есть в правилах"
+     },
+     {
+      "kie_id": "pixverse-v6/reference-to-video",
+      "family": "pixverse-v6",
+      "field": "quality",
+      "kind": "select",
+      "default": "360p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "360p",
+       "540p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "wan/2-5-text-to-video",
+      "family": "wan-2-5",
+      "field": "resolution",
+      "kind": "select",
+      "default": "720p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "wan/2-5-image-to-video",
+      "family": "wan-2-5",
+      "field": "resolution",
+      "kind": "select",
+      "default": "720p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "wan/2-6-text-to-video",
+      "family": "wan-2-6",
+      "field": "resolution",
+      "kind": "select",
+      "default": "720p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "wan/2-6-video-to-video",
+      "family": "wan-2-6",
+      "field": "resolution",
+      "kind": "select",
+      "default": "720p",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1080p",
+       "720p"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "wan/2-6-flash-image-to-video",
+      "family": "wan-2-6",
+      "field": "audio",
+      "kind": "toggle",
+      "default": false,
+      "rule_key": "sound",
+      "rule_values": [],
+      "reason": "поле участвует в when-правиле цены, default был null: toggle → false, значение есть в правилах"
+     },
+     {
+      "kie_id": "wan/2-6-flash-video-to-video",
+      "family": "wan-2-6",
+      "field": "audio",
+      "kind": "toggle",
+      "default": false,
+      "rule_key": "sound",
+      "rule_values": [],
+      "reason": "поле участвует в when-правиле цены, default был null: toggle → false, значение есть в правилах"
+     },
+     {
+      "kie_id": "flux-2/pro-text-to-image",
+      "family": "flux-2",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "flux-2/pro-image-to-image",
+      "family": "flux-2",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "flux-2/flex-text-to-image",
+      "family": "flux-2",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "flux-2/flex-image-to-image",
+      "family": "flux-2",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "ideogram/v3-text-to-image",
+      "family": "ideogram-v3",
+      "field": "rendering_speed",
+      "kind": "select",
+      "default": "TURBO",
+      "rule_key": "mode",
+      "rule_values": [
+       "balanced",
+       "quality",
+       "turbo"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "gpt-image/1.5-text-to-image",
+      "family": "gpt-image-1-5",
+      "field": "quality",
+      "kind": "select",
+      "default": "medium",
+      "rule_key": "mode",
+      "rule_values": [
+       "high",
+       "medium"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "gpt-image/1.5-image-to-image",
+      "family": "gpt-image-1-5",
+      "field": "quality",
+      "kind": "select",
+      "default": "medium",
+      "rule_key": "mode",
+      "rule_values": [
+       "high",
+       "medium"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "gpt-image-2-text-to-image",
+      "family": "gpt-image-2",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k",
+       "4k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "gpt-image-2-image-to-image",
+      "family": "gpt-image-2",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k",
+       "4k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "gpt-image-2-5-flare-text-to-image",
+      "family": "gpt-image-2-5",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k",
+       "4k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "gpt-image-2-5-flare-image-to-image",
+      "family": "gpt-image-2-5",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k",
+       "4k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "gpt-image-2-5-sunburst-text-to-image",
+      "family": "gpt-image-2-5",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k",
+       "4k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "gpt-image-2-5-sunburst-image-to-image",
+      "family": "gpt-image-2-5",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k",
+       "4k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "qwen3/text-to-image",
+      "family": "qwen3-image",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "qwen3/pro-text-to-image",
+      "family": "qwen3-image",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1K",
+      "rule_key": "resolution",
+      "rule_values": [
+       "1k",
+       "2k"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     }
+    ],
+    "note": "дефолты поставлены только полям из when-правил цены, у которых default был null; toggle → false, select → первый option, и только если значение есть в правилах"
+   },
    "catalog_snapshot": {
-    "git_blob_sha": "556db12240d0d55a616974e670e5cd1b0e1f7e07",
+    "git_blob_sha": "89307571cb56834f9595378c108ae15cbb900423",
     "entries": 33
    },
    "live_check": {
@@ -2659,7 +3322,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "1080p",
        "options": [
         "1080p"
        ],
@@ -4111,7 +4774,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "4",
        "options": [
         "4",
         "6",
@@ -4465,7 +5128,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "4",
        "options": [
         "4",
         "6",
@@ -5919,7 +6582,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "512P",
        "options": [
         "512P",
         "768P"
@@ -6023,7 +6686,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "6",
        "options": [
         "6",
         "10"
@@ -6035,7 +6698,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "768P",
        "options": [
         "768P",
         "1080P"
@@ -6158,7 +6821,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "6",
        "options": [
         "6",
         "10"
@@ -6170,7 +6833,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "768P",
        "options": [
         "768P",
         "1080P"
@@ -6862,7 +7525,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "5",
         "10"
@@ -6970,7 +7633,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "5",
         "10"
@@ -7066,7 +7729,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "5",
         "10"
@@ -7172,7 +7835,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "5",
         "10"
@@ -7268,7 +7931,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "5",
         "10"
@@ -7385,7 +8048,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "5",
         "10"
@@ -7616,7 +8279,7 @@
        "label": "Звук",
        "kind": "toggle",
        "required": true,
-       "default": null,
+       "default": false,
        "hint": "Required. This parameter specifies whether the generated video contains sound (boolean: true/false)"
       },
       {
@@ -7624,7 +8287,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "5",
         "10"
@@ -7743,7 +8406,7 @@
        "label": "Режим",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "720p",
        "options": [
         "720p",
         "1080p"
@@ -7830,7 +8493,7 @@
        "label": "Звук",
        "kind": "toggle",
        "required": true,
-       "default": null,
+       "default": false,
        "hint": "Required. Whether to generate audio (speech, sound effects, ambience) with the video. Affects price."
       },
       {
@@ -7874,7 +8537,7 @@
        "label": "Режим",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "std",
        "options": [
         "std",
         "pro",
@@ -8305,7 +8968,7 @@
        "label": "Аудио",
        "kind": "toggle",
        "required": false,
-       "default": null,
+       "default": false,
        "hint": "Whether to enable audio. Passing this value explicitly is recommended. `true` enables audio; `false` disables audio."
       },
       {
@@ -8489,7 +9152,7 @@
        "label": "Аудио",
        "kind": "toggle",
        "required": true,
-       "default": null,
+       "default": false,
        "hint": "Whether to enable audio. When no video is provided, both `true` and `false` are supported."
       },
       {
@@ -9875,7 +10538,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "360p",
        "options": [
         "360p",
         "540p",
@@ -10049,7 +10712,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "360p",
        "options": [
         "360p",
         "540p",
@@ -10293,7 +10956,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "360p",
        "options": [
         "360p",
         "540p",
@@ -10459,7 +11122,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "360p",
        "options": [
         "360p",
         "540p",
@@ -10635,7 +11298,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "360p",
        "options": [
         "360p",
         "540p",
@@ -10804,7 +11467,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "360p",
        "options": [
         "360p",
         "540p",
@@ -10818,7 +11481,7 @@
        "label": "Генерировать звук",
        "kind": "toggle",
        "required": false,
-       "default": null,
+       "default": false,
        "hint": "Whether to generate audio."
       },
       {
@@ -10996,7 +11659,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "360p",
        "options": [
         "360p",
         "540p",
@@ -12562,7 +13225,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "720p",
        "options": [
         "720p",
         "1080p"
@@ -12683,7 +13346,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "720p",
        "options": [
         "720p",
         "1080p"
@@ -12806,7 +13469,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "720p",
        "options": [
         "720p",
         "1080p"
@@ -13094,7 +13757,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "720p",
        "options": [
         "720p",
         "1080p"
@@ -13251,7 +13914,7 @@
        "label": "Аудио",
        "kind": "toggle",
        "required": true,
-       "default": null,
+       "default": false,
        "hint": "Whether to generate video with audio. Audio directly affects the cost, as the pricing differs between videos with sound and silent videos. (Boolean value (true/false))"
       },
       {
@@ -13470,7 +14133,7 @@
        "label": "Аудио",
        "kind": "toggle",
        "required": false,
-       "default": null,
+       "default": false,
        "hint": "Whether to generate video with audio. Audio directly affects the cost, as the pricing differs between videos with sound and silent videos. (Boolean value (true/false))"
       },
       {
@@ -14694,7 +15357,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K"
@@ -14796,7 +15459,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K"
@@ -14889,7 +15552,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K"
@@ -14991,7 +15654,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K"
@@ -19529,7 +20192,7 @@
        "label": "Скорость рендера",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "TURBO",
        "options": [
         "TURBO",
         "BALANCED",
@@ -20185,7 +20848,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "medium",
        "options": [
         "medium",
         "high"
@@ -20274,7 +20937,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "medium",
        "options": [
         "medium",
         "high"
@@ -20377,7 +21040,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K",
@@ -20501,7 +21164,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K",
@@ -20623,7 +21286,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K",
@@ -20744,7 +21407,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K",
@@ -20857,7 +21520,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K",
@@ -20978,7 +21641,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K",
@@ -23289,7 +23952,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K"
@@ -23563,7 +24226,7 @@
        "label": "Разрешение",
        "kind": "select",
        "required": false,
-       "default": null,
+       "default": "1K",
        "options": [
         "1K",
         "2K"

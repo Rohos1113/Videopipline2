@@ -71,6 +71,64 @@
 | `wan/2-7-image` | [4.8, 12.0] | [4.8] |
 | `wan/2-7-image-pro` | [4.8, 12.0] | [12.0] |
 
+### Сверка 4 — дефолты полей, от которых зависит цена
+
+- Поставлено дефолтов: **50** у **45** режимов (было `default: null`). Правило: `toggle` → `false`, `select` → первый option, и только если это значение реально есть в правилах цены; остальным полям дефолт не выдумываем.
+- Зачем: бэкенд сопоставляет правило по значению поля. Пока значение `null`, правило `when` не разрешается и `/estimate` берёт fallback-цену — в UI она расходится с выбранной настройкой (например, Kling 3.0 Omni 1080p: $0.47 вместо $0.63 из-за `audio:null`).
+
+| id | поле | тип | новый дефолт | ключ правила |
+|---|---|---|---|---|
+| `bytedance/seedance-2-5-draft` | resolution | select | `1080p` | resolution |
+| `gemini-omni-video` | duration | select | `4` | duration |
+| `google/gemini-omni-flash-1-1` | duration | select | `4` | duration |
+| `hailuo/02-image-to-video-standard` | resolution | select | `512P` | resolution |
+| `hailuo/2-3-image-to-video-pro` | duration | select | `6` | duration |
+| `hailuo/2-3-image-to-video-pro` | resolution | select | `768P` | resolution |
+| `hailuo/2-3-image-to-video-standard` | duration | select | `6` | duration |
+| `hailuo/2-3-image-to-video-standard` | resolution | select | `768P` | resolution |
+| `kling/v2-1-master-text-to-video` | duration | select | `5` | duration |
+| `kling/v2-1-master-image-to-video` | duration | select | `5` | duration |
+| `kling/v2-1-pro` | duration | select | `5` | duration |
+| `kling/v2-1-standard` | duration | select | `5` | duration |
+| `kling/v2-5-turbo-text-to-video-pro` | duration | select | `5` | duration |
+| `kling/v2-5-turbo-image-to-video-pro` | duration | select | `5` | duration |
+| `kling-2.6/image-to-video` | duration | select | `5` | duration |
+| `kling-2.6/image-to-video` | sound | toggle | false | sound |
+| `kling-2.6/motion-control` | mode | select | `720p` | resolution |
+| `kling-3.0/video` | mode | select | `std` | resolution |
+| `kling-3.0/video` | sound | toggle | false | sound |
+| `kling-3.0-omni/image-to-video` | audio | toggle | false | sound |
+| `kling-3.0-omni/reference-to-video` | audio | toggle | false | sound |
+| `pixverse-v6/text-to-video` | quality | select | `360p` | resolution |
+| `pixverse-v6/image-to-video` | quality | select | `360p` | resolution |
+| `pixverse-v6-max/text-to-video` | quality | select | `360p` | resolution |
+| `pixverse-v6-max/image-to-video` | quality | select | `360p` | resolution |
+| `pixverse-v6/transition` | quality | select | `360p` | resolution |
+| `pixverse-v6/extend` | quality | select | `360p` | resolution |
+| `pixverse-v6/extend` | generate_audio_switch | toggle | false | sound |
+| `pixverse-v6/reference-to-video` | quality | select | `360p` | resolution |
+| `wan/2-5-text-to-video` | resolution | select | `720p` | resolution |
+| `wan/2-5-image-to-video` | resolution | select | `720p` | resolution |
+| `wan/2-6-text-to-video` | resolution | select | `720p` | resolution |
+| `wan/2-6-video-to-video` | resolution | select | `720p` | resolution |
+| `wan/2-6-flash-image-to-video` | audio | toggle | false | sound |
+| `wan/2-6-flash-video-to-video` | audio | toggle | false | sound |
+| `flux-2/pro-text-to-image` | resolution | select | `1K` | resolution |
+| `flux-2/pro-image-to-image` | resolution | select | `1K` | resolution |
+| `flux-2/flex-text-to-image` | resolution | select | `1K` | resolution |
+| `flux-2/flex-image-to-image` | resolution | select | `1K` | resolution |
+| `ideogram/v3-text-to-image` | rendering_speed | select | `TURBO` | mode |
+| `gpt-image/1.5-text-to-image` | quality | select | `medium` | mode |
+| `gpt-image/1.5-image-to-image` | quality | select | `medium` | mode |
+| `gpt-image-2-text-to-image` | resolution | select | `1K` | resolution |
+| `gpt-image-2-image-to-image` | resolution | select | `1K` | resolution |
+| `gpt-image-2-5-flare-text-to-image` | resolution | select | `1K` | resolution |
+| `gpt-image-2-5-flare-image-to-image` | resolution | select | `1K` | resolution |
+| `gpt-image-2-5-sunburst-text-to-image` | resolution | select | `1K` | resolution |
+| `gpt-image-2-5-sunburst-image-to-image` | resolution | select | `1K` | resolution |
+| `qwen3/text-to-image` | resolution | select | `1K` | resolution |
+| `qwen3/pro-text-to-image` | resolution | select | `1K` | resolution |
+
 ## 3. Семейства по брендам — видео
 
 | Бренд | Семейство | Режимов | id | Режимы (kie_id) | Цена |
