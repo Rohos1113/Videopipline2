@@ -638,7 +638,7 @@ test("familyPriceFromUsd: price_from_usd из каталога, иначе ми�
   assert.equal(familyPriceFromUsd({ model: null }), null);
 });
 
-test("dropDuplicatePresets: пресеты с KIE-семьёй убираются, уникальные остаются", () => {
+test("dropDuplicatePresets: пресеты с KIE-эквивалентом скрываются, уникальные остаются", () => {
   const presets = [
     { slug: "flux-2-pro" },
     { slug: "seedance-2-0-fast" },
@@ -660,8 +660,24 @@ test("dropDuplicatePresets: пресеты с KIE-семьёй убираютс�
     dropDuplicatePresets(presets, families).map((p) => p.slug),
     ["suno-5-5", "elevenlabs-v4"],
   );
-  // Каталог без этих семей (старый backend) — пресеты остаются как были.
+  // Каталог не загружен (пустой ответ) — пресеты остаются, пикер не пустой.
   assert.equal(dropDuplicatePresets(presets, []).length, presets.length);
+});
+
+test("dropDuplicatePresets: пресет без семьи (модель удалена из каталога) тоже скрыт", () => {
+  // flux-2-pro / gpt-image-2 — моделей больше нет в curated-каталоге: их семей
+  // нет в families, но строки-пресеты не должны возвращаться в пикер.
+  const presets = [
+    { slug: "flux-2-pro" },
+    { slug: "gpt-image-2" },
+    { slug: "omni-flash" },
+    { slug: "suno-5-5" },
+  ];
+  const families = ["veo-3-1", "seedream-5", "nano-banana-2", "suno-music"];
+  assert.deepEqual(
+    dropDuplicatePresets(presets, families).map((p) => p.slug),
+    ["suno-5-5"],
+  );
 });
 
 test("outseePresetFamilyIds: соответствие пресетов семействам KIE", () => {

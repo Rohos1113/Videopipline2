@@ -1311,20 +1311,38 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
   const kieActive = kieModel != null;
 
   /**
-   * Пресет outsee, у которого есть KIE-семья, в пикере скрыт (одна строка на
-   * модель). Если такой slug остался выбранным (дефолт/старые настройки) —
+   * Дефолтная семья каталога для вкладки: предпочтительная, иначе первая.
+   * Нужна, когда выбранный slug — пресет outsee, которого в curated-каталоге
+   * больше нет (модель удалена владельцем): подсветить такую строку нечем.
+   */
+  const defaultKieSlugFor = (type: "image" | "video"): string | null => {
+    const list = kieModels.filter(
+      (m) => (m.media ?? (m.result === "video" ? "video" : "image")) === type,
+    );
+    const preferred = type === "image" ? "nano-banana-2" : "veo-3-1";
+    const fam = list.find((m) => m.id === preferred) ?? list[0];
+    return fam ? `kie:${fam.id}` : null;
+  };
+
+  /**
+   * Пресет outsee в пикере скрыт: у него есть KIE-эквивалент, а KIE — источник
+   * правды (одна строка на модель). Если такой slug остался выбранным
+   * (дефолт/старые настройки) или его семейство уже удалено из curated-каталога —
    * переводим выбор на «kie:<семья>», иначе строка не подсветится и генерация
    * уйдёт не туда.
    */
   useEffect(() => {
     const ids = new Set(kieModels.map((m) => m.id.toLowerCase()));
     if (mediaType === "image" && !imageSlug.startsWith("kie:")) {
-      const fam = outseePresetFamilyIds(imageSlug).find((id) => ids.has(id));
-      if (fam) setImageSlug(`kie:${fam}`);
+      const mapped = outseePresetFamilyIds(imageSlug).find((id) => ids.has(id));
+      const target = mapped ?? defaultKieSlugFor("image");
+      if (target) setImageSlug(`kie:${target}`);
     } else if (mediaType === "video" && !videoSlug.startsWith("kie:")) {
-      const fam = outseePresetFamilyIds(videoSlug).find((id) => ids.has(id));
-      if (fam) setVideoSlug(`kie:${fam}`);
+      const mapped = outseePresetFamilyIds(videoSlug).find((id) => ids.has(id));
+      const target = mapped ?? defaultKieSlugFor("video");
+      if (target) setVideoSlug(`kie:${target}`);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaType, imageSlug, videoSlug, kieModels]);
 
   /** Режимы семейства (шаг 8): пусто у старых плоских моделей каталога. */
@@ -1931,20 +1949,16 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSlug]);
 
-  // Трим каталога Create: outsee — только GPT Image 2 / Nano Banana 2 /
-  // Veo 3.1 Lite; аудио — только KIE (Suno/ElevenLabs не дублируются).
+  // Трим каталога Create: медиа — только семейства из curated-каталога KIE
+  // (пресеты outsee скрыты), аудио — только KIE (Suno/ElevenLabs не дублируются).
   useEffect(() => {
     if (!kieCatalogQ.data) return;
     const isKie = (s: string) => kieModels.some((m) => `kie:${m.id}` === s);
-    if (
-      mediaType === "image" &&
-      !isKie(imageSlug) &&
-      !["gpt-image-2", "nano-banana-2"].includes(imageSlug)
-    ) {
-      setImageSlug("gpt-image-2");
+    if (mediaType === "image" && !isKie(imageSlug)) {
+      setImageSlug(defaultKieSlugFor("image") ?? "gpt-image-2");
     }
-    if (mediaType === "video" && !isKie(videoSlug) && videoSlug !== "veo-3-1-lite") {
-      setVideoSlug("veo-3-1-lite");
+    if (mediaType === "video" && !isKie(videoSlug)) {
+      setVideoSlug(defaultKieSlugFor("video") ?? "veo-3-1-lite");
     }
     if (mediaType === "audio" && !isKie(audioSlug)) {
       setAudioSlug(
@@ -5760,14 +5774,13 @@ function ModelPickerPopover({
       };
     });
 
-    // Only include remaining base models that are NOT present in KIE
-    const remainingBaseItems = filteredModels
+    // Строки-пресеты outsee: только без KIE-эквивалента (Suno 5.5, ElevenLabs).
+    // Пресеты удалённых моделей тоже скрыты — в пикере лишь curated-каталог KIE.
+    const remainingBaseItems = dropDuplicatePresets(filteredModels, kieIdSet)
       .filter((m) => {
         const s = m.slug.toLowerCase();
         const c = s.replace(/[-_]/g, "");
-        if (kieIdSet.has(s) || kieIdSet.has(c)) return false;
-        // Одна модель — одна строка пикера: пресет с KIE-семьёй не показываем.
-        return !outseePresetFamilyIds(m.slug).some((fam) => kieIdSet.has(fam));
+        return !kieIdSet.has(s) && !kieIdSet.has(c);
       })
       .map((m) => ({
         slug: m.slug,

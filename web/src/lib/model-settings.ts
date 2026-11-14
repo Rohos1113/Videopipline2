@@ -559,13 +559,14 @@ export function kieModeOptions(
 }
 
 /**
- * Пресеты каталога outsee → id семейств KIE. Если семья есть в каталоге KIE,
- * строка-пресет в пикере не нужна: KIE — источник правды (поля, режимы, цена),
- * а пресет показывал бы ту же модель второй раз с урезанными настройками.
+ * Пресеты каталога outsee → id семейств KIE. В пикере одна строка на модель:
+ * KIE — источник правды (поля, режимы, цена), пресет дублировал бы её с
+ * урезанными настройками. id справа — как семейство называется в актуальном
+ * curated-каталоге (например, Seedream 5 Pro в каталоге это seedream-5).
  */
 export const OUTSEE_PRESET_FAMILIES: Record<string, string[]> = {
   "flux-2-pro": ["flux-2-pro"],
-  "seedream-5-pro": ["seedream-5-pro"],
+  "seedream-5-pro": ["seedream-5"],
   "nano-banana-2": ["nano-banana-2"],
   "qwen3-image": ["qwen3-image"],
   "gpt-image-2": ["gpt-image-2"],
@@ -585,17 +586,23 @@ export function outseePresetFamilyIds(slug: string): string[] {
 }
 
 /**
- * Убирает пресеты, у которых уже есть семья в каталоге KIE: одна модель —
- * одна строка в пикере. Пресеты без KIE-семейства (Suno 5.5, ElevenLabs) остаются.
+ * Убирает пресеты outsee, у которых есть KIE-эквивалент: в пикере одна модель —
+ * одна строка, KIE — источник правды (поля, режимы, цена).
+ *
+ * Владелец держит в пикере только curated-каталог KIE, поэтому пресет скрываем
+ * и тогда, когда его семейство уже удалено из каталога: иначе удалённая модель
+ * (Grok, Pixverse, Flux 2, старые Kling и т.д.) возвращалась бы в пикер отдельной
+ * строкой. Пресеты без KIE-эквивалента (Suno 5.5, ElevenLabs) остаются.
+ * Пока каталог не загружен (familyIds пуст) — показываем всё, чтобы пикер не
+ * остался пустым при недоступном /api/kie-create/catalog.
  */
 export function dropDuplicatePresets<T extends { slug: string }>(
   presets: T[],
   familyIds: Iterable<string>,
 ): T[] {
   const ids = new Set(Array.from(familyIds, (id) => String(id).toLowerCase()));
-  return presets.filter(
-    (p) => !outseePresetFamilyIds(p.slug).some((fam) => ids.has(fam)),
-  );
+  if (!ids.size) return presets.slice();
+  return presets.filter((p) => outseePresetFamilyIds(p.slug).length === 0);
 }
 
 /** Значения, которые переживают переключение режима: совпадают по имени поля. */
