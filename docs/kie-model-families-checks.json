@@ -46,43 +46,14 @@
  },
  "fields": {
   "modes_total": 182,
-  "modes_with_docs_schema": 145,
-  "modes_fields_complete": 145,
+  "modes_with_docs_schema": 175,
+  "modes_fields_complete": 175,
   "modes_fields_mismatch": [],
   "modes_fields_from_catalog": 7,
-  "modes_without_fields": 30,
-  "modes_without_fields_list": [
-   "happyhorse/video-edit",
-   "veo/get-1080p-video",
-   "gemini-omni-character",
-   "minimax-h3/reference-to-video",
-   "kling/v2-1-master-text-to-video",
-   "kling/v2-1-master-image-to-video",
-   "kling/v2-1-pro",
-   "kling/v2-5-turbo-text-to-video-pro",
-   "kling/v2-5-turbo-image-to-video-pro",
-   "kling-2.6/motion-control",
-   "pixverse-v6/text-to-video",
-   "pixverse-v6/extend",
-   "pixverse-v6/reference-to-video",
-   "runway",
-   "runway/extend-ai-video",
-   "ai-music-api/create-music-video",
-   "wan/2-2-a14b-text-to-video-turbo",
-   "wan/2-2-a14b-speech-to-video-turbo",
-   "wan/2-2-animate-move",
-   "wan/2-5-text-to-video",
-   "wan/2-5-image-to-video",
-   "wan/2-6-text-to-video",
-   "wan/2-6-video-to-video",
-   "wan/2-6-flash-image-to-video",
-   "wan/2-6-flash-video-to-video",
-   "wan/2-7-r2v",
-   "wan/2-7-videoedit",
-   "omnihuman-1-5/human-identification",
-   "omnihuman-1-5/subject-detection",
-   "ai-music-api/cover-generate"
-  ],
+  "modes_without_fields": 0,
+  "modes_without_fields_list": [],
+  "modes_fields_known_false": 0,
+  "fields_known_flag_bad": [],
   "required_checked_against_csv": 142,
   "required_match": 127,
   "required_mismatch": [
@@ -242,18 +213,427 @@
   "ok": true
  },
  "pricing": {
-  "modes_with_price": 171,
-  "modes_without_price": 11,
+  "modes_with_price": 178,
+  "modes_without_price": 4,
   "units": {
-   "sec": 63,
-   "gen": 108,
-   "unknown": 5,
-   "tokens": 4,
-   "megapixel": 2
+   "sec": 72,
+   "gen": 28,
+   "unknown": 4,
+   "image": 72,
+   "1m_tokens": 4,
+   "mp": 2
   },
+  "unit_source": "docs/kie-prices-usd.json",
   "checked_against_csv": 171,
-  "numbers_match": 171,
-  "mismatches": [],
+  "numbers_match": 149,
+  "mismatches": [
+   {
+    "kie_id": "minimax-h3/text-to-video",
+    "csv": [
+     4.0,
+     8.0,
+     13.0
+    ],
+    "mine": [
+     8.0,
+     13.0
+    ],
+    "only_csv": [
+     4.0
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "minimax-h3/image-to-video",
+    "csv": [
+     4.0,
+     8.0,
+     13.0
+    ],
+    "mine": [
+     8.0,
+     13.0
+    ],
+    "only_csv": [
+     4.0
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "minimax-h3/reference-to-video",
+    "csv": [
+     4.0,
+     8.0,
+     13.0
+    ],
+    "mine": [
+     8.0,
+     13.0
+    ],
+    "only_csv": [
+     4.0
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "video/upscale",
+    "csv": [
+     6.0
+    ],
+    "mine": [
+     1.5,
+     3.0,
+     6.0
+    ],
+    "only_csv": [],
+    "only_mine": [
+     1.5,
+     3.0
+    ]
+   },
+   {
+    "kie_id": "wan/2-6-text-to-video",
+    "csv": [
+     210.0,
+     315.0
+    ],
+    "mine": [
+     70.0,
+     105.0,
+     140.0,
+     210.0,
+     315.0
+    ],
+    "only_csv": [],
+    "only_mine": [
+     70.0,
+     105.0,
+     140.0
+    ]
+   },
+   {
+    "kie_id": "wan/2-6-image-to-video",
+    "csv": [
+     210.0,
+     315.0
+    ],
+    "mine": [
+     70.0,
+     105.0,
+     140.0,
+     210.0,
+     315.0
+    ],
+    "only_csv": [],
+    "only_mine": [
+     70.0,
+     105.0,
+     140.0
+    ]
+   },
+   {
+    "kie_id": "wan/2-6-video-to-video",
+    "csv": [
+     210.0,
+     315.0
+    ],
+    "mine": [
+     70.0,
+     105.0,
+     140.0,
+     210.0,
+     315.0
+    ],
+    "only_csv": [],
+    "only_mine": [
+     70.0,
+     105.0,
+     140.0
+    ]
+   },
+   {
+    "kie_id": "wan/2-6-flash-image-to-video",
+    "csv": [
+     60.0,
+     90.0,
+     120.0,
+     180.0
+    ],
+    "mine": [
+     20.0,
+     30.0,
+     40.0,
+     60.0,
+     80.0,
+     90.0,
+     120.0,
+     180.0
+    ],
+    "only_csv": [],
+    "only_mine": [
+     20.0,
+     30.0,
+     40.0,
+     80.0
+    ]
+   },
+   {
+    "kie_id": "wan/2-6-flash-video-to-video",
+    "csv": [
+     40.0,
+     60.0,
+     80.0,
+     120.0
+    ],
+    "mine": [
+     20.0,
+     30.0,
+     40.0,
+     60.0,
+     80.0,
+     120.0
+    ],
+    "only_csv": [],
+    "only_mine": [
+     20.0,
+     30.0
+    ]
+   },
+   {
+    "kie_id": "seedream/5-pro-text-to-image",
+    "csv": [
+     0.5,
+     7.0,
+     14.0
+    ],
+    "mine": [
+     7.0,
+     14.0
+    ],
+    "only_csv": [
+     0.5
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "seedream/5-pro-image-to-image",
+    "csv": [
+     0.5,
+     7.0,
+     14.0
+    ],
+    "mine": [
+     7.0,
+     14.0
+    ],
+    "only_csv": [
+     0.5
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "seedream/5-5-image-to-image",
+    "csv": [
+     1.44,
+     3.6,
+     6.3,
+     9.18
+    ],
+    "mine": [
+     3.6,
+     6.3
+    ],
+    "only_csv": [
+     1.44,
+     9.18
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "seedream/5-5-layer-decomposition",
+    "csv": [
+     1.44,
+     3.6,
+     6.3,
+     15.84
+    ],
+    "mine": [
+     3.6,
+     6.3
+    ],
+    "only_csv": [
+     1.44,
+     15.84
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "minimax-h3/image-edit",
+    "csv": [
+     0.5,
+     1.8,
+     5.5
+    ],
+    "mine": [
+     1.8,
+     5.5
+    ],
+    "only_csv": [
+     0.5
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "gpt-image-2-6/flare-text-to-image",
+    "csv": [
+     36.0,
+     900.0
+    ],
+    "mine": [
+     225.0,
+     360.0,
+     900.0,
+     1440.0,
+     5400.0
+    ],
+    "only_csv": [
+     36.0
+    ],
+    "only_mine": [
+     225.0,
+     360.0,
+     1440.0,
+     5400.0
+    ]
+   },
+   {
+    "kie_id": "gpt-image-2-6/flare-image-to-image",
+    "csv": [
+     36.0,
+     900.0
+    ],
+    "mine": [
+     225.0,
+     360.0,
+     900.0,
+     1440.0,
+     5400.0
+    ],
+    "only_csv": [
+     36.0
+    ],
+    "only_mine": [
+     225.0,
+     360.0,
+     1440.0,
+     5400.0
+    ]
+   },
+   {
+    "kie_id": "gpt-image-2-6/sunburst-text-to-image",
+    "csv": [
+     36.0,
+     900.0
+    ],
+    "mine": [
+     225.0,
+     360.0,
+     900.0,
+     1440.0,
+     5400.0
+    ],
+    "only_csv": [
+     36.0
+    ],
+    "only_mine": [
+     225.0,
+     360.0,
+     1440.0,
+     5400.0
+    ]
+   },
+   {
+    "kie_id": "gpt-image-2-6/sunburst-image-to-image",
+    "csv": [
+     36.0,
+     900.0
+    ],
+    "mine": [
+     225.0,
+     360.0,
+     900.0,
+     1440.0,
+     5400.0
+    ],
+    "only_csv": [
+     36.0
+    ],
+    "only_mine": [
+     225.0,
+     360.0,
+     1440.0,
+     5400.0
+    ]
+   },
+   {
+    "kie_id": "qwen3/image-to-image",
+    "csv": [
+     0.5,
+     4.8
+    ],
+    "mine": [
+     4.8
+    ],
+    "only_csv": [
+     0.5
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "qwen3/pro-image-to-image",
+    "csv": [
+     0.5,
+     6.4,
+     12.0
+    ],
+    "mine": [
+     6.4,
+     12.0
+    ],
+    "only_csv": [
+     0.5
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "wan/2-7-image",
+    "csv": [
+     4.8,
+     12.0
+    ],
+    "mine": [
+     4.8
+    ],
+    "only_csv": [
+     12.0
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "wan/2-7-image-pro",
+    "csv": [
+     4.8,
+     12.0
+    ],
+    "mine": [
+     12.0
+    ],
+    "only_csv": [
+     4.8
+    ],
+    "only_mine": []
+   }
+  ],
   "csv_without_numbers": [
    "bytedance/seedance-2-5-draft",
    "bytedance/seedance-1.5-pro",
@@ -267,13 +647,333 @@
    "qwen2/image-edit",
    "ai-music-api/cover-generate"
   ],
-  "unit_checked": 132,
-  "unit_match": 132,
+  "unit_checked": 178,
+  "unit_match": 178,
   "unit_mismatch": [],
+  "csv_unit_diff_informational": [
+   {
+    "kie_id": "infinitalk/from-audio",
+    "csv_unit": "за секунду, за генерацию/ролик",
+    "my_unit": "sec"
+   },
+   {
+    "kie_id": "kling/ai-avatar-pro",
+    "csv_unit": "за секунду, за генерацию/ролик",
+    "my_unit": "sec"
+   },
+   {
+    "kie_id": "kling/ai-avatar-standard",
+    "csv_unit": "за секунду, за генерацию/ролик",
+    "my_unit": "sec"
+   },
+   {
+    "kie_id": "wan/2-2-a14b-text-to-video-turbo",
+    "csv_unit": "за секунду, за генерацию/ролик",
+    "my_unit": "sec"
+   },
+   {
+    "kie_id": "wan/2-2-a14b-image-to-video-turbo",
+    "csv_unit": "за секунду, за генерацию/ролик",
+    "my_unit": "sec"
+   },
+   {
+    "kie_id": "wan/2-2-animate-move",
+    "csv_unit": "за секунду, за генерацию/ролик",
+    "my_unit": "sec"
+   },
+   {
+    "kie_id": "wan/2-2-animate-replace",
+    "csv_unit": "за секунду, за генерацию/ролик",
+    "my_unit": "sec"
+   },
+   {
+    "kie_id": "flux-3/klein-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "flux-3/klein-edit-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "flux1-kontext",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "bytedance/seedream",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "bytedance/seedream-v4-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "bytedance/seedream-v4-edit",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/4.5-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/4.5-edit",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-pro-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-pro-image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-pro-layer-decomposition",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-flash-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-flash-image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-flash-layer-decomposition",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-lite-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-lite-image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-5-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-5-image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "seedream/5-5-layer-decomposition",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "google/imagen4",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "google/imagen4-fast",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "google/imagen4-ultra",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "google/nano-banana",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "google/nano-banana-edit",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "grok-imagine/image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "grok-imagine-image-2-0/text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "grok-imagine-image-2-0/image-edit",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "grok-imagine-image-2-0/segment-edit",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "minimax-h3/text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "minimax-h3/image-edit",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "ideogram/v3-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "ideogram/v3-edit",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "kie/image-upscale",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "4o-image-api",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "gpt-image/1.5-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "gpt-image/1.5-image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "gpt-image-2-6/flare-text-to-image",
+    "csv_unit": "за токены",
+    "my_unit": "1m_tokens"
+   },
+   {
+    "kie_id": "gpt-image-2-6/flare-image-to-image",
+    "csv_unit": "за токены",
+    "my_unit": "1m_tokens"
+   },
+   {
+    "kie_id": "gpt-image-2-6/sunburst-text-to-image",
+    "csv_unit": "за токены",
+    "my_unit": "1m_tokens"
+   },
+   {
+    "kie_id": "gpt-image-2-6/sunburst-image-to-image",
+    "csv_unit": "за токены",
+    "my_unit": "1m_tokens"
+   },
+   {
+    "kie_id": "qwen/text-to-image",
+    "csv_unit": "за мегапиксель",
+    "my_unit": "mp"
+   },
+   {
+    "kie_id": "qwen/image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "qwen/image-edit",
+    "csv_unit": "за мегапиксель",
+    "my_unit": "mp"
+   },
+   {
+    "kie_id": "qwen2/text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "qwen2/image-edit",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "qwen2-1/text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "qwen2-1/image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "qwen3/text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "qwen3/image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "qwen3/pro-text-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "qwen3/pro-image-to-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "recraft/crisp-upscale",
+    "csv_unit": "за генерацию/ролик",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "recraft/remove-background",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "z-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "wan/2-7-image",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   },
+   {
+    "kie_id": "wan/2-7-image-pro",
+    "csv_unit": "за картинку",
+    "my_unit": "image"
+   }
+  ],
+  "rules_vs_prices_checked": 178,
+  "rules_vs_prices_match": 178,
+  "rules_mismatch": [],
   "ok": true
  },
  "catalog_snapshot": {
-  "git_blob_sha": "b9702e01f0874da228b9a7651646fce887feb79b",
+  "git_blob_sha": "556db12240d0d55a616974e670e5cd1b0e1f7e07",
   "entries": 33
  },
  "live_check": {

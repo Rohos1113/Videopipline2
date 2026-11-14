@@ -28,7 +28,10 @@ FAMILY_KEYS = {"id", "label", "brand", "media", "desc", "modes"}
 MODE_KEYS = {"id", "label", "kie_id", "task_type", "api", "fields", "pricing", "constraints", "docs_url"}
 FIELD_KEYS = {"name", "label", "kind", "required"}
 PRICING_KEYS = {"unit", "rules", "default", "note"}
-UNITS = {"sec", "gen", "1k_chars", "tokens", "megapixel", "unknown"}
+UNITS = {"sec", "gen", "image", "mp", "1m_tokens", "1k_chars", "unknown",
+         "tokens", "megapixel"}  # tokens/megapixel — старые имена, оставлены для совместимости
+MIN_KIE_IDS = 182
+MIN_SCHEMA_MODES = 175
 
 failures: list[str] = []
 notes: list[str] = []
@@ -40,15 +43,40 @@ def check(cond: bool, msg: str) -> None:
 
 
 def load_catalog_models() -> tuple[list[dict], str]:
+    """MODELS из kie_catalog.py на HEAD.
+
+    После разбиения на kie_catalog + kie_catalog_families HEAD-версия импортирует
+    семейства; подставляем HEAD-версию модуля семейств, чтобы не зависеть от рабочего дерева.
+    """
+    import types
+
     try:
         sha = subprocess.run(
             ["git", "rev-parse", "HEAD:app/services/kie_catalog.py"],
             cwd=ROOT, capture_output=True, text=True, check=True,
         ).stdout.strip()
+        fam_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD:app/services/kie_catalog_families.py"],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        fam_src = subprocess.run(
+            ["git", "show", "HEAD:app/services/kie_catalog_families.py"],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout
         src = subprocess.run(
             ["git", "show", "HEAD:app/services/kie_catalog.py"],
             cwd=ROOT, capture_output=True, text=True, check=True,
         ).stdout
+        pkg_app = types.ModuleType("app")
+        pkg_app.__path__ = [str(ROOT / "app")]
+        pkg_services = types.ModuleType("app.services")
+        pkg_services.__path__ = [str(ROOT / "app" / "services")]
+        fam_mod = types.ModuleType("app.services.kie_catalog_families")
+        fam_mod.__file__ = str(ROOT / "app" / "services" / "kie_catalog_families.py")
+        exec(compile(fam_src, f"kie_catalog_families@{fam_sha[:8]}", "exec"), fam_mod.__dict__)  # noqa: S102
+        sys.modules.setdefault("app", pkg_app)
+        sys.modules.setdefault("app.services", pkg_services)
+        sys.modules["app.services.kie_catalog_families"] = fam_mod
         ns: dict = {"__name__": "kie_catalog_head"}
         exec(compile(src, f"kie_catalog@{sha[:8]}", "exec"), ns)  # noqa: S102
         return ns.get("MODELS") or [], sha
@@ -62,6 +90,7 @@ def main() -> int:
     check(isinstance(payload, dict) and isinstance(payload.get("families"), list),
           "json: нет массива families")
     families = payload["families"] if isinstance(payload, dict) else []
+    prices = json.loads((DOCS / "kie-prices-usd.json").read_text(encoding="utf-8")).get("models") or {}
 
     # --- контракт ---
     fam_ids: set[str] = set()
@@ -97,6 +126,20 @@ def main() -> int:
             check(pricing.get("unit") in UNITS, f"mode {kid}: unit={pricing.get('unit')}")
             check(isinstance(mode.get("fields"), list), f"mode {kid}: fields не массив")
             check(isinstance(mode.get("constraints"), list), f"mode {kid}: constraints не массив")
+            # fields_known: true ⇔ набор полей непустой; false — полей нет и есть честный hint
+            check(isinstance(mode.get("fields_known"), bool),
+                  f"mode {kid}: fields_known должен быть bool")
+            if mode.get("fields_known") is True:
+                check(bool(mode.get("fields")), f"mode {kid}: fields_known=true, но fields пуст")
+            else:
+                check(not mode.get("fields"), f"mode {kid}: fields_known=false, но fields непуст")
+                check("неизвестна" in (mode.get("hint") or ""),
+                      f"mode {kid}: fields_known=false без hint про неизвестную схему")
+            # единица цены обязана совпадать с прайсом (он первичен по деньгам)
+            price_rec = prices.get(kid) or {}
+            if price_rec.get("unit"):
+                check(pricing.get("unit") == price_rec["unit"],
+                      f"mode {kid}: unit={pricing.get('unit')}, в прайсе {price_rec['unit']}")
             for f in mode.get("fields") or []:
                 field_total += 1
                 check(not (FIELD_KEYS - set(f)), f"mode {kid}: поле {f.get('name')} без ключей "
@@ -105,6 +148,18 @@ def main() -> int:
                 check(bool(f.get("kind")), f"mode {kid}: поле {f.get('name')} без kind")
 
     # --- сверка 1: покрытие живого API ---
+    check(len(kie_ids) >= MIN_KIE_IDS,
+          f"уникальных kie_id {len(kie_ids)}, ожидалось не меньше {MIN_KIE_IDS}")
+    with_fields = sum(1 for f in families for m in f.get("modes") or []
+                      if m.get("fields_known") is True)
+    check(with_fields >= MIN_SCHEMA_MODES,
+          f"режимов с известными полями {with_fields}, ожидалось не меньше {MIN_SCHEMA_MODES}")
+    ideogram_edit = next((m for f in families for m in f.get("modes") or []
+                          if m.get("kie_id") == "ideogram/v3-edit"), None)
+    check(ideogram_edit is not None, "нет режима ideogram/v3-edit")
+    if ideogram_edit is not None:
+        check("mask_url" in {x.get("name") for x in ideogram_edit.get("fields") or []},
+              "ideogram/v3-edit: в fields нет mask_url")
     api = json.loads((DOCS / "kie-ai-raw" / "models.json").read_text(encoding="utf-8"))
     api_models = {m["model"]: m for m in api["data"]["models"]}
     check(api["data"].get("total") == 251, f"в models.json total={api['data'].get('total')}, ожидалось 251")

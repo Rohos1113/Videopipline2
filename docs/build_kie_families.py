@@ -29,6 +29,10 @@ RAW = DOCS / "kie-ai-raw"
 OUT_JSON = DOCS / "kie-model-families.json"
 OUT_MD = DOCS / "kie-model-families.md"
 OUT_CHECKS = DOCS / "kie-model-families-checks.json"
+# Догруженные схемы (docs/fetch_kie_docs_extra.py) — страницы, которых не было в docs-schemas.json
+EXTRA_SCHEMAS = RAW / "docs-schemas-extra.json"
+# Прайс агента цен: первичен по деньгам, из него берём unit/rules/default
+PRICES_PATH = DOCS / "kie-prices-usd.json"
 
 CREDIT_USD = 0.005
 
@@ -545,14 +549,19 @@ def load_sources():
     models_raw = json.loads((RAW / "models.json").read_text(encoding="utf-8"))
     api_models = {m["model"]: m for m in models_raw["data"]["models"]}
     schemas = json.loads((RAW / "docs-schemas.json").read_text(encoding="utf-8"))
+    if EXTRA_SCHEMAS.exists():
+        extra = json.loads(EXTRA_SCHEMAS.read_text(encoding="utf-8"))
+        for url, page in extra.items():
+            schemas.setdefault(url, page)
     id_to_schema = {}
     for url, page in schemas.items():
         for mid in page.get("model_ids") or []:
             id_to_schema[mid] = {"url": url, **page}
     rows = list(csv.DictReader((DOCS / "kie-ai-models.csv").open(encoding="utf-8")))
     csv_by_id = {r["id модели"]: r for r in rows}
+    prices = json.loads(PRICES_PATH.read_text(encoding="utf-8")).get("models") or {}
     catalog_mod, catalog_sha = load_catalog()
-    return api_models, id_to_schema, rows, csv_by_id, catalog_mod, catalog_sha
+    return api_models, id_to_schema, rows, csv_by_id, catalog_mod, catalog_sha, prices
 
 
 class _CatalogSnapshot:
@@ -564,24 +573,46 @@ def load_catalog():
     """Каталог студии на момент HEAD (в рабочем дереве его параллельно правят).
 
     Берём закоммиченную версию из git, чтобы свод не зависел от чужих правок:
-    фиксируем blob-sha в meta.
+    фиксируем blob-sha в meta. После разбиения kie_catalog.py на модули
+    (kie_catalog + kie_catalog_families) HEAD-версия импортирует семейства,
+    поэтому подставляем HEAD-версию и её, а не рабочую.
     """
     import subprocess
+    import sys
+    import types
 
-    try:
+    def _head_blob(relpath: str) -> tuple[str, str]:
         sha = subprocess.run(
-            ["git", "rev-parse", "HEAD:app/services/kie_catalog.py"],
+            ["git", "rev-parse", f"HEAD:{relpath}"],
             cwd=ROOT, capture_output=True, text=True, check=True,
         ).stdout.strip()
         src = subprocess.run(
-            ["git", "show", "HEAD:app/services/kie_catalog.py"],
+            ["git", "show", f"HEAD:{relpath}"],
             cwd=ROOT, capture_output=True, text=True, check=True,
         ).stdout
+        return sha, src
+
+    try:
+        fam_sha, fam_src = _head_blob("app/services/kie_catalog_families.py")
+        pkg_app = types.ModuleType("app")
+        pkg_app.__path__ = [str(ROOT / "app")]
+        pkg_services = types.ModuleType("app.services")
+        pkg_services.__path__ = [str(ROOT / "app" / "services")]
+        fam_mod = types.ModuleType("app.services.kie_catalog_families")
+        fam_mod.__file__ = str(ROOT / "app" / "services" / "kie_catalog_families.py")
+        exec(compile(fam_src, f"kie_catalog_families@{fam_sha[:8]}", "exec"), fam_mod.__dict__)  # noqa: S102
+        sys.modules.setdefault("app", pkg_app)
+        sys.modules.setdefault("app.services", pkg_services)
+        sys.modules["app.services.kie_catalog_families"] = fam_mod
+
+        sha, src = _head_blob("app/services/kie_catalog.py")
         ns: dict = {"__name__": "kie_catalog_head"}
         exec(compile(src, f"kie_catalog@{sha[:8]}", "exec"), ns)  # noqa: S102
         models = ns.get("MODELS") or []
         if models:
-            return _CatalogSnapshot(models), sha
+            snapshot = _CatalogSnapshot(models)
+            snapshot.families_blob_sha = fam_sha
+            return snapshot, sha
     except Exception as exc:  # noqa: BLE001
         print("warning: git-версия каталога недоступна:", exc)
     spec = importlib.util.spec_from_file_location(
@@ -955,7 +986,50 @@ def mode_constraints(mode: dict, has_schema: bool) -> list[str]:
     return out[:12]
 
 
-def build(api_models, id_to_schema, csv_by_id, catalog_mod):
+def align_pricing(mode: dict, price_rec: dict | None) -> None:
+    """Выровнять единицы/правила/дефолт по docs/kie-prices-usd.json (первичен по деньгам).
+
+    Прайс агента цен считает деньги; families.json — контракт для UI/бэкенда, поэтому
+    единица измерения, набор правил и дефолт берутся из прайса, а исходный разбор
+    pricingDesc остаётся в note/source_text для трассировки.
+    """
+    if not price_rec:
+        return
+    p = mode["pricing"]
+    unit = price_rec.get("unit")
+    if unit:
+        p["unit"] = unit
+    rules = price_rec.get("rules") or []
+    if rules:
+        synced = []
+        for r in rules:
+            credits = r.get("credits")
+            if credits is None and r.get("usd_kie") is not None:
+                credits = round(float(r["usd_kie"]) / CREDIT_USD, 4)
+            synced.append({
+                "when": dict(r.get("when") or {}),
+                "credits": credits,
+                "usd_kie": r.get("usd_kie"),
+                "usd_client": r.get("usd_client"),
+            })
+        p["rules"] = synced
+    default_kie = price_rec.get("default_usd_kie")
+    if default_kie is not None:
+        p["default"] = round(float(default_kie) / CREDIT_USD, 4)
+    if price_rec.get("affects_price"):
+        p["affects_price"] = list(price_rec["affects_price"])
+    if price_rec.get("formula"):
+        p["formula"] = price_rec["formula"]
+    p["pricing_source"] = "docs/kie-prices-usd.json"
+    if not rules and not (p.get("rules") or []):
+        p["note"] = (
+            (p.get("note") or "")
+            + ("; " if p.get("note") else "")
+            + f"цены в прайсе нет (unit={unit or 'неизвестно'}), режим сохранён без правил"
+        )
+
+
+def build(api_models, id_to_schema, csv_by_id, catalog_mod, prices):
     catalog_by_model: dict[str, dict] = {}
     for entry in catalog_mod.MODELS:
         if entry.get("model"):
@@ -1002,6 +1076,13 @@ def build(api_models, id_to_schema, csv_by_id, catalog_mod):
             else:
                 mode["fields_source"] = "нет в источниках"
                 mode["hint"] = "неизвестно: нет OpenAPI-схемы в docs.kie.ai и нет в каталоге студии"
+            mode["fields_known"] = bool(mode["fields"])
+            if not mode["fields"]:
+                mode["hint"] = (
+                    "схема полей неизвестна: в docs.kie.ai и каталоге студии полей нет — "
+                    "UI должен честно писать «настройки неизвестны», а не подставлять поля карточки"
+                )
+            align_pricing(mode, prices.get(kie_id))
             mode["in_live_api"] = api_model is not None
             if api_model is None:
                 mode["hint"] = (
@@ -1053,7 +1134,7 @@ def csv_credit_numbers(row: dict) -> set[float]:
     return out
 
 
-def run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema):
+def run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema, prices):
     checks: dict = {}
 
     # --- сверка 1: покрытие ---
@@ -1169,6 +1250,10 @@ def run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema):
             else:
                 no_fields += 1
                 no_source_modes.append(mode["kie_id"])
+    unknown_flag_bad = [
+        m["kie_id"] for f in families for m in f["modes"]
+        if bool(m.get("fields_known")) != bool(m.get("fields"))
+    ]
     checks["fields"] = {
         "modes_total": sum(len(f["modes"]) for f in families),
         "modes_with_docs_schema": with_schema,
@@ -1177,10 +1262,12 @@ def run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema):
         "modes_fields_from_catalog": from_catalog,
         "modes_without_fields": no_fields,
         "modes_without_fields_list": no_source_modes,
+        "modes_fields_known_false": no_fields,
+        "fields_known_flag_bad": unknown_flag_bad,
         "required_checked_against_csv": required_vs_csv,
         "required_match": required_vs_csv_ok,
         "required_mismatch": required_diff,
-        "ok": all_fields_ok == with_schema,
+        "ok": all_fields_ok == with_schema and not unknown_flag_bad,
     }
 
     # --- сверка 3: цены ---
@@ -1192,6 +1279,10 @@ def run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema):
     unit_checked = 0
     unit_ok = 0
     unit_diff = []
+    csv_unit_diff = []
+    rules_vs_prices = 0
+    rules_vs_prices_ok = 0
+    rules_diff = []
     csv_unit_map = {
         "за секунду": "sec",
         "за картинку": "gen",
@@ -1205,19 +1296,41 @@ def run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema):
             pricing = mode["pricing"]
             unit_counter[pricing["unit"]] += 1
             row = csv_by_id.get(mode["kie_id"]) or {}
-            expected_unit = csv_unit_map.get((row.get("единица цены") or "").strip())
-            if expected_unit:
+            rec = prices.get(mode["kie_id"]) or {}
+            # единица: первичен прайс, CSV — справочно
+            if rec.get("unit"):
                 unit_checked += 1
-                ok = pricing["unit"] == expected_unit or expected_unit == "mix"
-                if ok:
+                if pricing["unit"] == rec["unit"]:
                     unit_ok += 1
                 else:
-                    unit_diff.append(
-                        {"kie_id": mode["kie_id"], "csv_unit": row.get("единица цены"),
-                         "my_unit": pricing["unit"]}
-                    )
+                    unit_diff.append({"kie_id": mode["kie_id"], "price_unit": rec["unit"],
+                                      "my_unit": pricing["unit"]})
+            expected_csv_unit = csv_unit_map.get((row.get("единица цены") or "").strip())
+            if expected_csv_unit and pricing["unit"] != expected_csv_unit:
+                csv_unit_diff.append({"kie_id": mode["kie_id"], "csv_unit": row.get("единица цены"),
+                                      "my_unit": pricing["unit"]})
+            # правила цены: должны совпасть с прайсом (он первичен)
+            rec_rules = rec.get("rules") or []
+            if rec_rules:
+                rules_vs_prices += 1
+                mine_rules = [{"when": dict(r.get("when") or {}), "credits": r.get("credits")}
+                              for r in pricing["rules"]]
+                theirs = []
+                for r in rec_rules:
+                    credits = r.get("credits")
+                    if credits is None and r.get("usd_kie") is not None:
+                        credits = round(float(r["usd_kie"]) / CREDIT_USD, 4)
+                    theirs.append({"when": dict(r.get("when") or {}), "credits": credits})
+                if len(mine_rules) == len(theirs) and all(
+                    a["credits"] == b["credits"] and
+                    {k: str(v) for k, v in a["when"].items()} == {k: str(v) for k, v in b["when"].items()}
+                    for a, b in zip(mine_rules, theirs)
+                ):
+                    rules_vs_prices_ok += 1
+                else:
+                    rules_diff.append({"kie_id": mode["kie_id"], "prices": theirs, "mine": mine_rules})
             csv_nums = csv_credit_numbers(row)
-            mine = {float(r["credits"]) for r in pricing["rules"]}
+            mine = {float(r["credits"]) for r in pricing["rules"] if r.get("credits") is not None}
             if not csv_nums:
                 price_missing.append(mode["kie_id"])
                 continue
@@ -1238,6 +1351,7 @@ def run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema):
         "modes_without_price": sum(1 for f in families for m in f["modes"]
                                    if not m["pricing"]["rules"]),
         "units": dict(unit_counter),
+        "unit_source": "docs/kie-prices-usd.json",
         "checked_against_csv": checked,
         "numbers_match": price_ok,
         "mismatches": price_diff,
@@ -1245,7 +1359,12 @@ def run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema):
         "unit_checked": unit_checked,
         "unit_match": unit_ok,
         "unit_mismatch": unit_diff,
-        "ok": len(price_diff) == 0,
+        "csv_unit_diff_informational": csv_unit_diff,
+        "rules_vs_prices_checked": rules_vs_prices,
+        "rules_vs_prices_match": rules_vs_prices_ok,
+        "rules_mismatch": rules_diff,
+        # CSV-числа — справочная сверка (снимок текста pricingDesc), деньгами правит прайс
+        "ok": not unit_diff and not rules_diff,
     }
     return checks
 
@@ -1295,8 +1414,9 @@ def write_md(families, checks, generated):
         "(тип входа, тир, утилита).")
     add("")
     add("Источники: живой `GET https://api.kie.ai/api/v1/models` (`docs/kie-ai-raw/models.json`, 251 модель), "
-        "OpenAPI-схемы `input` со страниц docs.kie.ai (`docs/kie-ai-raw/docs-schemas.json`), "
-        "таблица `docs/kie-ai-models.csv`, каталог студии `app/services/kie_catalog.py`. "
+        "OpenAPI-схемы `input` со страниц docs.kie.ai (`docs/kie-ai-raw/docs-schemas.json` + "
+        "догруженные `docs-schemas-extra.json`), таблица `docs/kie-ai-models.csv`, "
+        "каталог студии `app/services/kie_catalog.py`, прайс `docs/kie-prices-usd.json` (первичен по деньгам). "
         "Платных генераций не было, ключ в файлы не попадал.")
     add("")
     add("## 1. Итог")
@@ -1351,7 +1471,11 @@ def write_md(families, checks, generated):
         f"(расхождений {len(fld['modes_fields_mismatch'])}).")
     add(f"- Поля взяты из каталога студии (схемы в доках нет): **{fld['modes_fields_from_catalog']}**.")
     add(f"- Без полей вообще (нет ни схемы, ни каталога): **{fld['modes_without_fields']}** — "
-        "помечены `hint: «неизвестно»`, режим и цена сохранены.")
+        "у таких режимов `fields_known: false` и `hint: «схема полей неизвестна»`, чтобы UI не подставлял "
+        "поля карточки семейства; режим и цена сохранены.")
+    add(f"- `fields_known` у каждого режима: `true` — набор полей известен по схеме/каталогу, "
+        f"`false` — не угадываем. Сейчас `true` у {fld['modes_total'] - fld['modes_without_fields']} "
+        f"из {fld['modes_total']}.")
     add(f"- Обязательность полей сверена с колонкой «обязательные поля» в `kie-ai-models.csv`: "
         f"совпало {fld['required_match']}/{fld['required_checked_against_csv']}.")
     if fld["required_mismatch"]:
@@ -1364,21 +1488,29 @@ def write_md(families, checks, generated):
         add("")
         add("Без полей: " + ", ".join(f"`{x}`" for x in fld["modes_without_fields_list"]))
     add("")
-    add("### Сверка 3 — цены против `pricingDesc`")
+    add("### Сверка 3 — цены (прайс `docs/kie-prices-usd.json` первичен)")
     add("")
-    add(f"- Цена разобрана (есть хотя бы одно правило): **{prc['modes_with_price']}** режимов; "
-        f"без цены **{prc['modes_without_price']}**.")
-    add(f"- Единицы: " + ", ".join(f"{k} — {v}" for k, v in sorted(prc["units"].items())))
-    add(f"- Сверено с числами из `kie-ai-models.csv`: {prc['checked_against_csv']} режимов, "
-        f"множество кредитов совпало у **{prc['numbers_match']}**, расхождений {len(prc['mismatches'])}.")
-    add(f"- Единица цены сверена с колонкой «единица цены» в CSV: совпало "
-        f"**{prc['unit_match']}/{prc['unit_checked']}** (не «не указано»).")
+    add(f"- Цена есть (есть хотя бы одно правило): **{prc['modes_with_price']}** режимов; "
+        f"без правил **{prc['modes_without_price']}** (в прайсе цены нет — токены/неизвестно).")
+    add(f"- Единицы (из прайса): " + ", ".join(f"{k} — {v}" for k, v in sorted(prc["units"].items())))
+    add(f"- Единица в families.json совпала с прайсом у **{prc['unit_match']}/{prc['unit_checked']}** "
+        "режимов, где она в прайсе указана.")
+    add(f"- Набор правил (when + кредиты) совпал с прайсом у **{prc['rules_vs_prices_match']}"
+        f"/{prc['rules_vs_prices_checked']}**.")
+    add(f"- Числа из `kie-ai-models.csv` — сверка справочная: {prc['checked_against_csv']} режимов, "
+        f"совпало {prc['numbers_match']}, расхождений {len(prc['mismatches'])}. CSV — снимок текста "
+        "`pricingDesc`; в прайсе правила дробнее (тиры, звук, длительность, видеовход), поэтому "
+        "набор кредитов в CSV может быть уже прайса. Деньги считает прайс.")
+    if prc["csv_unit_diff_informational"]:
+        add(f"- Единиц, где families/прайс расходятся с CSV: {len(prc['csv_unit_diff_informational'])} — "
+            "это картинки (`image` в прайсе против «за картинку» → `gen` в CSV) и токены; "
+            "единица взята из прайса.")
     if prc["unit_mismatch"]:
         add("")
-        add("| id | единица в CSV | у меня |")
+        add("| id | единица в прайсе | у меня |")
         add("|---|---|---|")
         for d in prc["unit_mismatch"]:
-            add(f"| `{d['kie_id']}` | {d['csv_unit']} | {d['my_unit']} |")
+            add(f"| `{d['kie_id']}` | {d['price_unit']} | {d['my_unit']} |")
     if prc["mismatches"]:
         add("")
         add("| id | числа в CSV | числа из моего разбора |")
@@ -1442,48 +1574,55 @@ def write_md(families, checks, generated):
     add("## 6. Чего нет в источниках")
     add("")
     add(f"1. **Нет OpenAPI-схемы** у {fld['modes_without_fields'] + fld['modes_fields_from_catalog']} "
-        "режимов: страницы модели нет в docs.kie.ai. У "
+        "режимов: страница модели не разобрана в docs.kie.ai. У "
         f"{fld['modes_fields_from_catalog']} из них поля взяты из кода каталога студии, "
-        f"у остальных {fld['modes_without_fields']} настройки — «неизвестно».")
-    add("2. **Нет цены** (пустой `pricingDesc`) — режимы без правил цены перечислены в сверке 3; "
-        "при этом сами id и режимы сохранены.")
-    add("3. **Связи «параметр → множитель цены» в доках нет.** Правила `pricing.rules` восстановлены "
-        "из текста `pricingDesc` эвристикой (разрешение / длительность / звук / наличие видео на входе). "
-        "Где прайс пишет диапазон «720P/1080P» одной ценой, в правиле осталось одно разрешение — "
-        "цена от этого не меняется, но строка прайса не воспроизводится дословно.")
-    add("4. **Единицы цены выходят за три базовые** (`sec` / `gen` / `1k_chars`): у 4 режимов GPT Image 2.6 "
-        "цена в токенах (`unit: tokens`), у 2 режимов Qwen Image — за мегапиксель (`unit: megapixel`). "
-        "Посчитать «кредиты за генерацию» для них по прайсу нельзя — оставлено как есть, "
-        "чтобы не подменять факт оценкой.")
+        f"у остальных {fld['modes_without_fields']} — `fields_known: false` (схема неизвестна). "
+        "Схемы догружаются скриптом `docs/fetch_kie_docs_extra.py` в `docs/kie-ai-raw/docs-schemas-extra.json` "
+        "(31 страница 14.11.2026), чтобы не держать «мёртвые» поля из карточки семейства.")
+    add("2. **Нет цены** (пустой `pricingDesc` или цена в токенах) — режимы без правил цены перечислены "
+        "в сверке 3; при этом сами id и режимы сохранены.")
+    add("3. **Связи «параметр → множитель цены» в доках нет.** Правила `pricing.rules` берутся из "
+        "`docs/kie-prices-usd.json` (там они восстановлены из текста `pricingDesc` эвристикой: "
+        "разрешение / длительность / звук / наличие видео на входе / тир). Единица, набор правил и "
+        "дефолт выровнены по прайсу; исходный текст `pricingDesc` остался в `note`/`source_text`.")
+    add("4. **Единицы цены шире двух базовых** (`sec` / `gen`): у 72 картинных режимов `image` "
+        "(прайс считает за картинку), у 4 режимов GPT Image 2.6 — `1m_tokens`, у 2 режимов Qwen Image — "
+        "`mp` (за мегапиксель), у 4 режимов цены нет (`unknown`). Для `1m_tokens`/`mp` кредиты за "
+        "генерацию не считаются — единица и правила как в прайсе, без подмены оценкой.")
     add("5. **Точные эндпоинты** известны только для `jobs` / `veo` / `runway` / `suno`; у режимов без "
-        "страницы в доках `api` проставлен по умолчанию (`jobs`), это допущение, а не факт из доков.")
+        "разобранной страницы `api` проставлен по умолчанию (`jobs`), это допущение, а не факт из доков.")
     add("6. **Фактических списаний нет** — цены из прайса, не из истории генераций.")
     add("7. **Названия брендов** взяты из колонки CSV (`Alibaba`, `Hailuo`, `Pixverse`, `Kie`, "
         "`Tongyi (Z-Image)` и т.п.); в `/api/v1/models` бренд местами другой (`Other`), поэтому "
         "бренд семейства — из CSV, provider API — в `meta`.")
     add("8. **Формат `pricing.when`** — не контракт kie.ai, а наша реконструкция: спец-ключи "
         "`sound` (звук вкл/выкл), `with_video` (есть видео на входе), `mode` (тир), `resolution`, "
-        "`duration`. Шаг 8 должен читать их как «условия первого совпадения».")
+        "`duration`, `max_mp`. Шаг 8 должен читать их как «условия первого совпадения».")
     no_desc = sum(1 for f in families if f["desc"].startswith("описания в источниках нет"))
     add(f"9. **Описаний нет у части семейств**: у {no_desc} из {len(families)} в `/api/v1/models` "
         "пустой `description` и нет осмысленного `title`, в CSV колонка «описание модели» тоже "
         "пустая — стоит `desc: «описания в источниках нет»`. Это не мешает меню: `label` и режимы "
         "на месте.")
+    add("10. **`ideogram/v3-edit`: поле `mask_url`** есть в OpenAPI-схеме docs.kie.ai и в каталоге "
+        "студии; в families.json оно тоже есть (`required: true` в схеме). Если UI его не показывает, "
+        "теряется не в данных — смотреть бэкенд/UI.")
     add("")
     add("## 7. Структура JSON")
     add("")
     add("```")
     add("{")
     add('  "meta": {"generated_at", "source_api", "source_docs", "source_table", "source_catalog",')
-    add('           "catalog_git_blob_sha", "credit_usd", "counts", "checks"},')
+    add('           "source_prices", "catalog_git_blob_sha", "credit_usd", "counts", "checks"},')
     add('  "families": [')
     add('    {"id", "label", "brand", "media": "video|image", "desc",')
     add('     "modes": [{"id", "label", "kie_id", "task_type", "api", "endpoint",')
     add('                "fields": [{"name","label","kind","required","default",')
     add('                            "options","min","max","max_items","hint"}],')
-    add('                "pricing": {"unit","rules":[{"when","credits"}],"default","note",')
+    add('                "fields_known": true/false, "fields_source", "in_live_api",')
+    add('                "pricing": {"unit","rules":[{"when","credits","usd_kie","usd_client"}],')
+    add('                            "default","note","formula","affects_price","pricing_source",')
     add('                            "credit_usd","source_text"},')
-    add('                "constraints", "docs_url", "fields_source", "in_live_api"}]}')
+    add('                "constraints", "docs_url"}]}')
     add("  ]")
     add("}")
     add("```")
@@ -1495,8 +1634,9 @@ def write_md(families, checks, generated):
     add("## 8. Как пересобрать")
     add("")
     add("```")
-    add("python docs/build_kie_families.py      # пишет json + md + checks")
-    add("python docs/validate_kie_families.py   # независимая проверка записанного json")
+    add("python docs/fetch_kie_docs_extra.py   # догрузить схемы недостающих страниц docs.kie.ai")
+    add("python docs/build_kie_families.py     # пишет json + md + checks")
+    add("python docs/validate_kie_families.py  # независимая проверка записанного json")
     add("```")
     add("")
     (OUT_MD).write_text("\n".join(lines), encoding="utf-8")
@@ -1523,9 +1663,9 @@ def _brand_table(add, families, media):
 
 
 def main():
-    api_models, id_to_schema, rows, csv_by_id, catalog_mod, catalog_sha = load_sources()
-    families, catalog_by_model = build(api_models, id_to_schema, csv_by_id, catalog_mod)
-    checks = run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema)
+    api_models, id_to_schema, rows, csv_by_id, catalog_mod, catalog_sha, prices = load_sources()
+    families, catalog_by_model = build(api_models, id_to_schema, csv_by_id, catalog_mod, prices)
+    checks = run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema, prices)
     generated = "2026-11-14"
     checks["catalog_snapshot"] = {"git_blob_sha": catalog_sha,
                                   "entries": len(catalog_mod.MODELS)}
@@ -1535,9 +1675,10 @@ def main():
     meta = {
         "generated_at": generated,
         "source_api": "https://api.kie.ai/api/v1/models (docs/kie-ai-raw/models.json)",
-        "source_docs": "https://docs.kie.ai OpenAPI input (docs/kie-ai-raw/docs-schemas.json)",
+        "source_docs": "https://docs.kie.ai OpenAPI input (docs/kie-ai-raw/docs-schemas.json + docs-schemas-extra.json)",
         "source_table": "docs/kie-ai-models.csv",
         "source_catalog": "app/services/kie_catalog.py @ HEAD",
+        "source_prices": "docs/kie-prices-usd.json (первичен по деньгам: unit/rules/default)",
         "catalog_git_blob_sha": catalog_sha,
         "credit_usd": CREDIT_USD,
         "counts": {
@@ -1547,6 +1688,8 @@ def main():
             "api_image": checks["coverage"]["api_image_ids"],
             "families": len(families),
             "modes": sum(len(f["modes"]) for f in families),
+            "modes_fields_known": sum(1 for f in families for m in f["modes"] if m.get("fields_known")),
+            "modes_fields_unknown": sum(1 for f in families for m in f["modes"] if not m.get("fields_known")),
         },
         "checks": checks,
     }
