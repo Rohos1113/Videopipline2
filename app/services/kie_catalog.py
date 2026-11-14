@@ -24,9 +24,13 @@ from __future__ import annotations
 
 import contextlib
 import math
+import re
 from typing import Any
 
+from app.services.kie_catalog_families import FAMILIES
+
 CREDIT_USD = 0.005  # 1 кредит kie.ai = $0.005
+MARKUP = 1.25  # наценка студии: usd_client = usd_kie × 1.25
 
 CATEGORIES: list[dict[str, str]] = [
     {"id": "video", "label": "Видео"},
@@ -1289,8 +1293,14 @@ def estimate_credits(spec: dict[str, Any], values: dict[str, Any]) -> dict[str, 
     return {
         "credits": round(total, 2),
         "usd": round(total * CREDIT_USD, 4),
+        # клиентская цена с наценкой — для нового UI (старое поле "usd" не менялось)
+        "usd_kie": round(total * CREDIT_USD, 6),
+        "usd_client": round(total * CREDIT_USD * MARKUP, 4),
+        "markup": MARKUP,
         "unit": unit,
         "unit_credits": credits,
+        "unit_usd_kie": round(credits * CREDIT_USD, 6),
+        "unit_usd_client": round(credits * CREDIT_USD * MARKUP, 4),
         "multiplier": multiplier,
         "note": pricing.get("note") or "",
     }
@@ -1362,7 +1372,7 @@ def validate_values(spec: dict[str, Any], values: dict[str, Any]) -> list[str]:
     return errors
 
 
-def resolve_model_id(spec: dict[str, Any], values: dict[str, Any]) -> str:
+def _legacy_resolve_model_id(spec: dict[str, Any], values: dict[str, Any]) -> str:
     """model с учётом model_map (variant→другой model id) и i2i-варианта."""
     merged = normalize_values(spec, values)
     mmap = spec.get("model_map") or {}
@@ -1468,7 +1478,7 @@ def build_payload(spec: dict[str, Any], values: dict[str, Any]) -> dict[str, Any
 
         return build_pay52_video_payload(spec, merged)
     if api == "jobs":
-        return {"model": resolve_model_id(spec, merged), "input": body}
+        return {"model": _legacy_resolve_model_id(spec, merged), "input": body}
     if api in ("veo", "runway") and "duration" in body:
         # veo/runway ждут duration числом, даже если в UI это select
         with contextlib.suppress(TypeError, ValueError):
@@ -1481,6 +1491,949 @@ def build_payload(spec: dict[str, Any], values: dict[str, Any]) -> dict[str, Any
             with contextlib.suppress(TypeError, ValueError):
                 body["duration"] = int(float(body["duration"]))
     return body
+
+
+# ==================== СЕМЬИ И РЕЖИМЫ (шаг 9) ====================
+# FAMILIES генерируется scripts/gen_kie_families.py из docs/kie-model-families.json
+# и docs/kie-prices-usd.json. У каждого режима pricing в ДОЛЛАРАХ:
+# usd_client = usd_kie × MARKUP. Legacy-записи MODELS остаются как были
+# (обратная совместимость старых id и аудио), семьи — надстройка над ними.
+
+_ENDPOINT_BY_API: dict[str, str] = {
+    "veo": "/api/v1/veo/generate",
+    "runway": "/api/v1/runway/generate",
+    "suno": "/api/v1/generate",
+}
+
+_AUDIO_CATEGORIES = ("music", "sound", "voice")
+
+
+def _num(val: Any) -> float | None:
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def _legacy_kie_ids(spec: dict[str, Any]) -> set[str]:
+    """Все kie model id, которые может отправить legacy-запись каталога."""
+    ids: set[str] = set()
+    for key in ("model", "id"):
+        val = spec.get(key)
+        if val:
+            ids.add(str(val))
+    for val in (spec.get("model_map") or {}).values():
+        if val:
+            ids.add(str(val))
+    if spec.get("model_map_i2i"):
+        ids.add(str(spec["model_map_i2i"]))
+    return ids
+
+
+_FAMILY_BY_ID: dict[str, dict[str, Any]] = {str(f["id"]): f for f in FAMILIES}
+_FAMILY_BY_KIE: dict[str, dict[str, Any]] = {}
+for _fam in FAMILIES:
+    for _mode in _fam.get("modes") or []:
+        _kid = str(_mode.get("kie_id") or "")
+        if _kid:
+            _FAMILY_BY_KIE.setdefault(_kid, _fam)
+
+# legacy id каталога → семья (чтобы старые id не двоились в меню, а остались режимом)
+_FAMILY_BY_LEGACY_ID: dict[str, dict[str, Any]] = {}
+for _spec in MODELS:
+    _fam_legacy: dict[str, Any] | None = _FAMILY_BY_ID.get(str(_spec["id"]))
+    if _fam_legacy is None:
+        for _kid in _legacy_kie_ids(_spec):
+            _fam_legacy = _FAMILY_BY_KIE.get(_kid)
+            if _fam_legacy is not None:
+                break
+    if _fam_legacy is not None:
+        _FAMILY_BY_LEGACY_ID[str(_spec["id"])] = _fam_legacy
+
+_LEGACY_BY_KIE: dict[str, dict[str, Any]] = {}
+for _spec in MODELS:
+    for _kid in _legacy_kie_ids(_spec):
+        _LEGACY_BY_KIE.setdefault(_kid, _spec)
+
+
+def list_families() -> list[dict[str, Any]]:
+    return list(FAMILIES)
+
+
+def _singleton_mode(spec: dict[str, Any], media: str) -> dict[str, Any]:
+    """Режим-заглушка для legacy-модели, не вошедшей в семьи."""
+    return {
+        "id": "default",
+        "label": str(spec.get("label") or ""),
+        "kie_id": str(spec.get("model") or spec.get("id") or ""),
+        "task_type": str(spec.get("category") or ""),
+        "api": str(spec.get("api") or "jobs"),
+        "media": media,
+        "endpoint": str(spec.get("endpoint") or ""),
+        "fields": spec.get("fields") or [],
+        "pricing": _usd_pricing_from_legacy(spec),
+        "constraints": [],
+        "_legacy": True,
+    }
+
+
+def _singleton_family(spec: dict[str, Any]) -> dict[str, Any]:
+    """Семья из одной модели — обратная совместимость одиночных карточек."""
+    media = _media_of(spec)
+    if media not in ("video", "image"):
+        media = "video" if str(spec.get("result") or "") == "video" else str(spec.get("result") or "video")
+    return {
+        "id": str(spec["id"]),
+        "label": str(spec.get("label") or spec["id"]),
+        "brand": str(spec.get("brand") or ""),
+        "media": media,
+        "desc": str(spec.get("desc") or ""),
+        "default_mode": "default",
+        "modes": [_singleton_mode(spec, media)],
+        "_legacy": True,
+    }
+
+
+def _usd_pricing_from_legacy(spec: dict[str, Any]) -> dict[str, Any]:
+    """pricing кредитов legacy-модели → pricing режима в USD (+25%)."""
+    pricing = spec.get("pricing") or {}
+    unit = str(pricing.get("unit") or "gen")
+    rules: list[dict[str, Any]] = []
+    for raw in pricing.get("rules") or []:
+        credits = _num(raw.get("credits"))
+        if credits is None:
+            continue
+        usd_kie = credits * CREDIT_USD
+        rules.append(
+            {
+                "when": raw.get("when") or {},
+                "usd_kie": round(usd_kie, 6),
+                "usd_client": round(usd_kie * MARKUP, 4),
+            }
+        )
+    default_kie = _num(pricing.get("default"))
+    default_kie = default_kie * CREDIT_USD if default_kie is not None else None
+    if default_kie is None and rules:
+        default_kie = float(rules[0]["usd_kie"])
+    return {
+        "unit": unit,
+        "markup": MARKUP,
+        "usd_rules": rules,
+        "usd_default_kie": round(default_kie, 6) if default_kie is not None else None,
+        "usd_default_client": round(default_kie * MARKUP, 4) if default_kie is not None else None,
+        "note": str(pricing.get("note") or ""),
+        "formula": "",
+    }
+
+
+def get_family(family_id: str | dict[str, Any] | None) -> dict[str, Any] | None:
+    """Семья по id: id семьи, старый id каталога, kie_id режима или сама семья."""
+    if isinstance(family_id, dict):
+        return family_id if "modes" in family_id else None
+    if not family_id:
+        return None
+    key = str(family_id)
+    fam = _FAMILY_BY_ID.get(key) or _FAMILY_BY_LEGACY_ID.get(key) or _FAMILY_BY_KIE.get(key)
+    if fam is not None:
+        return fam
+    legacy = get_model(key)
+    if legacy is not None:
+        return _singleton_family(legacy)
+    return None
+
+
+def get_mode(
+    family: str | dict[str, Any] | None,
+    mode_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Режим семьи; без mode_id — режим по умолчанию (default_mode или первый)."""
+    fam = family if isinstance(family, dict) and "modes" in family else get_family(family)
+    if fam is None:
+        return None
+    modes = fam.get("modes") or []
+    if not modes:
+        return None
+    if mode_id:
+        key = str(mode_id).strip()
+        for mode in modes:
+            if key in (str(mode.get("id")), str(mode.get("kie_id"))):
+                return mode
+        return None
+    default_id = str(fam.get("default_mode") or "")
+    for mode in modes:
+        if str(mode.get("id")) == default_id:
+            return mode
+    return modes[0]
+
+
+def _default_endpoint(api: str, kie_id: str) -> str:
+    if api in _ENDPOINT_BY_API:
+        return _ENDPOINT_BY_API[api]
+    legacy = _LEGACY_BY_KIE.get(kie_id)
+    if legacy and legacy.get("endpoint"):
+        return str(legacy["endpoint"])
+    return ""
+
+
+def mode_spec(
+    family: str | dict[str, Any] | None,
+    mode: str | dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Режим в форме legacy-записи каталога (общая механика payload/валидации)."""
+    fam = family if isinstance(family, dict) and "modes" in family else get_family(family)
+    md = mode if isinstance(mode, dict) and "kie_id" in mode else get_mode(fam, mode if isinstance(mode, str) else None)
+    if fam is None or md is None:
+        return {}
+    kie_id = str(md.get("kie_id") or "")
+    api = str(md.get("api") or "jobs")
+    media = str(md.get("media") or fam.get("media") or "video")
+    spec: dict[str, Any] = {
+        "id": kie_id or str(md.get("id") or ""),
+        "family_id": fam.get("id"),
+        "mode_id": md.get("id"),
+        "label": str(md.get("label") or fam.get("label") or ""),
+        "brand": str(fam.get("brand") or ""),
+        "category": media,
+        "media": media,
+        "api": api,
+        "model": kie_id,
+        "result": media,
+        "fields": md.get("fields") or [],
+        "constraints": md.get("constraints") or [],
+        "pricing": md.get("pricing") or {},
+        "is_family_mode": True,
+    }
+    endpoint = md.get("endpoint") or _default_endpoint(api, kie_id)
+    if endpoint:
+        spec["endpoint"] = endpoint
+    return spec
+
+
+def defaults_for_mode(
+    family: str | dict[str, Any] | None,
+    mode: str | dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    spec = mode_spec(family, mode)
+    return defaults_for(spec) if spec else {}
+
+
+def build_mode_payload(
+    family: str | dict[str, Any] | None,
+    mode: str | dict[str, Any] | None,
+    values: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Тело запроса для нужного api по семье/режиму (jobs: model+input, veo/… flat)."""
+    spec = mode_spec(family, mode)
+    if not spec:
+        return {}
+    return build_payload(spec, values or {})
+
+
+def resolve_model_id(
+    spec_or_family: str | dict[str, Any] | None,
+    values: dict[str, Any] | None = None,
+    mode: str | None = None,
+) -> str:
+    """kie_id модели: у семьи/режима — kie_id выбранного режима, у legacy — model."""
+    target: Any = spec_or_family
+    if isinstance(target, str):
+        target = get_family(target)
+    if isinstance(target, dict) and "modes" in target:
+        chosen = get_mode(target, mode)
+        return str((chosen or {}).get("kie_id") or "")
+    if isinstance(target, dict) and "kie_id" in target:
+        return str(target.get("kie_id") or target.get("model") or "")
+    if isinstance(target, dict):
+        return _legacy_resolve_model_id(target, values or {})
+    return ""
+
+
+_IMAGE_SIZE_MP: dict[str, float] = {
+    "square": 1.048576,
+    "square_hd": 2.359296,
+    "portrait_4_3": 1.39776,
+    "portrait_16_9": 1.86368,
+    "landscape_4_3": 1.39776,
+    "landscape_16_9": 1.86368,
+}
+_RESOLUTION_MP: dict[str, float] = {
+    "1k": 1.048576,
+    "2k": 4.19,
+    "4k": 16.78,
+    "8k": 67.11,
+}
+_SIZE_WH_RE = re.compile(r"^\s*(\d{2,5})\s*[x×*]\s*(\d{2,5})\s*$")
+
+
+def _megapixels(merged: dict[str, Any]) -> float | None:
+    """Мегапиксели выхода по настройкам (для цен «за мегапиксель»)."""
+    width = _num(merged.get("width"))
+    height = _num(merged.get("height"))
+    if width and height:
+        return width * height / 1_000_000
+    size = merged.get("image_size") or merged.get("size")
+    if size is not None and str(size).strip():
+        text = str(size).strip()
+        preset = _IMAGE_SIZE_MP.get(text.casefold())
+        if preset is not None:
+            return preset
+        match = _SIZE_WH_RE.match(text)
+        if match:
+            return int(match.group(1)) * int(match.group(2)) / 1_000_000
+    resolution = merged.get("resolution") or merged.get("output_resolution")
+    if resolution is not None:
+        return _RESOLUTION_MP.get(str(resolution).strip().casefold())
+    return None
+
+
+def _price_multiplier(unit: str, spec: dict[str, Any], merged: dict[str, Any]) -> tuple[float, str]:
+    """Во сколько раз базовая цена умножается на текущие настройки."""
+    if unit == "sec":
+        for name in ("duration", "seconds", "video_duration", "duration_seconds"):
+            if name in merged:
+                num = _num(merged[name])
+                if num is not None and num > 0:
+                    return max(1.0, num), name
+        return 5.0, "duration(default 5)"
+    if unit in ("image", "images", "img", "picture"):
+        for name in ("count", "num_images", "n", "image_count", "batch_size"):
+            num = _num(merged.get(name))
+            if num is not None and num > 0:
+                return max(1.0, num), name
+        return 1.0, "count(default 1)"
+    if unit == "1k_chars":
+        text = str(merged.get("text") or merged.get("prompt") or merged.get("dialogue") or "")
+        return float(max(1, math.ceil(len(text) / 1000))), "text"
+    if unit in ("1m_tokens", "mp"):
+        # цена за 1M токенов / за мегапиксель: из формы итог не выводится
+        return 1.0, "unit"
+    return 1.0, "gen"
+
+
+def estimate_usd(
+    family: str | dict[str, Any] | None,
+    mode: str | dict[str, Any] | None = None,
+    values: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Цена режима в долларах: usd_kie (kie) и usd_client (+25%), кредиты для леджера."""
+    fam = family if isinstance(family, dict) and "modes" in family else get_family(family)
+    md = mode if isinstance(mode, dict) and "kie_id" in mode else get_mode(fam, mode if isinstance(mode, str) else None)
+    unknown = {
+        "family_id": str((fam or {}).get("id") or ""),
+        "mode_id": str((md or {}).get("id") or ""),
+        "kie_id": str((md or {}).get("kie_id") or ""),
+        "unit": "gen",
+        "markup": MARKUP,
+        "usd_kie": None,
+        "usd_client": None,
+        "usd": 0.0,
+        "credits": 0.0,
+        "unit_usd_kie": None,
+        "unit_usd_client": None,
+        "multiplier": 1.0,
+        "multiplier_on": "",
+        "known": False,
+        "note": "неизвестно",
+        "formula": "",
+        "breakdown": {},
+    }
+    if fam is None or md is None:
+        return unknown
+    spec = mode_spec(fam, md)
+    merged = normalize_values(spec, values or {})
+    pricing = _mode_usd_pricing(md)
+    unit = str(pricing.get("unit") or "gen")
+
+    def _unknown_quote(note: str) -> dict[str, Any]:
+        result = dict(unknown)
+        result.update(
+            {
+                "family_id": str(fam.get("id") or ""),
+                "mode_id": str(md.get("id") or ""),
+                "kie_id": str(md.get("kie_id") or ""),
+                "unit": unit,
+                "note": note,
+                "formula": pricing.get("formula") or "",
+            }
+        )
+        return result
+
+    token_multiplier: float | None = None
+    if unit in ("tokens", "1m_tokens"):
+        tokens = _token_count(merged)
+        if tokens is None:
+            # количество токенов из настроек не выводится — цену не выдумываем
+            return _unknown_quote("цена уточняется")
+        token_multiplier = tokens / 1_000_000
+    matched: dict[str, Any] | None = None
+    for rule in pricing.get("usd_rules") or []:
+        if _match_usd_rule(rule.get("when") or {}, merged, spec):
+            matched = rule
+            break
+    if matched is not None:
+        base_kie = _num(matched.get("usd_kie"))
+        base_client = _num(matched.get("usd_client"))
+    else:
+        base_kie = _num(pricing.get("usd_default_kie"))
+        base_client = _num(pricing.get("usd_default_client"))
+    if base_kie is None and base_client is not None:
+        base_kie = base_client / MARKUP
+    if base_client is None and base_kie is not None:
+        base_client = base_kie * MARKUP
+    if base_kie is None or base_client is None:
+        return _unknown_quote(pricing.get("note") or "неизвестно")
+    if token_multiplier is not None:
+        multiplier, multiplier_on = token_multiplier, "tokens"
+    elif unit in ("megapixel", "mp"):
+        pixels = _megapixels(merged)
+        if pixels is None:
+            return _unknown_quote("цена уточняется")
+        multiplier, multiplier_on = pixels, "megapixels"
+    else:
+        multiplier, multiplier_on = _price_multiplier(unit, spec, merged)
+    usd_kie = float(base_kie) * multiplier
+    usd_client = float(base_client) * multiplier
+    extra_kie, extra_client, extra_applied = _extra_usd(pricing, merged)
+    usd_kie += extra_kie
+    usd_client += extra_client
+    credits = usd_client / CREDIT_USD
+    note = pricing.get("note") or ""
+    if matched is None and pricing.get("usd_rules"):
+        note = f"{note} (ориентировочно: правило не разрешилось)".strip()
+    breakdown = {
+        "kie_id": str(md.get("kie_id") or ""),
+        "unit": unit,
+        "matched_rule": (matched or {}).get("when") or None,
+        "base_usd_kie": round(float(base_kie), 6),
+        "base_usd_client": round(float(base_client), 4),
+        "multiplier": multiplier,
+        "multiplier_on": multiplier_on,
+        "usd_kie": round(usd_kie, 6),
+        "usd_client": round(usd_client, 4),
+        "credits": round(credits, 4),
+        "markup": MARKUP,
+    }
+    if extra_applied:
+        breakdown["extra_charges"] = extra_applied
+        breakdown["extra_usd_kie"] = round(extra_kie, 6)
+        breakdown["extra_usd_client"] = round(extra_client, 4)
+    return {
+        "family_id": str(fam.get("id") or ""),
+        "mode_id": str(md.get("id") or ""),
+        "kie_id": str(md.get("kie_id") or ""),
+        "unit": unit,
+        "markup": MARKUP,
+        "usd_kie": round(usd_kie, 6),
+        "usd_client": round(usd_client, 4),
+        "usd": round(usd_client, 4),
+        "credits": round(credits, 4),
+        "unit_usd_kie": round(float(base_kie), 6),
+        "unit_usd_client": round(float(base_client), 4),
+        "multiplier": multiplier,
+        "multiplier_on": multiplier_on,
+        "known": True,
+        "note": note,
+        "formula": pricing.get("formula") or "",
+        "breakdown": breakdown,
+    }
+
+
+_TOKEN_FIELD_CANDIDATES = (
+    "tokens",
+    "token_count",
+    "input_tokens",
+    "output_tokens",
+    "max_tokens",
+    "token_budget",
+)
+_IMAGE_KEYS_RE = re.compile(r"(image|frame|photo|picture)", re.IGNORECASE)
+_IMAGE_SETTING_KEYS = {
+    "image_size",
+    "size",
+    "image_quality",
+    "image_steps",
+    "image_resolution",
+    "image_format",
+}
+
+
+def _looks_like_image_ref(value: Any) -> bool:
+    """URL/путь/data-uri картинки, а не слово вроде «16:9»."""
+    if isinstance(value, dict):
+        return bool(str(value.get("url") or "").strip())
+    text = str(value or "").strip()
+    if not text:
+        return False
+    low = text.lower()
+    if low.startswith(("http://", "https://", "data:", "file://", "blob:")):
+        return True
+    if "\\" in text:
+        return True
+    tail = text.rsplit("/", 1)[-1]
+    return "/" in text and "." in tail
+
+
+def _iter_images(merged: dict[str, Any]) -> list[str]:
+    """Все картинки из значений: по полям вида *_image(s)/*_frame и свободным ключам."""
+    found: list[str] = []
+    for key, val in merged.items():
+        key_low = str(key).lower()
+        if key_low in _IMAGE_SETTING_KEYS:
+            continue
+        if "video" in key_low or "audio" in key_low:
+            continue
+        if not _IMAGE_KEYS_RE.search(key_low):
+            continue
+        items = val if isinstance(val, list) else [val]
+        for item in items:
+            if _looks_like_image_ref(item):
+                found.append(str(item.get("url") if isinstance(item, dict) else item).strip())
+    return found
+
+
+def _extra_usd(
+    pricing: dict[str, Any], merged: dict[str, Any]
+) -> tuple[float, float, list[dict[str, Any]]]:
+    """Доплаты за входные картинки сверх бесплатных (pricing.extra_charges)."""
+    charges = pricing.get("extra_charges") or []
+    if not charges:
+        return 0.0, 0.0, []
+    images = _iter_images(merged)
+    total_kie = 0.0
+    total_client = 0.0
+    applied: list[dict[str, Any]] = []
+    for charge in charges:
+        if str(charge.get("per") or "") not in ("image", "images"):
+            continue
+        per_kie = _num(charge.get("usd_kie")) or 0.0
+        per_client = _num(charge.get("usd_client")) or 0.0
+        free = int(charge.get("free_first") or 0)
+        paid = max(0, len(images) - free)
+        if paid <= 0:
+            continue
+        add_kie = per_kie * paid
+        add_client = per_client * paid
+        total_kie += add_kie
+        total_client += add_client
+        applied.append(
+            {
+                "what": str(charge.get("what") or "входные картинки"),
+                "images": len(images),
+                "free": free,
+                "paid": paid,
+                "unit_usd_kie": round(per_kie, 6),
+                "unit_usd_client": round(per_client, 4),
+                "usd_kie": round(add_kie, 6),
+                "usd_client": round(add_client, 4),
+            }
+        )
+    return total_kie, total_client, applied
+
+
+def _token_count(merged: dict[str, Any]) -> float | None:
+    """Количество токенов, если настройка задаёт его явно."""
+    for name in _TOKEN_FIELD_CANDIDATES:
+        num = _num(merged.get(name))
+        if num:
+            return num
+    return None
+
+
+def _has_value(merged: dict[str, Any], key: str) -> bool:
+    val = merged.get(key)
+    if isinstance(val, list):
+        return len(val) > 0
+    if isinstance(val, str):
+        return bool(val.strip())
+    return val is not None and val is not False
+
+
+def _frames_refs_conflict(spec: dict[str, Any], merged: dict[str, Any]) -> bool:
+    """Кадры (first/last/start/end) и референс-картинки несовместимы в одном запросе."""
+    frames = False
+    refs = False
+    for field in spec.get("fields") or []:
+        name = str(field.get("name") or "").lower()
+        if not _has_value(merged, field.get("name") or ""):
+            continue
+        if "frame" in name:
+            frames = True
+        elif "reference" in name and "video" not in name and "audio" not in name:
+            refs = True
+    return frames and refs
+
+
+def validate_mode_values(
+    family: str | dict[str, Any] | None,
+    mode: str | dict[str, Any] | None,
+    values: dict[str, Any] | None = None,
+) -> list[str]:
+    """Проверки режима: обязательные, enum, min/max, max_items, взаимоисключения."""
+    spec = mode_spec(family, mode)
+    if not spec:
+        return ["режим не найден"]
+    vals = values or {}
+    errors = validate_values(spec, vals)
+    if str(spec.get("category")) == "video":
+        merged = normalize_values(spec, vals)
+        conflict = (
+            "Видеомодели не поддерживают одновременное совмещение перехода по кадрам (старт/финиш) "
+            "и референсов. Выберите один режим: либо только кадры, либо только референсы."
+        )
+        if _frames_refs_conflict(spec, merged) and conflict not in errors:
+            errors.append(conflict)
+    return errors
+
+
+_TIER_FIELD_CANDIDATES = ("tier", "model", "quality", "rendering_speed", "mode", "speed", "quality_tier")
+_RESOLUTION_FIELD_CANDIDATES = (
+    "resolution",
+    "output_resolution",
+    "video_resolution",
+    "quality",
+    "image_size",
+    "size",
+)
+_AUDIO_FIELD_CANDIDATES = (
+    "audio",
+    "sound",
+    "generate_audio",
+    "enable_audio",
+    "generate_audio_switch",
+    "sound_effects",
+    "with_audio",
+)
+_UPSCALE_FIELD_CANDIDATES = ("upscale_factor", "upscale", "scale", "factor")
+_FROM_RES_FIELD_CANDIDATES = ("from_resolution", "source_resolution", "input_resolution")
+
+# тир в правилах цены может не совпадать буквально со значением поля (veo3_lite ↔ lite)
+_TIER_ALIASES: dict[str, set[str]] = {
+    "quality": {"quality", "veo3", "pro", "high", "max", "best"},
+    "pro": {"pro", "quality", "veo3", "high", "max"},
+    "lite": {"lite", "veo3_lite", "low", "cheap"},
+    "fast": {"fast", "turbo", "veo3_fast"},
+    "turbo": {"turbo", "fast"},
+    "max": {"max", "quality", "veo3", "high"},
+    "standard": {"standard", "std"},
+    "high": {"high", "quality", "pro"},
+}
+
+# разрешение в правилах цены против тирового поля (std=720p, pro=1080p в Kling)
+_RESOLUTION_ALIASES: dict[str, set[str]] = {
+    "480p": {"480p", "sd"},
+    "720p": {"720p", "hd", "std", "standard"},
+    "768p": {"768p"},
+    "1080p": {"1080p", "fullhd", "fhd", "pro"},
+    "2k": {"2k", "1440p", "qhd"},
+    "4k": {"4k", "2160p", "uhd", "ultra"},
+}
+
+_RES_OPTION_RE = re.compile(r"^\s*(\d{3,4}\s*[pP]|\d+\s*[kK]|\d+\s*[kK]\s*/\s*\d+\s*[kK])\s*$")
+
+
+def _as_bool(val: Any) -> bool:
+    if isinstance(val, bool):
+        return val
+    return str(val).strip().lower() in ("true", "1", "yes", "on")
+
+
+def _looks_like_resolution(field: dict[str, Any]) -> bool:
+    options = [str(o) for o in (field.get("options") or [])]
+    if not options:
+        return False
+    hits = 0
+    for opt in options:
+        if _RES_OPTION_RE.match(opt) or ("/" in opt and any(_RES_OPTION_RE.match(p) for p in opt.split("/"))):
+            hits += 1
+    return hits >= max(1, len(options) // 2)
+
+
+def _find_rule_field(spec: dict[str, Any], key: str) -> str | None:
+    """Какое поле режима отвечает за условие правила цены (resolution → quality и т.п.)."""
+    fields = spec.get("fields") or []
+
+    def _by_names(names: tuple[str, ...], need_resolution: bool = False) -> str | None:
+        for name in names:
+            for field in fields:
+                if field.get("name") != name:
+                    continue
+                if need_resolution and not _looks_like_resolution(field):
+                    continue
+                return str(name)
+        return None
+
+    if key == "resolution":
+        found = _by_names(_RESOLUTION_FIELD_CANDIDATES, need_resolution=True)
+        if found:
+            return found
+        for field in fields:
+            if _looks_like_resolution(field):
+                return str(field.get("name") or "")
+        return None
+    if key == "tier":
+        return _by_names(_TIER_FIELD_CANDIDATES)
+    if key == "audio":
+        found = _by_names(_AUDIO_FIELD_CANDIDATES)
+        if found:
+            return found
+        for field in fields:
+            name = str(field.get("name") or "").lower()
+            if field.get("kind") == "toggle" and ("audio" in name or "sound" in name):
+                return str(field.get("name") or "")
+        return None
+    if key == "upscale":
+        return _by_names(_UPSCALE_FIELD_CANDIDATES)
+    if key == "from_resolution":
+        return _by_names(_FROM_RES_FIELD_CANDIDATES)
+    return None
+
+
+def _values_match(want: Any, got: Any, key: str = "") -> bool:
+    """Сравнение значения правила с настройкой: регистр, числа, bool, «1K/2K», тиры."""
+    if isinstance(want, bool):
+        return _as_bool(got) == want
+    if want is None:
+        return True
+    w = str(want).strip()
+    g = str(got).strip()
+    if w == g:
+        return True
+    w_cf, g_cf = w.casefold(), g.casefold()
+    if w_cf == g_cf:
+        return True
+    if "/" in w:
+        parts = [p.strip() for p in w.split("/") if p.strip()]
+        if any(p.casefold() == g_cf for p in parts):
+            return True
+        g_num = _num(g)
+        if g_num is not None:
+            for part in parts:
+                part_num = _num(part)
+                if part_num is not None and abs(part_num - g_num) < 1e-9:
+                    return True
+    wont, gont = _num(w), _num(g)
+    if wont is not None and gont is not None and abs(wont - gont) < 1e-9:
+        return True
+    if key in ("upscale", "scale") and w_cf.rstrip("x") == g_cf.rstrip("x"):
+        return True
+    if key == "tier":
+        if w_cf in g_cf:
+            return True
+        if w_cf in set(re.split(r"[^a-z0-9]+", g_cf)):
+            return True
+        alias = _TIER_ALIASES.get(w_cf)
+        if alias and g_cf in alias:
+            return True
+    if key == "resolution":
+        if g_cf in _RESOLUTION_ALIASES.get(w_cf, set()):
+            return True
+        if w_cf in _RESOLUTION_ALIASES and g_cf.rstrip("p") == w_cf.rstrip("p"):
+            return True
+    return False
+
+
+def _has_video_input(merged: dict[str, Any], spec: dict[str, Any]) -> bool:
+    """Есть ли на входе видео (цена у Seedance зависит от видеовхода)."""
+    for field in spec.get("fields") or []:
+        name = str(field.get("name") or "")
+        if not _has_value(merged, name):
+            continue
+        low = name.lower()
+        if field.get("kind") == "videos":
+            return True
+        if "video" in low and any(tok in low for tok in ("url", "list", "ids", "reference", "input", "file")):
+            return True
+    return False
+
+
+def _match_usd_rule(
+    when: dict[str, Any],
+    merged: dict[str, Any],
+    spec: dict[str, Any],
+) -> bool:
+    """Совпадение правила цены: ключи правил = реальные поля (или их алиасы)."""
+    for key, want in (when or {}).items():
+        if key == "_has_videos":
+            if _has_video_input(merged, spec) != bool(want):
+                return False
+            continue
+        if key == "_has_images":
+            if _has_files(merged, spec, {"images"}) != bool(want):
+                return False
+            continue
+        if key in ("token_kind", "max_mp"):
+            # цена по токенам/мегапикселям из значений формы не выводится — default
+            return False
+        field_name = key if key in merged else _find_rule_field(spec, key)
+        if field_name is None:
+            # условие может быть зашито в самом id модели (hailuo ...-pro / ...-standard)
+            model_hint = str(spec.get("id") or "")
+            if key in ("tier", "resolution") and model_hint and _values_match(want, model_hint, key):
+                continue
+            return False
+        got = merged.get(field_name)
+        if got is None or (isinstance(got, str) and not got.strip()):
+            return False
+        if not _values_match(want, got, key):
+            return False
+    return True
+
+
+def _mode_usd_pricing(mode: dict[str, Any]) -> dict[str, Any]:
+    """pricing режима в USD; если прайс не нашёлся — цена legacy-записи каталога."""
+    pricing = mode.get("pricing") or {}
+    if pricing.get("usd_default_kie") is not None or pricing.get("usd_rules"):
+        return pricing
+    legacy = _LEGACY_BY_KIE.get(str(mode.get("kie_id") or ""))
+    if legacy is not None:
+        return _usd_pricing_from_legacy(legacy)
+    return pricing
+
+
+def _cheapest_usd(pricing: dict[str, Any]) -> float | None:
+    vals: list[float] = []
+    default_client = _num(pricing.get("usd_default_client"))
+    if default_client is not None and default_client > 0:
+        vals.append(default_client)
+    for rule in pricing.get("usd_rules") or []:
+        client = _num(rule.get("usd_client"))
+        if client is not None and client > 0:
+            vals.append(client)
+    return round(min(vals), 4) if vals else None
+
+
+def _credits_pricing_from_usd(pricing: dict[str, Any]) -> dict[str, Any]:
+    """pricing режима в USD → legacy-совместимый pricing в кредитах (для старого UI)."""
+    unit = str(pricing.get("unit") or "gen")
+    rules: list[dict[str, Any]] = []
+    for raw in pricing.get("usd_rules") or []:
+        client = _num(raw.get("usd_client"))
+        if client is None:
+            continue
+        rules.append({"when": raw.get("when") or {}, "credits": round(client / CREDIT_USD, 2)})
+    default_client = _num(pricing.get("usd_default_client"))
+    default: float
+    if default_client is not None and default_client > 0:
+        default = round(default_client / CREDIT_USD, 2)
+    elif rules and float(rules[0]["credits"]) > 0:
+        default = float(rules[0]["credits"])
+    else:
+        # бесплатная модель или неизвестная цена: положительный плейсхолдер,
+        # чтобы старый UI не писал $0. Настоящая цена — в pricing режима.
+        default = 1.0
+    return {
+        "unit": unit,
+        "rules": rules,
+        "default": default,
+        "note": str(pricing.get("note") or ""),
+        "unknown": _cheapest_usd(pricing) is None,
+    }
+
+
+def _mode_card(mode: dict[str, Any], fam: dict[str, Any]) -> dict[str, Any]:
+    pricing = _mode_usd_pricing(mode)
+    return {
+        "id": str(mode.get("id") or ""),
+        "label": str(mode.get("label") or mode.get("id") or ""),
+        "kie_id": str(mode.get("kie_id") or ""),
+        "task_type": str(mode.get("task_type") or ""),
+        "api": str(mode.get("api") or "jobs"),
+        "media": str(mode.get("media") or fam.get("media") or ""),
+        "fields": mode.get("fields") or [],
+        "pricing": pricing,
+        "constraints": mode.get("constraints") or [],
+        "docs_url": str(mode.get("docs_url") or ""),
+        "hint": str(mode.get("hint") or ""),
+        "price_from_usd": _cheapest_usd(pricing),
+    }
+
+
+def _primary_legacy(fam: dict[str, Any]) -> dict[str, Any] | None:
+    """Legacy-модель, чьи поля/цены берём для карточки семьи (совместимость UI)."""
+    fid = str(fam.get("id") or "")
+    for spec in MODELS:
+        if str(spec["id"]) == fid:
+            return spec
+    default_mode = get_mode(fam) or {}
+    kie_id = str(default_mode.get("kie_id") or "")
+    if kie_id:
+        for spec in MODELS:
+            if kie_id in _legacy_kie_ids(spec):
+                return spec
+    for spec in MODELS:
+        if _FAMILY_BY_LEGACY_ID.get(str(spec["id"])) is fam:
+            return spec
+    return None
+
+
+def _audio_card(spec: dict[str, Any]) -> dict[str, Any]:
+    """Аудио/музыка/голос — как раньше, без семей и USD-наценки."""
+    return {
+        "id": spec["id"],
+        "label": spec["label"],
+        "category": spec["category"],
+        "media": _media_of(spec),
+        "desc": spec.get("desc") or "",
+        "hint": spec.get("hint") or "",
+        "is_top": bool(spec.get("is_top", False)),
+        "isTop": bool(spec.get("is_top", False)),
+        "badge": spec.get("badge") or "",
+        "result": spec.get("result"),
+        "fields": spec.get("fields") or [],
+        "pricing": spec.get("pricing") or {},
+    }
+
+
+def _family_card(fam: dict[str, Any], legacy: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Карточка семьи для UI: modes[] + legacy-поля для обратной совместимости."""
+    modes = fam.get("modes") or []
+    mode_cards = [_mode_card(mode, fam) for mode in modes]
+    default_mode = get_mode(fam) or (modes[0] if modes else {})
+    default_fields = default_mode.get("fields") or []
+    fields = (legacy or {}).get("fields") or default_fields
+    if not fields:
+        for card in mode_cards:
+            if card.get("fields"):
+                fields = card["fields"]
+                break
+    if not fields:
+        fields = [
+            {
+                "name": "prompt",
+                "label": "Промпт",
+                "kind": "textarea",
+                "required": False,
+                "desc": "неизвестно",
+            }
+        ]
+    pricing = (legacy or {}).get("pricing")
+    if not pricing:
+        pricing = _credits_pricing_from_usd(_mode_usd_pricing(default_mode))
+    is_top = bool((legacy or {}).get("is_top", fam.get("is_top", False)))
+    media = str(fam.get("media") or _media_of(legacy or {}) or "video")
+    category = str((legacy or {}).get("category") or ("video" if media == "video" else "image"))
+    prices = [card["price_from_usd"] for card in mode_cards if card.get("price_from_usd")]
+    return {
+        "id": str((legacy or {}).get("id") or fam.get("id")),
+        "label": str(fam.get("label") or (legacy or {}).get("label") or fam.get("id")),
+        "category": category,
+        "media": media,
+        "desc": str(fam.get("desc") or (legacy or {}).get("desc") or ""),
+        "hint": str((legacy or {}).get("hint") or ""),
+        "is_top": is_top,
+        "isTop": is_top,
+        "badge": str((legacy or {}).get("badge") or ""),
+        "result": str((legacy or {}).get("result") or media),
+        "fields": fields,
+        "pricing": pricing,
+        "brand": str(fam.get("brand") or ""),
+        "family_id": str(fam.get("id") or ""),
+        "kie_id": str(default_mode.get("kie_id") or ""),
+        "default_mode": str(default_mode.get("id") or ""),
+        "modes": mode_cards,
+        "modes_count": len(mode_cards),
+        "price_from_usd": round(min(prices), 4) if prices else None,
+    }
 
 
 def _media_of(m: dict[str, Any]) -> str:
@@ -1497,25 +2450,32 @@ def _media_of(m: dict[str, Any]) -> str:
 
 
 def catalog_for_ui() -> dict[str, Any]:
-    """Каталог для фронта: категории + модели с полями и правилами цен."""
+    """Каталог для фронта: семьи с режимами (медиа) + аудио как раньше.
+
+    Медиа: одна карточка на семейство, внутри modes[] со своими полями и
+    ценами в USD (pricing.usd_default_client). Старые одиночные модели без
+    семьи остаются карточкой с одним режимом «default».
+    Аудио/музыка/голос отдаются ровно как раньше — без семей и наценки.
+    """
+    covered: set[str] = set()
+    cards: list[dict[str, Any]] = []
+    for fam in FAMILIES:
+        legacy = _primary_legacy(fam)
+        cards.append(_family_card(fam, legacy))
+        for spec in MODELS:
+            if _FAMILY_BY_LEGACY_ID.get(str(spec["id"])) is fam:
+                covered.add(str(spec["id"]))
+    for spec in MODELS:
+        if str(spec["id"]) in covered:
+            continue
+        if spec.get("category") in _AUDIO_CATEGORIES:
+            cards.append(_audio_card(spec))
+            continue
+        cards.append(_family_card(_singleton_family(spec), spec))
     return {
         "credit_usd": CREDIT_USD,
+        "markup": MARKUP,
+        "families_count": len(FAMILIES),
         "categories": CATEGORIES,
-        "models": [
-            {
-                "id": m["id"],
-                "label": m["label"],
-                "category": m["category"],
-                "media": _media_of(m),
-                "desc": m.get("desc") or "",
-                "hint": m.get("hint") or "",
-                "is_top": bool(m.get("is_top", False)),
-                "isTop": bool(m.get("is_top", False)),
-                "badge": m.get("badge") or "",
-                "result": m.get("result"),
-                "fields": m.get("fields") or [],
-                "pricing": m.get("pricing") or {},
-            }
-            for m in MODELS
-        ],
+        "models": cards,
     }
