@@ -1,11 +1,12 @@
 {
  "meta": {
-  "generated_at": "2026-11-14T18:28:36",
-  "task": "task-10 / приёмка kie.ai моделей в UI (повторная по build 577)",
+  "generated_at": "2026-11-14T19:53:52",
+  "task": "task-10 / приёмка kie.ai моделей в UI (build 579)",
+  "build": "579 (UI 19d2414d, backend c7dbab1e, данные 7393d050+df4f29f2)",
   "dump": "web/.tmp-verify/dom-dump-final.json",
-  "dump_taken_at": "2026-11-14T14:29:35.134Z",
+  "dump_taken_at": "2026-11-14T16:31:17.276Z",
   "dump_taken_by": "lead (браузер субагента запрещён песочницей)",
-  "provenance": "DOM снят лидом в его браузере на build 577; поля/режимы/цены сверены с docs/kie-model-families.json, docs/kie-prices-usd.json, каталогом /api/kie-create/catalog и backend-функциями app/services/kie_catalog.py",
+  "provenance": "DOM снят лидом в его браузере на build 579; поля/режимы/цены сверены с docs/kie-model-families.json, docs/kie-prices-usd.json, живым каталогом /api/kie-create/catalog и backend-функциями app/services/kie_catalog.py",
   "counts": {
    "families_contract": 72,
    "families_in_dump": 72,
@@ -15,8 +16,8 @@
    "picker_rows_image": 35,
    "panel_families_checked": 72,
    "panel_modes_checked": 182,
-   "panel_settings_checked": 284,
-   "fields_contract_total": 1168,
+   "panel_settings_checked": 289,
+   "fields_contract_total": 1179,
    "prices_with_price": 178,
    "prices_pending": 9
   }
@@ -28,15 +29,15 @@
   },
   "item2_panel_fields": {
    "status": "PASS",
-   "detail": "72 семей / 182 режимов / 284 полей в панели: 0 недостающих, 0 лишних, 0 расхождений вида контрола. 4 мягких замечания по тексту пунктов списков (в дампе текст без value). 6 режимов «только промпт и файлы» — панель пустая корректно (полей-чипов в контракте нет), но подпись «Настройки этого режима неизвестны» — UX-замечание."
+   "detail": "72 семей / 182 режимов / 289 полей в панели: 0 недостающих, 0 лишних, 0 расхождений вида контрола. 5 мягких замечаний по тексту пунктов списков (в дампе текст без value). 4 режима «только промпт и файлы» — панель пустая корректно, подпись «У этого режима нет дополнительных настроек — только промпт и файлы» (было «настройки неизвестны»)."
   },
   "item3_mode_switch": {
    "status": "PASS",
    "detail": "Число режимов в UI = контракту во всех 72 семьях (0 расхождений), порядок и состав режимов совпадают. Наборы полей каждого режима совпали с контрактом. Протечек значений между режимами 0 (valuesForMode)."
   },
   "item4_price": {
-   "status": "PASS_WITH_DEFECTS",
-   "detail": "Цена по умолчанию: 170/171 совпали с прайсом. Клик по длительности: 71/73; по разрешению: 89/93 (0 расхождений, 4 замера на токенных режимах не считаются). «Цена уточняется» ровно у 9 режимов — честно. 40 «плоских» замеров: 38 законны (фикс-цена/недоступная опция), 2 дефекта — Hailuo 2.3 Pro/Standard: при 10 c в шапке остаётся $0.19, прайс требует $0.31/$0.56."
+   "status": "PASS",
+   "detail": "Цена по умолчанию: 171/171 совпали с прайсом. Клик по длительности: 74/74; по разрешению: 98/102 (0 расхождений, 4 замера на токенных режимах не считаются). «Цена уточняется» ровно у 9 режимов — честно. Hailuo 2.3 починен: 6 c $0.28/$0.19, 10 c $0.56/$0.31 — совпадает с правилами. «Плоских» замеров 39, все законны; где цена обязана была измениться — не найдено. Остался один ценовой вопрос к прайсу: у Hailuo 2.3 и Runway при 10 c + 1080p нет правила на комбинацию, и цена падает до default ($0.28/$0.19/$0.07)."
   },
   "item5_no_merges": {
    "status": "PASS",
@@ -69,7 +70,7 @@
  "panel": {
   "families_checked": 72,
   "modes_checked": 182,
-  "settings_found": 284,
+  "settings_found": 289,
   "field_missing": 0,
   "field_extra": 0,
   "kind_mismatch": 0,
@@ -82,6 +83,16 @@
     ],
     "expected_n": 6,
     "dump_n": 6,
+    "note": "в дампе текст пунктов без value, сверка мягкая"
+   },
+   {
+    "family": "kling-avatar",
+    "field": "resolution",
+    "missing_values": [
+     "720p"
+    ],
+    "expected_n": 1,
+    "dump_n": 1,
     "note": "в дампе текст пунктов без value, сверка мягкая"
    },
    {
@@ -121,16 +132,6 @@
   "mode_ids_mismatch": 0,
   "file_only_modes": [
    {
-    "family": "kling-avatar",
-    "mode": "avatar-pro",
-    "fields_found": []
-   },
-   {
-    "family": "kling-avatar",
-    "mode": "avatar-standard",
-    "fields_found": []
-   },
-   {
     "family": "omnihuman-1-5-image",
     "mode": "human-identification",
     "fields_found": []
@@ -151,35 +152,17 @@
     "fields_found": []
    }
   ],
-  "ux_note": "6 режимов без полей-чипов (Kling Avatar Pro/Standard, OmniHuman 1.5 разметка, Recraft апскейл/фон) показывают подпись «Настройки этого режима неизвестны». Схема у них известна: только промпт (или без него) и файловые входы. Предложение: подпись «Только промпт и файлы» либо скрыть панель."
+  "ux_note": "4 режима без полей-чипов (OmniHuman 1.5 разметка ×2, Recraft апскейл/удаление фона) показывают подпись «У этого режима нет дополнительных настроек — только промпт и файлы.» — корректно. Kling Avatar получил контрол разрешения (был одним из 6 «пустых»)."
  },
  "prices": {
   "defaults_checked": 171,
-  "defaults_matched": 170,
-  "defaults_mismatch": [
-   {
-    "family": "hailuo-2-3",
-    "mode": "i2v-pro",
-    "dump": 0.19,
-    "expected": 0.2812
-   }
-  ],
-  "duration_clicked": 73,
-  "duration_matched": 71,
-  "duration_mismatch": [
-   {
-    "value": 10,
-    "dump": 0.19,
-    "expected": 0.5625
-   },
-   {
-    "value": 10,
-    "dump": 0.19,
-    "expected": 0.3125
-   }
-  ],
-  "resolution_clicked": 93,
-  "resolution_matched": 89,
+  "defaults_matched": 171,
+  "defaults_mismatch": [],
+  "duration_clicked": 74,
+  "duration_matched": 74,
+  "duration_mismatch": [],
+  "resolution_clicked": 102,
+  "resolution_matched": 98,
   "resolution_mismatch": [],
   "resolution_uncomputable": 4,
   "pending_modes": [
@@ -193,38 +176,40 @@
    "gpt-image-2-6/i2i-sunburst",
    "qwen-image/t2i"
   ],
-  "flat_measurements_total": 40,
-  "flat_legit": 38,
-  "flat_defects": [
+  "flat_measurements_total": 39,
+  "flat_legit": 39,
+  "flat_defects": [],
+  "price_drops_after_resolution": [
    {
-    "family": "hailuo-2-3",
+    "family": "hailuo-2-3-i2v",
     "mode": "i2v-pro",
-    "what": "duration",
-    "value": 10,
-    "price_shown": 0.19,
-    "expected_if_changed": 0.5625
+    "sequence": "10 c → $0.56, затем 1080P → $0.28 (default)",
+    "detail": "в прайсе нет правила на {duration:10, resolution:1080p}; не совпав, цена падает до default"
    },
    {
-    "family": "hailuo-2-3",
+    "family": "hailuo-2-3-i2v",
     "mode": "i2v-standard",
-    "what": "duration",
-    "value": 10,
-    "price_shown": 0.19,
-    "expected_if_changed": 0.3125
+    "sequence": "10 c → $0.31, затем 1080P → $0.19 (default)",
+    "detail": "нет правила на {duration:10, resolution:1080p}"
+   },
+   {
+    "family": "runway",
+    "mode": "generate",
+    "sequence": "10 c → $0.19, затем 1080p → $0.07 (default)",
+    "detail": "нет правила на {duration:10, resolution:1080p}"
    }
   ],
-  "pricing_rules_dead_modes": 40,
-  "pricing_rules_all_dead_modes": 38,
+  "pricing_rules_dead_modes": 25,
+  "pricing_rules_all_dead_modes": 23,
   "pricing_dead_keys_all_dead": {
-   "resolution": 128,
+   "resolution": 91,
    "_has_videos": 69,
-   "mode": 29,
-   "duration": 47,
-   "from_resolution": 3,
+   "mode": 11,
+   "duration": 28,
    "max_mp": 9,
    "token_kind": 24
   },
-  "pricing_dead_note": "Симуляция без загрузки файлов: правила с _has_videos/_has_images в режимах, где файловые входы есть, достижимы в продукте и в счёт не входят. Остаются ключи, которых нет в форме: mode/token_kind/max_mp/from_resolution — цена в UI на них не реагирует (см. flat_defects).",
+  "pricing_dead_note": "Симуляция без загрузки файлов: правила с _has_videos/_has_images в режимах, где файловые входы есть, достижимы в продукте и в счёт не входят. Остаются ключи, которых нет в форме: token_kind/max_mp/mode и значения resolution вне списка опций — цена в UI на них не реагирует.",
   "checks": {
    "modes_with_price": 178,
    "modes_without_price": 4,
@@ -240,7 +225,7 @@
   "markup_errors": [],
   "docs_rule_normalization": 71,
   "ui_logic_vs_backend_mismatch": 29,
-  "ui_logic_vs_backend_note": "Сравнение исходника UI в рабочем дереве (model-settings.ts) с backend: 46 пар расходятся по цене. В живом дампе build 577 цена совпала с backend в 170/171 режиме, т.е. исходник в дереве отстаёт от сборки — пересобрать и перепроверить после следующей сборки."
+  "ui_logic_vs_backend_note": "Сравнение исходника UI в рабочем дереве (model-settings.ts) с backend: 29 пар расходятся по цене. В живом дампе build 579 цена по умолчанию совпала с backend в 171/171 режиме, т.е. исходник в дереве отстаёт от сборки — пересобрать и перепроверить после следующей сборки."
  },
  "contract_and_payload": {
   "families": {
@@ -252,7 +237,7 @@
   "modes": 182,
   "fields": {
    "modes": 182,
-   "fields_contract": 1168,
+   "fields_contract": 1179,
    "field_diffs": 0,
    "modes_without_fields": [],
    "fields_per_mode": {
@@ -282,15 +267,15 @@
     "gemini-omni/character": 4,
     "gemini-omni-flash-1-1/video": 11,
     "gemini-omni-flash-1-2/video": 10,
-    "gemini-omni-flash-1-2/extend": 4,
+    "gemini-omni-flash-1-2/extend": 5,
     "grok-imagine-video/t2v": 6,
     "grok-imagine-video/i2v": 9,
-    "grok-imagine-video/extend": 4,
-    "grok-imagine-video/upscale": 2,
+    "grok-imagine-video/extend": 6,
+    "grok-imagine-video/upscale": 3,
     "grok-imagine-video-1-5/i2v": 11,
-    "hailuo-02/t2v-pro": 3,
-    "hailuo-02/t2v-standard": 4,
-    "hailuo-02/i2v-pro": 5,
+    "hailuo-02/t2v-pro": 4,
+    "hailuo-02/t2v-standard": 5,
+    "hailuo-02/i2v-pro": 6,
     "hailuo-02/i2v-standard": 7,
     "hailuo-2-3/i2v-pro": 4,
     "hailuo-2-3/i2v-standard": 5,
@@ -320,8 +305,8 @@
     "kling-4-0/keyframe-flash": 5,
     "kling-4-0/r2v": 9,
     "kling-4-0/r2v-flash": 8,
-    "kling-avatar/avatar-pro": 3,
-    "kling-avatar/avatar-standard": 3,
+    "kling-avatar/avatar-pro": 4,
+    "kling-avatar/avatar-standard": 4,
     "omnihuman-1-5/avatar": 7,
     "omnihuman-2-0/avatar": 4,
     "pixverse-v6/t2v": 7,
@@ -331,8 +316,8 @@
     "pixverse-v6/transition": 7,
     "pixverse-v6/extend": 7,
     "pixverse-v6/r2v": 7,
-    "runway/generate": 6,
-    "runway/extend": 4,
+    "runway/generate": 7,
+    "runway/extend": 5,
     "suno-music-video/music-video": 4,
     "topaz-video-upscale/upscale": 2,
     "vidu-q4/i2v": 5,
@@ -466,8 +451,8 @@
    "required_tested": 282,
    "required_ok": 282,
    "required_fail": [],
-   "enum_tested": 378,
-   "enum_ok": 378,
+   "enum_tested": 390,
+   "enum_ok": 390,
    "enum_fail": [],
    "range_tested": 112,
    "range_ok": 112,
@@ -702,20 +687,22 @@
      "api": "jobs",
      "payload_keys": [
       "aspect_ratio",
+      "duration",
       "resolution"
      ]
     },
     "gemini-omni-flash-1-2/extend": {
      "api": "jobs",
      "payload_keys": [
-      "input",
-      "model"
+      "duration",
+      "resolution"
      ]
     },
     "grok-imagine-video/t2v": {
      "api": "jobs",
      "payload_keys": [
       "aspect_ratio",
+      "duration",
       "mode",
       "resolution"
      ]
@@ -732,12 +719,15 @@
     "grok-imagine-video/extend": {
      "api": "jobs",
      "payload_keys": [
-      "extend_at"
+      "duration",
+      "extend_at",
+      "resolution"
      ]
     },
     "grok-imagine-video/upscale": {
      "api": "jobs",
      "payload_keys": [
+      "from_resolution",
       "resolution"
      ]
     },
@@ -752,27 +742,26 @@
     "hailuo-02/t2v-pro": {
      "api": "jobs",
      "payload_keys": [
-      "input",
-      "model"
+      "resolution"
      ]
     },
     "hailuo-02/t2v-standard": {
      "api": "jobs",
      "payload_keys": [
-      "input",
-      "model"
+      "duration",
+      "resolution"
      ]
     },
     "hailuo-02/i2v-pro": {
      "api": "jobs",
      "payload_keys": [
-      "input",
-      "model"
+      "resolution"
      ]
     },
     "hailuo-02/i2v-standard": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "resolution"
      ]
     },
@@ -892,6 +881,7 @@
     "kling-3-0/video": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "mode",
       "sound"
      ]
@@ -988,15 +978,13 @@
     "kling-avatar/avatar-pro": {
      "api": "jobs",
      "payload_keys": [
-      "input",
-      "model"
+      "resolution"
      ]
     },
     "kling-avatar/avatar-standard": {
      "api": "jobs",
      "payload_keys": [
-      "input",
-      "model"
+      "resolution"
      ]
     },
     "omnihuman-1-5/avatar": {
@@ -1016,6 +1004,7 @@
     "pixverse-v6/t2v": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "generate_audio_switch",
       "generate_multi_clip_switch",
       "quality"
@@ -1024,6 +1013,7 @@
     "pixverse-v6/i2v": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "generate_audio_switch",
       "generate_multi_clip_switch",
       "quality"
@@ -1032,6 +1022,7 @@
     "pixverse-v6/t2v-max": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "generate_audio_switch",
       "quality"
      ]
@@ -1039,6 +1030,7 @@
     "pixverse-v6/i2v-max": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "generate_audio_switch",
       "quality"
      ]
@@ -1046,6 +1038,7 @@
     "pixverse-v6/transition": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "generate_audio_switch",
       "quality"
      ]
@@ -1053,6 +1046,7 @@
     "pixverse-v6/extend": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "generate_audio_switch",
       "quality"
      ]
@@ -1060,17 +1054,23 @@
     "pixverse-v6/r2v": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "generate_audio_switch",
       "quality"
      ]
     },
     "runway/generate": {
      "api": "runway",
-     "payload_keys": []
+     "payload_keys": [
+      "duration",
+      "resolution"
+     ]
     },
     "runway/extend": {
      "api": "runway",
-     "payload_keys": []
+     "payload_keys": [
+      "resolution"
+     ]
     },
     "suno-music-video/music-video": {
      "api": "suno",
@@ -1150,12 +1150,14 @@
     "wan-2-5/t2v": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "resolution"
      ]
     },
     "wan-2-5/i2v": {
      "api": "jobs",
      "payload_keys": [
+      "duration",
       "resolution"
      ]
     },
@@ -1349,13 +1351,15 @@
     "seedream-5/t2i-pro": {
      "api": "jobs",
      "payload_keys": [
-      "output_format"
+      "output_format",
+      "quality"
      ]
     },
     "seedream-5/i2i-pro": {
      "api": "jobs",
      "payload_keys": [
-      "output_format"
+      "output_format",
+      "quality"
      ]
     },
     "seedream-5/layer-pro": {
@@ -1491,8 +1495,7 @@
     "grok-imagine-image/t2i": {
      "api": "jobs",
      "payload_keys": [
-      "input",
-      "model"
+      "enable_pro"
      ]
     },
     "grok-imagine-image/i2i": {
@@ -1945,37 +1948,15 @@
    "detail": "4 режима gpt-image-2-6 (flare/sunburst) тарифицируются по токенам, qwen-image/t2i — по мегапикселям, ещё 4 (gemini-omni/character, ideogram-v3/remix, omnihuman-1-5 разметка) без цены в прайсе. Это честное «уточняется», не провал."
   },
   {
-   "what": "6 режимов без полей-чипов",
-   "detail": "только промпт и файловые входы; панель пустая корректно, но текст «Настройки этого режима неизвестны» вводит в заблуждение"
+   "what": "4 режима без полей-чипов",
+   "detail": "только промпт и файловые входы (OmniHuman 1.5 разметка ×2, Recraft апскейл/фон); подпись «У этого режима нет дополнительных настроек — только промпт и файлы» — корректна"
   },
   {
-   "what": "правки цен жили вне этого дампа",
-   "detail": "цены-исправления (4 шт.) подтверждены отдельным отчётом docs/kie-pricing-verify.md; здесь проверено только отображение"
+   "what": "3 режима с падением цены на комбинации настроек",
+   "detail": "Hailuo 2.3 Pro/Standard и Runway: при 10 c + 1080p правила на комбинацию нет, цена падает до default; вопрос к прайсу/бэкенду"
   }
  ],
- "failures": [
-  {
-   "kind": "price_default",
-   "owner": "UI-цена",
-   "family": "hailuo-2-3",
-   "mode": "i2v-pro",
-   "detail": "цена по умолчанию $0.19, по прайсу $0.2812"
-  },
-  {
-   "kind": "price_after_duration",
-   "owner": "UI-цена",
-   "family": "hailuo-2-3",
-   "mode": "i2v-pro",
-   "detail": "duration=10: в UI $0.19, по прайсу $0.5625"
-  },
-  {
-   "kind": "price_after_duration",
-   "owner": "UI-цена",
-   "family": "hailuo-2-3",
-   "mode": "i2v-standard",
-   "detail": "duration=10: в UI $0.19, по прайсу $0.3125"
-  }
- ],
+ "failures": [],
  "warnings": [
   {
    "kind": "price_oracle_missing",
@@ -3053,11 +3034,13 @@
      "mode": "extend",
      "ui_fields_expected": [
       "task_id",
-      "duration"
+      "duration",
+      "resolution"
      ],
      "ui_fields_found": [
       "task_id",
-      "duration"
+      "duration",
+      "resolution"
      ],
      "missing": [],
      "extra": [],
@@ -3068,7 +3051,12 @@
       "dump": 0.25,
       "expected": 0.25
      },
-     "resolution_click": null
+     "resolution_click": {
+      "value": "720p",
+      "dump": 0.56,
+      "expected": 0.562,
+      "after_duration": 10
+     }
     }
    ]
   },
@@ -3116,8 +3104,8 @@
      ],
      "missing": [],
      "extra": [],
-     "price_default_dom": "$0.07",
-     "price_default_expected": 0.075,
+     "price_default_dom": "$0.09",
+     "price_default_expected": 0.09,
      "duration_click": {
       "value": 15,
       "dump": 0.23,
@@ -3171,29 +3159,44 @@
      "ui_fields_expected": [
       "task_id",
       "extend_at",
-      "extend_times"
+      "extend_times",
+      "duration",
+      "resolution"
      ],
      "ui_fields_found": [
       "task_id",
       "extend_at",
-      "extend_times"
+      "extend_times",
+      "duration",
+      "resolution"
      ],
      "missing": [],
      "extra": [],
      "price_default_dom": "$0.09",
      "price_default_expected": 0.09,
-     "duration_click": null,
-     "resolution_click": null
+     "duration_click": {
+      "value": 10,
+      "dump": 0.15,
+      "expected": 0.15
+     },
+     "resolution_click": {
+      "value": "720p",
+      "dump": 0.28,
+      "expected": 0.2812,
+      "after_duration": 10
+     }
     },
     {
      "mode": "upscale",
      "ui_fields_expected": [
       "task_id",
-      "resolution"
+      "resolution",
+      "from_resolution"
      ],
      "ui_fields_found": [
       "task_id",
-      "resolution"
+      "resolution",
+      "from_resolution"
      ],
      "missing": [],
      "extra": [],
@@ -3202,8 +3205,8 @@
      "duration_click": null,
      "resolution_click": {
       "value": "1080p",
-      "dump": 0.06,
-      "expected": 0.0625,
+      "dump": 0.19,
+      "expected": 0.1875,
       "after_duration": null
      }
     }
@@ -3301,58 +3304,79 @@
      "mode": "t2v-pro",
      "ui_fields_expected": [
       "prompt_optimizer",
-      "nsfw_checker"
+      "nsfw_checker",
+      "resolution"
      ],
      "ui_fields_found": [
       "prompt_optimizer",
-      "nsfw_checker"
+      "nsfw_checker",
+      "resolution"
      ],
      "missing": [],
      "extra": [],
      "price_default_dom": "$0.30",
      "price_default_expected": 0.297,
      "duration_click": null,
-     "resolution_click": null
+     "resolution_click": {
+      "value": "1080P",
+      "dump": 0.3,
+      "expected": 0.297,
+      "after_duration": null
+     }
     },
     {
      "mode": "t2v-standard",
      "ui_fields_expected": [
       "duration",
       "prompt_optimizer",
-      "nsfw_checker"
+      "nsfw_checker",
+      "resolution"
      ],
      "ui_fields_found": [
       "duration",
       "prompt_optimizer",
-      "nsfw_checker"
+      "nsfw_checker",
+      "resolution"
      ],
      "missing": [],
      "extra": [],
-     "price_default_dom": "$0.16",
-     "price_default_expected": 0.156,
+     "price_default_dom": "$0.19",
+     "price_default_expected": 0.1872,
      "duration_click": {
       "value": 10,
       "dump": 0.31,
       "expected": 0.312
      },
-     "resolution_click": null
+     "resolution_click": {
+      "value": "768P",
+      "dump": 0.31,
+      "expected": 0.312,
+      "after_duration": 10
+     }
     },
     {
      "mode": "i2v-pro",
      "ui_fields_expected": [
       "prompt_optimizer",
-      "nsfw_checker"
+      "nsfw_checker",
+      "resolution"
      ],
      "ui_fields_found": [
       "prompt_optimizer",
-      "nsfw_checker"
+      "nsfw_checker",
+      "resolution"
      ],
      "missing": [],
      "extra": [],
      "price_default_dom": "$0.30",
      "price_default_expected": 0.297,
      "duration_click": null,
-     "resolution_click": null
+     "resolution_click": {
+      "value": "1080P",
+      "dump": 0.3,
+      "expected": 0.297,
+      "after_duration": null
+     }
     },
     {
      "mode": "i2v-standard",
@@ -3370,8 +3394,8 @@
      ],
      "missing": [],
      "extra": [],
-     "price_default_dom": "$0.06",
-     "price_default_expected": 0.0625,
+     "price_default_dom": "$0.07",
+     "price_default_expected": 0.075,
      "duration_click": {
       "value": 10,
       "dump": 0.13,
@@ -3424,17 +3448,17 @@
      ],
      "missing": [],
      "extra": [],
-     "price_default_dom": "$0.19",
+     "price_default_dom": "$0.28",
      "price_default_expected": 0.2812,
      "duration_click": {
       "value": 10,
-      "dump": 0.19,
+      "dump": 0.56,
       "expected": 0.5625
      },
      "resolution_click": {
       "value": "1080P",
-      "dump": 0.19,
-      "expected": 0.1875,
+      "dump": 0.28,
+      "expected": 0.2812,
       "after_duration": 10
      }
     },
@@ -3456,7 +3480,7 @@
      "price_default_expected": 0.1875,
      "duration_click": {
       "value": 10,
-      "dump": 0.19,
+      "dump": 0.31,
       "expected": 0.3125
      },
      "resolution_click": {
@@ -4413,25 +4437,43 @@
    "modes": [
     {
      "mode": "avatar-pro",
-     "ui_fields_expected": [],
-     "ui_fields_found": [],
+     "ui_fields_expected": [
+      "resolution"
+     ],
+     "ui_fields_found": [
+      "resolution"
+     ],
      "missing": [],
      "extra": [],
-     "price_default_dom": "$0.32",
-     "price_default_expected": 0.3155,
+     "price_default_dom": "$0.63",
+     "price_default_expected": 0.6315,
      "duration_click": null,
-     "resolution_click": null
+     "resolution_click": {
+      "value": "1080p",
+      "dump": 0.63,
+      "expected": 0.6315,
+      "after_duration": null
+     }
     },
     {
      "mode": "avatar-standard",
-     "ui_fields_expected": [],
-     "ui_fields_found": [],
+     "ui_fields_expected": [
+      "resolution"
+     ],
+     "ui_fields_found": [
+      "resolution"
+     ],
      "missing": [],
      "extra": [],
      "price_default_dom": "$0.32",
      "price_default_expected": 0.3155,
      "duration_click": null,
-     "resolution_click": null
+     "resolution_click": {
+      "value": "720p",
+      "dump": 0.32,
+      "expected": 0.3155,
+      "after_duration": null
+     }
     }
    ]
   },
@@ -4776,43 +4818,57 @@
       "duration",
       "quality",
       "aspect_ratio",
-      "watermark"
+      "watermark",
+      "resolution"
      ],
      "ui_fields_found": [
       "duration",
       "quality",
       "aspect_ratio",
-      "watermark"
+      "watermark",
+      "resolution"
      ],
      "missing": [],
      "extra": [],
      "price_default_dom": "$0.07",
      "price_default_expected": 0.075,
      "duration_click": {
-      "value": 15,
-      "dump": 0.07,
-      "expected": 0.075
+      "value": 10,
+      "dump": 0.19,
+      "expected": 0.1875
      },
-     "resolution_click": null
+     "resolution_click": {
+      "value": "1080p",
+      "dump": 0.07,
+      "expected": 0.075,
+      "after_duration": 10
+     }
     },
     {
      "mode": "extend",
      "ui_fields_expected": [
       "task_id",
       "quality",
-      "watermark"
+      "watermark",
+      "resolution"
      ],
      "ui_fields_found": [
       "task_id",
       "quality",
-      "watermark"
+      "watermark",
+      "resolution"
      ],
      "missing": [],
      "extra": [],
      "price_default_dom": "$0.07",
      "price_default_expected": 0.075,
      "duration_click": null,
-     "resolution_click": null
+     "resolution_click": {
+      "value": "1080p",
+      "dump": 0.19,
+      "expected": 0.1875,
+      "after_duration": null
+     }
     }
    ]
   },
@@ -8654,7 +8710,12 @@
   {
    "what": "ошибки валидации в интерфейсе",
    "why": "в дампе нет сценария с невалидными значениями",
-   "how": "проверено на backend: required 282/282, enum 378/378, range 112/112, max_items 197/197, взаимоисключение 7/7"
+   "how": "проверено на backend: required 282/282, enum 390/390, range 112/112, max_items 197/197, взаимоисключение 7/7"
+  },
+  {
+   "what": "переключение опции quality (seedream) в живой панели",
+   "why": "дамп кликает только duration/resolution",
+   "how": "цена по quality проверена через backend: high $0.09, basic $0.04"
   },
   {
    "what": "файловые плитки (референсы, кадры, аудио) внутри панели",
