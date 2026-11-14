@@ -1,15 +1,16 @@
 # Проверка цен kie.ai в живом продукте
 
-Дата: 14.11.2026 15:08 · студия `http://127.0.0.1:8777` · источники: `docs/kie-prices-usd.json` (правила), `docs/kie-model-families.json` (схемы полей), `POST /api/kie-create/estimate`, живая панель UI.
+Дата: 14.11.2026 17:57 · студия `http://127.0.0.1:8777` · источники: `docs/kie-prices-usd.json` (правила), `docs/kie-model-families.json` (схемы полей), `POST /api/kie-create/estimate`, живая панель UI.
 
 ## Итог
 
 - Сверено **174 режимов** из 182 (остальные 8 — без цены в прайсе, ожидаемо «цена уточняется»).
-- Прогнано **669 конфигураций** (разрешение, длительность, звук, видеовход, тир, число картинок).
-- Формула ↔ API: **585 сошлось**, **63 расхождений**, 19 спорных (нельзя посчитать заранее), 2 не посчитать.
+- Прогнано **767 конфигураций** (разрешение, длительность, звук, видеовход, тир, число картинок).
+- Формула ↔ API: **746 сошлось**, **0 расхождений**, 19 спорных (нельзя посчитать заранее), 2 не посчитать.
 - UI ↔ формула ↔ API: **194 замеров** по 56 семействам из дампа; **182 UI = API**, 6 расхождений UI, 5 залипших цен.
 - Исправления цен: **все 4 подтверждены** (правила, каталог, API и UI там, где замер есть).
 - Наценка `usd_client = usd_kie × 1.25` и `1 кредит = $0.005` — сходятся во всех посчитанных случаях.
+- **34 режима с фиксированной ценой**: в прайсе одно правило `when={}`; backend по контракту отдаёт `matched_rule=null` (пустой when не показывается), но цена берётся именно из этого правила — это не расхождение и не FAIL (veo get-1080p/4k, seedream, imagen4, nano-banana, grok-image, qwen, recraft и др.).
 
 ## Метод
 
@@ -23,91 +24,12 @@
 
 ## Расхождения формулы и API
 
-Всего 63 кейсов в 21 режимах. Причины сгруппированы — по ним видно, что чинить в бэкенде/данных, а не «где-то в цене».
+Всего 0 кейсов в 0 режимах. Причины сгруппированы — по ним видно, что чинить в бэкенде/данных, а не «где-то в цене».
 
 | Причина | Кейсов | Режимы | Что происходит |
 |---|---|---|---|
-| `mode` | 19 | flux1-kontext, gpt-image/1.5-image-to-image, gpt-image/1.5-text-to-image, ideogram/character, ideogram/character-edit, ideogram/character-remix, ideogram/v3-edit, ideogram/v3-text-to-image, veo-3-1, veo/extend | ключ правила `mode` не сопоставляется с полем тира |
-| `sound` | 40 | kling-3.0-omni/image-to-video, kling-3.0-omni/reference-to-video, kling-3.0-omni/text-to-video, pixverse-v6-max/image-to-video, pixverse-v6-max/text-to-video, pixverse-v6/image-to-video, pixverse-v6/transition | ключ правила `sound` не сопоставляется с полем аудио |
-| `video` | 2 | gemini-omni-video, google/gemini-omni-flash-1-1 | видеовход не распознан |
-| `max_mp` | 2 | minimax-h3/image-edit, minimax-h3/text-to-image | ключ `max_mp` не поддерживается |
 
 Детали по каждой причине:
-
-### Тир (`mode`)
-
-- `veo-3-1` · resolution: 1080p · ожидалось **$0.41**, API отдал **$0.38** · правило `{"mode": "fast", "resolution": "1080p"}` · API matched `null`
-- `veo-3-1` · resolution: 4k · ожидалось **$1.12**, API отдал **$0.38** · правило `{"mode": "fast", "resolution": "4K"}` · API matched `null`
-- `veo-3-1` · model: veo3_lite · ожидалось **$0.19**, API отдал **$0.38** · правило `{"mode": "lite", "resolution": "720p"}` · API matched `null`
-- `veo-3-1` · model: veo3 · ожидалось **$1.56**, API отдал **$0.38** · правило `{"mode": "quality", "resolution": "720p"}` · API matched `null`
-- `veo/extend` · model: quality · ожидалось **$1.56**, API отдал **$0.38** · правило `{"mode": "quality"}` · API matched `null`
-- `veo/extend` · model: lite · ожидалось **$0.19**, API отдал **$0.38** · правило `{"mode": "lite"}` · API matched `null`
-- `flux1-kontext` · model: flux-kontext-max · ожидалось **$0.06**, API отдал **$0.03** · правило `{"mode": "max"}` · API matched `null`
-- `ideogram/character` · базовая · ожидалось **$0.11**, API отдал **$0.07** · правило `{"mode": "balanced"}` · API matched `null`
-- `ideogram/character` · rendering_speed: QUALITY · ожидалось **$0.15**, API отдал **$0.07** · правило `{"mode": "quality"}` · API matched `null`
-- `ideogram/character-edit` · базовая · ожидалось **$0.11**, API отдал **$0.07** · правило `{"mode": "balanced"}` · API matched `null`
-- `ideogram/character-edit` · rendering_speed: QUALITY · ожидалось **$0.15**, API отдал **$0.07** · правило `{"mode": "quality"}` · API matched `null`
-- `ideogram/character-remix` · базовая · ожидалось **$0.11**, API отдал **$0.07** · правило `{"mode": "balanced"}` · API matched `null`
-- `ideogram/character-remix` · rendering_speed: QUALITY · ожидалось **$0.15**, API отдал **$0.07** · правило `{"mode": "quality"}` · API matched `null`
-- `ideogram/v3-text-to-image` · rendering_speed: BALANCED · ожидалось **$0.04**, API отдал **$0.02** · правило `{"mode": "balanced"}` · API matched `null`
-- `ideogram/v3-text-to-image` · rendering_speed: QUALITY · ожидалось **$0.06**, API отдал **$0.02** · правило `{"mode": "quality"}` · API matched `null`
-- `ideogram/v3-edit` · базовая · ожидалось **$0.04**, API отдал **$0.02** · правило `{"mode": "balanced"}` · API matched `null`
-- `ideogram/v3-edit` · rendering_speed: QUALITY · ожидалось **$0.06**, API отдал **$0.02** · правило `{"mode": "quality"}` · API matched `null`
-- `gpt-image/1.5-text-to-image` · quality: high · ожидалось **$0.14**, API отдал **$0.03** · правило `{"mode": "high"}` · API matched `null`
-- `gpt-image/1.5-image-to-image` · quality: high · ожидалось **$0.14**, API отдал **$0.03** · правило `{"mode": "high"}` · API matched `null`
-
-### Звук (`sound`)
-
-- `kling-3.0-omni/text-to-video` · resolution: 1080p · ожидалось **$0.63**, API отдал **$0.47** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `kling-3.0-omni/text-to-video` · audio: вкл · ожидалось **$0.63**, API отдал **$0.47** · правило `{"resolution": "720p", "sound": true}` · API matched `null`
-- `kling-3.0-omni/text-to-video` · комбо: aspect_ratio=16:9, audio=True, customize_multi_shots=False, duration=3, prefer_multi_shots=False, resolution=720p · ожидалось **$0.38**, API отдал **$0.28** · правило `{"resolution": "720p", "sound": true}` · API matched `null`
-- `kling-3.0-omni/text-to-video` · комбо: aspect_ratio=16:9, audio=True, customize_multi_shots=False, duration=15, prefer_multi_shots=False, resolution=720p · ожидалось **$1.89**, API отдал **$1.42** · правило `{"resolution": "720p", "sound": true}` · API matched `null`
-- `kling-3.0-omni/image-to-video` · resolution: 1080p · ожидалось **$0.63**, API отдал **$0.47** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `kling-3.0-omni/image-to-video` · audio: вкл · ожидалось **$0.63**, API отдал **$0.47** · правило `{"resolution": "720p", "sound": true}` · API matched `null`
-- `kling-3.0-omni/image-to-video` · комбо: aspect_ratio=auto, audio=True, customize_multi_shots=False, duration=3, resolution=720p · ожидалось **$0.38**, API отдал **$0.28** · правило `{"resolution": "720p", "sound": true}` · API matched `null`
-- `kling-3.0-omni/image-to-video` · комбо: aspect_ratio=auto, audio=True, customize_multi_shots=False, duration=15, resolution=720p · ожидалось **$1.89**, API отдал **$1.42** · правило `{"resolution": "720p", "sound": true}` · API matched `null`
-- `kling-3.0-omni/reference-to-video` · resolution: 1080p · ожидалось **$0.63**, API отдал **$0.47** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `kling-3.0-omni/reference-to-video` · audio: вкл · ожидалось **$0.63**, API отдал **$0.47** · правило `{"resolution": "720p", "sound": true}` · API matched `null`
-- `kling-3.0-omni/reference-to-video` · комбо: aspect_ratio=16:9, audio=True, customize_multi_shots=False, duration=3, resolution=720p, video_urls=[] · ожидалось **$0.38**, API отдал **$0.28** · правило `{"resolution": "720p", "sound": true}` · API matched `null`
-- `kling-3.0-omni/reference-to-video` · комбо: aspect_ratio=16:9, audio=True, customize_multi_shots=False, duration=15, resolution=720p, video_urls=[] · ожидалось **$1.89**, API отдал **$1.42** · правило `{"resolution": "720p", "sound": true}` · API matched `null`
-- `pixverse-v6/image-to-video` · quality: 720p · ожидалось **$0.04**, API отдал **$0.03** · правило `{"resolution": "720p", "sound": false}` · API matched `null`
-- `pixverse-v6/image-to-video` · quality: 1080p · ожидалось **$0.09**, API отдал **$0.03** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `pixverse-v6/image-to-video` · комбо: duration=15, generate_audio_switch=True, generate_multi_clip_switch=False, quality=360p · ожидалось **$0.53**, API отдал **$0.38** · правило `{"resolution": "360p", "sound": true}` · API matched `null`
-- `pixverse-v6/image-to-video` · комбо: duration=1, generate_audio_switch=True, generate_multi_clip_switch=False, quality=1080p · ожидалось **$0.12**, API отдал **$0.03** · правило `{"resolution": "1080p", "sound": true}` · API matched `null`
-- `pixverse-v6/image-to-video` · комбо: duration=15, generate_audio_switch=False, generate_multi_clip_switch=False, quality=1080p · ожидалось **$1.35**, API отдал **$0.38** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `pixverse-v6/image-to-video` · комбо: duration=15, generate_audio_switch=True, generate_multi_clip_switch=False, quality=1080p · ожидалось **$1.73**, API отдал **$0.38** · правило `{"resolution": "1080p", "sound": true}` · API matched `null`
-- `pixverse-v6-max/text-to-video` · quality: 540p · ожидалось **$0.04**, API отдал **$0.03** · правило `{"resolution": "540p", "sound": false}` · API matched `null`
-- `pixverse-v6-max/text-to-video` · quality: 720p · ожидалось **$0.06**, API отдал **$0.03** · правило `{"resolution": "720p", "sound": false}` · API matched `null`
-- `pixverse-v6-max/text-to-video` · quality: 1080p · ожидалось **$0.11**, API отдал **$0.03** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `pixverse-v6-max/text-to-video` · generate_audio_switch: вкл · ожидалось **$0.04**, API отдал **$0.03** · правило `{"resolution": "360p", "sound": true}` · API matched `null`
-- `pixverse-v6-max/text-to-video` · комбо: duration=15, generate_audio_switch=True, quality=360p · ожидалось **$0.68**, API отдал **$0.45** · правило `{"resolution": "360p", "sound": true}` · API matched `null`
-- `pixverse-v6-max/text-to-video` · комбо: duration=1, generate_audio_switch=True, quality=1080p · ожидалось **$0.14**, API отдал **$0.03** · правило `{"resolution": "1080p", "sound": true}` · API matched `null`
-- `pixverse-v6-max/text-to-video` · комбо: duration=15, generate_audio_switch=False, quality=1080p · ожидалось **$1.65**, API отдал **$0.45** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `pixverse-v6-max/text-to-video` · комбо: duration=15, generate_audio_switch=True, quality=1080p · ожидалось **$2.10**, API отдал **$0.45** · правило `{"resolution": "1080p", "sound": true}` · API matched `null`
-- `pixverse-v6-max/image-to-video` · quality: 540p · ожидалось **$0.04**, API отдал **$0.03** · правило `{"resolution": "540p", "sound": false}` · API matched `null`
-- `pixverse-v6-max/image-to-video` · quality: 720p · ожидалось **$0.06**, API отдал **$0.03** · правило `{"resolution": "720p", "sound": false}` · API matched `null`
-- `pixverse-v6-max/image-to-video` · quality: 1080p · ожидалось **$0.11**, API отдал **$0.03** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `pixverse-v6-max/image-to-video` · generate_audio_switch: вкл · ожидалось **$0.04**, API отдал **$0.03** · правило `{"resolution": "360p", "sound": true}` · API matched `null`
-- `pixverse-v6-max/image-to-video` · комбо: duration=15, generate_audio_switch=True, quality=360p · ожидалось **$0.68**, API отдал **$0.45** · правило `{"resolution": "360p", "sound": true}` · API matched `null`
-- `pixverse-v6-max/image-to-video` · комбо: duration=1, generate_audio_switch=True, quality=1080p · ожидалось **$0.14**, API отдал **$0.03** · правило `{"resolution": "1080p", "sound": true}` · API matched `null`
-- `pixverse-v6-max/image-to-video` · комбо: duration=15, generate_audio_switch=False, quality=1080p · ожидалось **$1.65**, API отдал **$0.45** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `pixverse-v6-max/image-to-video` · комбо: duration=15, generate_audio_switch=True, quality=1080p · ожидалось **$2.10**, API отдал **$0.45** · правило `{"resolution": "1080p", "sound": true}` · API matched `null`
-- `pixverse-v6/transition` · quality: 720p · ожидалось **$0.04**, API отдал **$0.03** · правило `{"resolution": "720p", "sound": false}` · API matched `null`
-- `pixverse-v6/transition` · quality: 1080p · ожидалось **$0.09**, API отдал **$0.03** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `pixverse-v6/transition` · комбо: duration=15, generate_audio_switch=True, quality=360p · ожидалось **$0.53**, API отдал **$0.38** · правило `{"resolution": "360p", "sound": true}` · API matched `null`
-- `pixverse-v6/transition` · комбо: duration=1, generate_audio_switch=True, quality=1080p · ожидалось **$0.12**, API отдал **$0.03** · правило `{"resolution": "1080p", "sound": true}` · API matched `null`
-- `pixverse-v6/transition` · комбо: duration=15, generate_audio_switch=False, quality=1080p · ожидалось **$1.35**, API отдал **$0.38** · правило `{"resolution": "1080p", "sound": false}` · API matched `null`
-- `pixverse-v6/transition` · комбо: duration=15, generate_audio_switch=True, quality=1080p · ожидалось **$1.73**, API отдал **$0.38** · правило `{"resolution": "1080p", "sound": true}` · API matched `null`
-
-### Видеовход (`with_video`)
-
-- `gemini-omni-video` · видеовход: есть · ожидалось **$1.05**, API отдал **$0.39** · правило `{"resolution": "720p", "with_video": true}` · API matched `{"resolution": "720p", "duration": "4"}`
-- `google/gemini-omni-flash-1-1` · видеовход: есть · ожидалось **$1.05**, API отдал **$0.39** · правило `{"resolution": "720p", "with_video": true}` · API matched `{"resolution": "720p", "duration": "4"}`
-
-### `max_mp`
-
-- `minimax-h3/text-to-image` · resolution: 4K · ожидалось **$0.03**, API отдал **$0.01** · правило `{"max_mp": 20, "resolution": "4K"}` · API matched `null`
-- `minimax-h3/image-edit` · resolution: 4K · ожидалось **$0.03**, API отдал **$0.01** · правило `{"max_mp": 20, "resolution": "4K"}` · API matched `null`
 
 
 ### Спорное: число выходных картинок
@@ -118,7 +40,7 @@
 
 | Что проверяли | Ожидалось | Правила | Каталог | API | Вердикт |
 |---|---|---|---|---|---|
-| 1080p без видеовхода — 158 кр/с (было 114) (`bytedance/seedance-2-5`) | 158.0 кр/с | 158.0 | нет строки* | 158.0 | OK |
+| 1080p без видеовхода — 158 кр/с (было 114) (`bytedance/seedance-2-5`) | 158.0 кр/с | 158.0 | 158.0 | 158.0 | OK |
 | 4K — 75.5 кр/с (было 67) (`kling-3.0/video`) | 75.5 кр/с | 75.5 | 75.5 | 75.5 | OK |
 | 720p со звуком — 22.7 кр/с (было 20) (`kling-3.0/video`) | 22.7 кр/с | 22.7 | 22.7 | 22.7 | OK |
 | 768P — 8 кр/с (было 16) (`minimax-h3/text-to-video`) | 8.0 кр/с | 8.0 | 8.0 | 8.0 | OK |
@@ -136,7 +58,7 @@
 | `qwen3/pro-image-to-image` | image_urls | $0.0031 / $0.0031 | $0.0062 / $0.0062 | $0.0093 / $0.0093 | OK |
 | `minimax-h3/text-to-video` | — | — | — | — | не проверить: в схеме режима нет поля-картинок — доплату через API не проверить |
 | `minimax-h3/image-to-video` | first_frame_url | — | — | — | OK |
-| `minimax-h3/reference-to-video` | — | — | — | — | не проверить: в схеме режима нет поля-картинок — доплату через API не проверить |
+| `minimax-h3/reference-to-video` | reference_image_urls | — | — | — | OK |
 | `qwen3/image-to-image` | image_urls | $0.0031 / $0.0031 | $0.0062 / $0.0062 | $0.0093 / $0.0093 | OK |
 | `seedream/5-5-image-to-image` | image_urls | $0.0090 / $0.0090 | $0.02 / $0.02 | $0.03 / $0.03 | OK |
 | `seedream/5-5-layer-decomposition` | image_url | $0.0090 / $0.0090 | $0.02 / $0.02 | $0.03 / $0.03 | OK |
@@ -191,12 +113,13 @@
 - видеовход с длительностью/секундами входа (Seedance 2.x: seconds видео входит в счёт) — API принимает внешний видеовход, но UI-дамп не даёт его включить; проверено только веткой «без видео»
 - 16 семейств в дампе UI не открылись (10 скрыто + 6 картинных без панели) — их цены не сверены с UI, только формула ↔ API
 - пликер «от $X» не сверялся как цена конфигурации: это минимум по режимам семейства (`price_from_usd`), а не цена выбранных настроек
+- UI-дамп снят до фикса дефолтов полей (14:59); после перезапуска 577 UI не перемерялся — сверка UI в этом отчёте историческая, актуальную делает Lead на финальной приёмке
 
 ## Служебное
 
-- Каталог живого продукта: 182 режима, все 182 есть в прайсе; расхождения `when` в каталоге — 9 (у 9 режимов потеряно условие `with_video:false`, из-за чего тариф с видеовходом недостижим).
+- Каталог живого продукта: 182 режима, все 182 есть в прайсе; расхождения `when` в каталоге — 0 (у 9 режимов потеряно условие `with_video:false`, из-за чего тариф с видеовходом недостижим).
 - Разводка правил: всего 542 правил; `resolution` 435, `duration` 109, `sound` 91 (из них почти все не мапятся на поле), `mode` 51, `with_video:false` 45, `max_mp` 9, `token_kind` 24.
-- `affects_price` без поля в схеме: 51 режимов — настройками не проверить.
+- `affects_price` без поля в схеме: 34 режимов — настройками не проверить.
 - Пликер «от $X» не сверялся как цена конфигурации: это минимум по режимам семейства (`price_from_usd`), а не цена выбранных настроек.
 - Скрипты проверки: `web/.tmp-verify/verify_pricing.py` (формула ↔ API), `web/.tmp-verify/ui_compare.py` (UI ↔ формула ↔ API), вход — `web/.tmp-verify/dom-dump-all.json`. В git не кладутся.
 - Сырые результаты: `web/.tmp-verify/pricing_result.json`, `web/.tmp-verify/ui_compare.json`.
