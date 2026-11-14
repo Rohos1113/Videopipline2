@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { GenStyleArt as GenStyleArtView } from "@/components/outsee/gen-style-art";
@@ -113,6 +113,8 @@ export function InspirationMenu({
   const [artUrls, setArtUrls] = useState<Record<string, string>>({});
   const [catId, setCatId] = useState<string>(INSPIRATION_CATEGORIES[0]?.id ?? "");
   const [detailId, setDetailId] = useState<string | null>(null);
+  /** Поиск по всем 406+ стилям: в категории их бывает до 65, глазами не найти. */
+  const [query, setQuery] = useState("");
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -123,9 +125,22 @@ export function InspirationMenu({
   );
   const detail = detailId ? inspirationStyle(detailId) : null;
 
+  const needle = query.trim().toLowerCase();
+  const visibleStyles = useMemo(() => {
+    if (!needle) return category?.styles ?? [];
+    return INSPIRATION_STYLES.filter((s) =>
+      `${s.name} ${s.desc} ${s.id} ${(s.tags ?? []).join(" ")}`.toLowerCase().includes(needle),
+    );
+  }, [needle, category]);
+
+  const categoryNameOf = useCallback((styleId: string) => {
+    return INSPIRATION_CATEGORIES.find((c) => c.styles.some((s) => s.id === styleId))?.name ?? "";
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     setArtUrls(readArtUrls());
+    setQuery("");
     // Открываем на категории выбранного стиля, иначе на сохранённой, иначе на первой.
     let saved = "";
     try {
@@ -316,10 +331,30 @@ export function InspirationMenu({
               data-testid="inspiration-styles"
               className="w-[264px] shrink-0 overflow-y-auto border-r border-white/[0.08] p-2"
             >
+              <div className="relative mb-1.5 px-1">
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3 w-3 -translate-y-1/2 text-white/35" />
+                <input
+                  data-testid="inspiration-search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Поиск по всем стилям"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.04] py-1 pr-[22px] pl-[26px] text-[10.5px] text-white/85 placeholder:text-white/30 focus:border-[#2dd4bf]/60 focus:outline-none"
+                />
+                {query ? (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label="Очистить поиск"
+                    className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-white/40 transition hover:text-white"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                ) : null}
+              </div>
               <p className="mb-1.5 px-1 text-[9px] font-bold tracking-[0.14em] text-white/30 uppercase">
-                Стили
+                {needle ? `Найдено · ${visibleStyles.length}` : `Стили · ${visibleStyles.length}`}
               </p>
-              {(category?.styles ?? []).map((s) => {
+              {visibleStyles.map((s) => {
                 const isOpen = s.id === detailId;
                 return (
                   <button
@@ -342,7 +377,9 @@ export function InspirationMenu({
                     <StyleThumb style={s} artUrl={artUrls[s.id]} className="h-[116px] w-full" />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent px-2 pt-8 pb-1.5">
                       <div className="line-clamp-1 text-[12px] font-bold text-white">{s.name}</div>
-                      <div className="line-clamp-1 text-[10px] text-white/55">{s.desc}</div>
+                      <div className="line-clamp-1 text-[10px] text-white/55">
+                        {needle ? categoryNameOf(s.id) : s.desc}
+                      </div>
                     </div>
                     {s.id === value ? (
                       <span className="absolute top-1 right-1 flex items-center gap-0.5 rounded bg-[#2dd4bf] px-1 py-0.5 text-[9px] font-bold text-black">
@@ -352,6 +389,11 @@ export function InspirationMenu({
                   </button>
                 );
               })}
+              {visibleStyles.length === 0 ? (
+                <p className="px-1 py-3 text-[10.5px] leading-relaxed text-white/40">
+                  Ничего не нашлось. Попробуй короче: «аниме», «нуар», «бумага», «киберпанк».
+                </p>
+              ) : null}
             </div>
 
             {/* Справа открывается карточка выбранного стиля; без выбора третьей колонки нет */}
