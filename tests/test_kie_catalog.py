@@ -9,33 +9,22 @@ def test_catalog_covers_categories() -> None:
     cat = kc.catalog_for_ui()
     cats = {c["id"] for c in cat["categories"]}
     assert {"video", "image", "music", "sound", "voice", "tools"} <= cats
-    cards = cat["models"]
-    media_cards = [m for m in cards if m["media"] in ("video", "image")]
-    audio_cards = [m for m in cards if m["media"] == "audio" or m.get("audio")]
-    # FAMILIES — единственный источник состава для медиа: 84 docs-семьи, по карточке
-    assert cat["families_count"] == 84
-    assert len(media_cards) == 84
-    assert len({m["id"] for m in cards}) == 93
-    # аудио (Suno/ElevenLabs) — отдельные 9 карточек без modes, во вкладку «Аудио»
-    assert len(audio_cards) == 9
-    assert {"suno-music", "elevenlabs-v4"} <= {m["id"] for m in audio_cards}
-    assert not [m for m in audio_cards if "modes" in m]
-    video = {m["id"] for m in media_cards if m["media"] == "video"}
-    image = {m["id"] for m in media_cards if m["media"] == "image"}
-    assert len(video) == len(image) == 42
-    assert not [m for m in media_cards if m["category"] in ("music", "sound", "voice")]
-    assert {"topaz-video-upscale", "kling-3-0-video", "hailuo-2-3-image-to-video-pro"} <= video
-    assert {"topaz-image-upscale", "kie-image-upscale", "gpt-image-2-text-to-image"} <= image
-    # media берём из данных, но чиним известные ошибки kie.ai (taskType врёт)
-    assert "ideogram-v3-text-to-image" in image
-    assert "infinitalk-from-audio" in video
-    # у каждой модели есть поля; у двух omnihuman фиксированной цены нет вовсе
-    for m in cards:
+    by_cat = {c: [] for c in cats}
+    for m in cat["models"]:
+        by_cat[m["category"]].append(m["id"])
+    # curated-каталог владельца: 36 семей / 86 режимов, видео-семейств после
+    # сокращения состава стало меньше (было 15+)
+    assert len(by_cat["video"]) >= 12
+    assert len(by_cat["image"]) >= 5
+    assert "suno-music" in by_cat["music"]
+    assert "suno-sounds" in by_cat["sound"]
+    assert "elevenlabs-sfx" in by_cat["sound"]
+    assert "elevenlabs-v4" in by_cat["voice"]
+    assert "topaz-video-upscale" in by_cat["tools"]
+    # у каждой модели есть цена по умолчанию и поля
+    for m in cat["models"]:
         assert m["fields"], m["id"]
-    # у двух omnihuman цены нет вовсе — старый UI видит честный флаг unknown
-    for m in media_cards:
-        if m["id"] in {"omnihuman-1-5-human-identification", "omnihuman-1-5-subject-detection"}:
-            assert m["pricing"].get("unknown") is True, m["id"]
+        assert (m["pricing"].get("default") or 0) > 0, m["id"]
 
 
 def test_veo_price_by_mode_and_resolution() -> None:

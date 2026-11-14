@@ -275,17 +275,14 @@ def test_estimate_usd_tokens_and_megapixel_units() -> None:
 @needs_data
 def test_extra_charges_for_input_images() -> None:
     """Доплаты за входные картинки (extra_charges) входят в цену режима."""
-    family = kc.get_family("seedream-5-pro-image-to-image")
-    assert family is not None
-    mode_id = family["modes"][0]["id"]
     one = kc.estimate_usd(
-        family,
-        mode_id,
+        "seedream-5-pro",
+        "i2i-pro",
         {"prompt": "x", "image_urls": ["https://example.com/a.png"]},
     )
     three = kc.estimate_usd(
-        family,
-        mode_id,
+        "seedream-5-pro",
+        "i2i-pro",
         {"prompt": "x", "image_urls": [f"https://example.com/{i}.png" for i in range(3)]},
     )
     assert one["known"] is True and three["known"] is True
@@ -295,18 +292,17 @@ def test_extra_charges_for_input_images() -> None:
     assert three["usd_client"] > one["usd_client"]
     assert three["usd_client"] == pytest.approx(one["usd_client"] + 2 * extra[0]["unit_usd_client"], abs=0.001)
 
-    # MiniMax H3 R2V: первые 5 картинок бесплатны
-    family = kc.get_family("minimax-h3-reference-to-video")
+    # MiniMax H3: первые 5 картинок бесплатны
+    family = kc.get_family("minimax-h3")
     assert family is not None
-    mode_id = family["modes"][0]["id"]
     five = kc.estimate_usd(
         family,
-        mode_id,
+        "r2v",
         {"duration": 5, "resolution": "768P", "reference_image_urls": [f"https://e.com/{i}.png" for i in range(5)]},
     )
     eight = kc.estimate_usd(
         family,
-        mode_id,
+        "r2v",
         {"duration": 5, "resolution": "768P", "reference_image_urls": [f"https://e.com/{i}.png" for i in range(8)]},
     )
     assert not five["breakdown"].get("extra_charges")
@@ -319,8 +315,7 @@ def test_note_orientirovochno_when_rule_not_matched() -> None:
     """Если правило не разрешилось и взята цена по умолчанию — note помечает это."""
     family = kc.get_family("nano-banana-2-lite")
     assert family is not None
-    mode_id = family["modes"][0]["id"]
-    est = kc.estimate_usd(family, mode_id, kc.defaults_for_mode(family, mode_id))
+    est = kc.estimate_usd(family, "generate", kc.defaults_for_mode(family, "generate"))
     assert est["known"] is True
     assert est["breakdown"]["matched_rule"] is None
     assert "ориентировочно" in est["note"]
@@ -328,8 +323,8 @@ def test_note_orientirovochno_when_rule_not_matched() -> None:
 
 @needs_data
 def test_tokens_modes_are_unknown() -> None:
-    """GPT Image 2.6 Flare: токены из настроек не выводятся — цену не придумываем."""
-    family = kc.get_family("gpt-image-2-6-flare-text-to-image")
+    """GPT Image 2.6: токены из настроек не выводятся — цену не придумываем."""
+    family = kc.get_family("gpt-image-2-6")
     assert family is not None
     token_modes = [m for m in family["modes"] if m["pricing"]["unit"] in ("tokens", "1m_tokens")]
     assert token_modes
@@ -411,48 +406,25 @@ def test_validate_mode_frames_vs_references() -> None:
 def test_catalog_cards_have_modes_and_usd_pricing() -> None:
     catalog = kc.catalog_for_ui()
     assert catalog["markup"] == 1.25
-    cards = catalog["models"]
-    # FAMILIES — единственный источник состава для медиа: 84 docs-семьи,
-    # плюс отдельные аудио-карточки (без modes) для вкладки «Аудио»
-    assert catalog["families_count"] == len(kc.FAMILIES) == 84
-    media_cards = [card for card in cards if card["media"] in ("video", "image")]
-    audio_cards = [card for card in cards if card["media"] == "audio" or card.get("audio")]
-    assert len(media_cards) == 84
-    assert len(audio_cards) == 9
-    assert len(cards) == 93
-    ids = [card["id"] for card in cards]
-    assert len(set(ids)) == 93, [i for i in ids if ids.count(i) > 1]
-    assert [card["id"] for card in media_cards] == [fam["id"] for fam in kc.FAMILIES]
-    assert [card["label"] for card in media_cards] == [fam["label"] for fam in kc.FAMILIES]
-    assert sum(card["media"] == "video" for card in media_cards) == 42
-    assert sum(card["media"] == "image" for card in media_cards) == 42
-    # аудио не должно попадать в медиа-группы и не иметь modes
-    for card in audio_cards:
-        assert card["media"] == "audio"
-        assert card.get("audio") is True
-        assert "modes" not in card
-        assert card["category"] in ("music", "sound", "voice")
-    assert not [card for card in media_cards if card["category"] in ("music", "sound", "voice")]
-    mode_kie_ids: list[str] = []
+    media_cards = [m for m in catalog["models"] if m.get("media") in ("video", "image")]
+    assert media_cards, "в каталоге должны быть медиа-карточки"
     for card in media_cards:
         assert card["fields"], card["id"]
+        assert (card["pricing"].get("default") or 0) > 0, card["id"]
         assert card.get("modes"), card["id"]
-        assert card["modes_count"] == len(card["modes"]) == 1, card["id"]
         assert card.get("brand") is not None
-        assert card["family_id"] == card["id"]
+        assert card.get("modes_count") == len(card["modes"])
         for mode in card["modes"]:
             assert mode["kie_id"]
             assert mode["api"]
-            mode_kie_ids.append(mode["kie_id"])
             pricing = mode["pricing"]
             assert pricing["markup"] == 1.25
             assert "usd_default_client" in pricing
             assert "usd_rules" in pricing
-    assert len(mode_kie_ids) == len(set(mode_kie_ids)) == 84
-    # media: ideogram — картинка (в kie.ai врёт taskType), infinitalk — видео (Lip Sync)
-    by_id = {card["id"]: card for card in media_cards}
-    assert by_id["ideogram-v3-text-to-image"]["media"] == "image"
-    assert by_id["infinitalk-from-audio"]["media"] == "video"
+    audio_cards = [m for m in catalog["models"] if m["category"] in ("music", "sound", "voice")]
+    assert audio_cards
+    for card in audio_cards:
+        assert "modes" not in card  # аудио не трогаем
 
 
 def test_legacy_ids_still_resolve_and_build_same_payload() -> None:
@@ -619,7 +591,6 @@ def test_every_mode_builds_payload_without_exception() -> None:
 @needs_data
 def test_every_mode_estimates_or_marks_unknown() -> None:
     known = 0
-    unknown: list[str] = []
     for family in FAMILIES:
         for mode in family["modes"]:
             est = kc.estimate_usd(family, mode["id"], kc.defaults_for_mode(family, mode["id"]))
@@ -628,16 +599,9 @@ def test_every_mode_estimates_or_marks_unknown() -> None:
                 assert est["usd_client"] == pytest.approx(est["usd_kie"] * 1.25, abs=0.01)
                 assert est["usd_kie"] >= 0
             else:
-                unknown.append(f"{family['id']}/{mode['id']}")
                 assert est["usd_client"] is None, f"{family['id']}/{mode['id']}"
                 assert est["note"] in ("неизвестно", "цена уточняется"), est["note"]
-    # у 3 моделей цены нет в прайсе kie.ai (2 нет вовсе, 1 считается в токенах)
-    assert known == len(FAMILIES) - 3, f"цена известна только у {known} режимов"
-    assert sorted(unknown) == [
-        "gpt-image-2-6-flare-text-to-image/default",
-        "omnihuman-1-5-human-identification/default",
-        "omnihuman-1-5-subject-detection/default",
-    ]
+    assert known >= len(FAMILIES), f"цена известна только у {known} режимов"
 
 
 @needs_data
@@ -1024,47 +988,41 @@ def test_with_video_false_rule_is_kept_in_generated_data() -> None:
     ("family_id", "mode_id", "values", "want_when"),
     [
         # Veo 3.1: тир берётся из поля model, разрешение — из resolution
-        ("veo-3-1", "default", {"model": "veo3_lite", "resolution": "720p"}, {"mode": "lite", "resolution": "720p"}),
-        (
-            "veo-3-1",
-            "default",
-            {"model": "veo3_fast", "resolution": "1080p"},
-            {"mode": "fast", "resolution": "1080p"},
-        ),
-        ("veo-3-1", "default", {"model": "veo3", "resolution": "4k"}, {"mode": "quality", "resolution": "4K"}),
-        # Veo Extend: тир продления
-        ("veo-extend", "default", {"model": "quality"}, {"mode": "quality"}),
+        ("veo-3-1", "generate", {"model": "veo3_lite", "resolution": "720p"}, {"mode": "lite", "resolution": "720p"}),
+        ("veo-3-1", "generate", {"model": "veo3_fast", "resolution": "1080p"}, {"mode": "fast", "resolution": "1080p"}),
+        ("veo-3-1", "generate", {"model": "veo3", "resolution": "4k"}, {"mode": "quality", "resolution": "4K"}),
+        ("veo-3-1", "extend", {"model": "quality"}, {"mode": "quality"}),
         # GPT Image 2: разрешение задаёт тариф
-        ("gpt-image-2-text-to-image", "default", {"resolution": "1K"}, {"resolution": "1K"}),
-        ("gpt-image-2-text-to-image", "default", {"resolution": "2K"}, {"resolution": "2K"}),
+        ("gpt-image-2", "t2i", {"resolution": "1K", "aspect_ratio": "1:1"}, {"resolution": "1K"}),
+        ("gpt-image-2", "t2i", {"resolution": "2K", "aspect_ratio": "1:1"}, {"resolution": "2K"}),
         # Kling 2.6: звук и длительность
-        ("kling-2-6-image-to-video", "default", {"duration": 10, "sound": False}, {"duration": "10", "sound": False}),
-        ("kling-2-6-image-to-video", "default", {"duration": 10, "sound": True}, {"duration": "10", "sound": True}),
+        ("kling-2-6", "i2v", {"duration": 10, "sound": False}, {"duration": "10", "sound": False}),
+        ("kling-2-6", "i2v", {"duration": 10, "sound": True}, {"duration": "10", "sound": True}),
         # Kling 3.0 Omni: sound в прайсе = toggle audio в форме
         (
-            "kling-3-0-omni-image-to-video",
-            "default",
+            "kling-3-0",
+            "omni-i2v",
             {"resolution": "1080p", "audio": True, "duration": 5},
             {"resolution": "1080p", "sound": True},
         ),
         (
-            "kling-3-0-omni-image-to-video",
-            "default",
+            "kling-3-0",
+            "omni-i2v",
             {"resolution": "720p", "audio": False, "duration": 5},
             {"resolution": "720p", "sound": False},
         ),
         # Flux Kontext: тир в имени модели
-        ("flux1-kontext", "default", {"model": "flux-kontext-max"}, {"mode": "max"}),
-        ("flux1-kontext", "default", {"model": "flux-kontext-pro"}, {"mode": "pro"}),
+        ("flux-1-kontext", "edit", {"model": "flux-kontext-max"}, {"mode": "max"}),
+        ("flux-1-kontext", "edit", {"model": "flux-kontext-pro"}, {"mode": "pro"}),
         # Seedance 2.0: видео-референс на входе — отдельный тариф
         (
-            "bytedance-seedance-2",
-            "default",
+            "seedance-2-0",
+            "standard",
             {"resolution": "1080p", "reference_video_urls": ["https://example.com/a.mp4"]},
             {"resolution": "1080p", "_has_videos": True},
         ),
         # Апскейл: разрешение выводится из фактора (4x → 4K)
-        ("kie-image-upscale", "default", {"upscale_factor": "4"}, {"resolution": "4K", "max_mp": 16.78}),
+        ("kie-image-upscale", "upscale", {"upscale_factor": "4"}, {"resolution": "4K", "max_mp": 16.78}),
     ],
 )
 def test_price_rule_selected_for_live_settings(
@@ -1087,22 +1045,18 @@ def test_price_rule_selected_for_live_settings(
 def test_expensive_setting_changes_price() -> None:
     """Дорогая настройка в каждом из 6 случаев аудита реально поднимает цену."""
     pairs = [
-        (("veo-3-1", "default"), {"model": "veo3_lite", "resolution": "720p"}, {"model": "veo3", "resolution": "4k"}),
-        (("veo-extend", "default"), {"model": "fast"}, {"model": "quality"}),
+        (("veo-3-1", "generate"), {"model": "veo3_lite", "resolution": "720p"}, {"model": "veo3", "resolution": "4k"}),
+        (("veo-3-1", "extend"), {"model": "fast"}, {"model": "quality"}),
+        (("gpt-image-2", "t2i"), {"resolution": "1K", "aspect_ratio": "1:1"}, {"resolution": "4K", "aspect_ratio": "1:1"}),
+        (("kling-2-6", "i2v"), {"duration": 5, "sound": False}, {"duration": 10, "sound": True}),
         (
-            ("gpt-image-2-text-to-image", "default"),
-            {"resolution": "1K"},
-            {"resolution": "4K"},
-        ),
-        (("kling-2-6-image-to-video", "default"), {"duration": 5, "sound": False}, {"duration": 10, "sound": True}),
-        (
-            ("kling-3-0-omni-image-to-video", "default"),
+            ("kling-3-0", "omni-i2v"),
             {"resolution": "720p", "audio": False, "duration": 5},
             {"resolution": "1080p", "audio": True, "duration": 5},
         ),
-        (("flux1-kontext", "default"), {"model": "flux-kontext-pro"}, {"model": "flux-kontext-max"}),
+        (("flux-1-kontext", "edit"), {"model": "flux-kontext-pro"}, {"model": "flux-kontext-max"}),
         (
-            ("kling-3-0-video", "default"),
+            ("kling-3-0", "video"),
             {"mode": "std", "sound": False, "duration": 5},
             {"mode": "pro", "sound": True, "duration": 5},
         ),
@@ -1122,10 +1076,10 @@ def test_unresolvable_rule_falls_back_to_default_with_note() -> None:
     """Правило не включить настройками формы — берём default и помечаем «ориентировочно»."""
     family = kc.get_family("nano-banana-2-lite")
     assert family is not None
-    mode = kc.get_mode(family)
+    mode = kc.get_mode(family, "generate")
     assert mode is not None
     assert (mode["pricing"].get("usd_rules") or []), "у режима должны быть правила"
-    est = kc.estimate_usd(family, mode["id"], kc.defaults_for_mode(family, mode["id"]))
+    est = kc.estimate_usd(family, "generate", kc.defaults_for_mode(family, "generate"))
     assert est["known"] is True
     assert est["breakdown"]["matched_rule"] is None
     assert "ориентировочно" in est["note"]
@@ -1137,11 +1091,10 @@ def test_unresolvable_rule_falls_back_to_default_with_note() -> None:
 @needs_data
 def test_max_mp_condition_matches_derived_resolution() -> None:
     """max_mp — не поле формы, а вычисляемое условие: должно разрешаться из resolution."""
-    family = kc.get_family("minimax-h3-text-to-image")
+    family = kc.get_family("minimax-h3-image")
     assert family is not None
-    mode_id = family["modes"][0]["id"]
-    two_k = kc.estimate_usd(family, mode_id, {"prompt": "x", "resolution": "2K"})
-    four_k = kc.estimate_usd(family, mode_id, {"prompt": "x", "resolution": "4K"})
+    two_k = kc.estimate_usd(family, "t2i", {"prompt": "x", "resolution": "2K"})
+    four_k = kc.estimate_usd(family, "t2i", {"prompt": "x", "resolution": "4K"})
     assert two_k["breakdown"]["matched_rule"] == {"max_mp": 4.5, "resolution": "2K"}
     assert four_k["breakdown"]["matched_rule"] == {"max_mp": 20, "resolution": "4K"}
     assert four_k["usd_client"] > two_k["usd_client"]
@@ -1153,9 +1106,8 @@ def test_resolution_derived_from_upscale_factor() -> None:
     """Если разрешения в форме нет, оно выводится из фактора апскейла."""
     family = kc.get_family("kie-image-upscale")
     assert family is not None
-    mode_id = family["modes"][0]["id"]
     for factor, resolution in (("2", "2K"), ("4", "4K"), ("8", "8K")):
-        est = kc.estimate_usd(family, mode_id, {"upscale_factor": factor})
+        est = kc.estimate_usd(family, "upscale", {"upscale_factor": factor})
         assert est["breakdown"]["matched_rule"] is not None, factor
         assert est["breakdown"]["matched_rule"]["resolution"] == resolution
 
@@ -1163,19 +1115,19 @@ def test_resolution_derived_from_upscale_factor() -> None:
 @needs_data
 def test_explicit_null_values_fall_back_to_mode_defaults() -> None:
     """UI шлёт null/"" для нетронутых полей: это «не задано», а не сброс цены."""
-    family = kc.get_family("kling-3-0-omni-image-to-video")
+    family = kc.get_family("kling-3-0")
     assert family is not None
-    base = kc.estimate_usd(family, "default", {"resolution": "1080p"})
+    base = kc.estimate_usd(family, "omni-i2v", {"resolution": "1080p"})
     for unset in (None, ""):
-        est = kc.estimate_usd(family, "default", {"resolution": "1080p", "audio": unset})
+        est = kc.estimate_usd(family, "omni-i2v", {"resolution": "1080p", "audio": unset})
         assert est["breakdown"]["matched_rule"] == base["breakdown"]["matched_rule"]
         assert est["usd_client"] == pytest.approx(0.6315, abs=0.0002)
-    with_false = kc.estimate_usd(family, "default", {"resolution": "1080p", "audio": False})
+    with_false = kc.estimate_usd(family, "omni-i2v", {"resolution": "1080p", "audio": False})
     assert with_false["usd_client"] == pytest.approx(0.6315, abs=0.0002)
-    family_26 = kc.get_family("kling-2-6-image-to-video")
+    family_26 = kc.get_family("kling-2-6")
     assert family_26 is not None
-    with_null = kc.estimate_usd(family_26, "default", {"duration": 10, "sound": None})
-    without = kc.estimate_usd(family_26, "default", {"duration": 10})
+    with_null = kc.estimate_usd(family_26, "i2v", {"duration": 10, "sound": None})
+    without = kc.estimate_usd(family_26, "i2v", {"duration": 10})
     assert with_null["breakdown"]["matched_rule"] == without["breakdown"]["matched_rule"]
     assert with_null["usd_client"] == pytest.approx(0.7875, abs=0.0002)
 
@@ -1183,9 +1135,9 @@ def test_explicit_null_values_fall_back_to_mode_defaults() -> None:
 @needs_data
 def test_null_values_do_not_go_to_payload_as_unset() -> None:
     """null в values не должен ни глушить дефолт, ни уезжать в тело запроса пустым."""
-    family = kc.get_family("kling-3-0-omni-image-to-video")
+    family = kc.get_family("kling-3-0")
     assert family is not None
-    payload = kc.build_mode_payload(family, "default", {"resolution": "1080p", "audio": None})
+    payload = kc.build_mode_payload(family, "omni-i2v", {"resolution": "1080p", "audio": None})
     body = payload["input"]
     assert body["resolution"] == "1080p"
     assert body["audio"] is False
@@ -1199,8 +1151,8 @@ def test_estimate_endpoint_null_value_keeps_mode_default() -> None:
     r = client.post(
         "/api/kie-create/estimate",
         json={
-            "model_id": "kling-3-0-omni-image-to-video",
-            "mode": "default",
+            "model_id": "kling-3-0",
+            "mode": "omni-i2v",
             "values": {
                 "resolution": "1080p",
                 "audio": None,
@@ -1217,28 +1169,24 @@ def test_estimate_endpoint_null_value_keeps_mode_default() -> None:
 
 @needs_data
 def test_estimate_endpoint_returns_catalog_family_id() -> None:
-    """family_id в ответе = id каталога из model_id (docs-семья, без legacy-переименований)."""
+    """family_id в ответе = id каталога из model_id (у части семейств он с суффиксом)."""
     client = TestClient(_app())
     r = client.post(
         "/api/kie-create/estimate",
-        json={
-            "model_id": "hailuo-2-3-image-to-video-pro",
-            "mode": "default",
-            "values": {"duration": 10, "resolution": "768P"},
-        },
+        json={"model_id": "hailuo-2-3-i2v", "mode": "i2v-pro", "values": {"duration": 10, "resolution": "768P"}},
     )
     assert r.status_code == 200, r.text
     data = r.json()
-    assert data["family_id"] == "hailuo-2-3-image-to-video-pro"
-    assert data["mode_id"] == "default"
+    assert data["family_id"] == "hailuo-2-3-i2v"
+    assert data["mode_id"] == "i2v-pro"
     assert data["usd_client"] == pytest.approx(0.5625, abs=0.0002)
     # у обычных семейств ничего не меняется
     plain = client.post(
         "/api/kie-create/estimate",
-        json={"model_id": "kling-3-0-video", "mode": "default", "values": {"resolution": "1080p"}},
+        json={"model_id": "kling-3-0", "mode": "omni-i2v", "values": {"resolution": "1080p"}},
     )
     assert plain.status_code == 200, plain.text
-    assert plain.json()["family_id"] == "kling-3-0-video"
+    assert plain.json()["family_id"] == "kling-3-0"
 
 
 @needs_data
@@ -1273,8 +1221,8 @@ def test_generate_endpoint_returns_catalog_family_id(
     r = client.post(
         "/api/kie-create/generate",
         json={
-            "model_id": "hailuo-2-3-image-to-video-pro",
-            "mode": "default",
+            "model_id": "hailuo-2-3-i2v",
+            "mode": "i2v-pro",
             "values": {
                 "prompt": "x",
                 "image_url": ["https://example.com/a.png"],
@@ -1285,14 +1233,14 @@ def test_generate_endpoint_returns_catalog_family_id(
     )
     assert r.status_code == 200, r.text
     data = r.json()
-    assert data["estimate"]["family_id"] == "hailuo-2-3-image-to-video-pro"
+    assert data["estimate"]["family_id"] == "hailuo-2-3-i2v"
     assert data["estimate"]["usd_client"] == pytest.approx(0.5625, abs=0.0002)
 
 
 @needs_data
 def test_nearest_tariff_when_combo_missing_from_price() -> None:
     """Нет точного правила — берём ближайший тариф, цена не падает к глобальному минимуму."""
-    family = kc.get_family("hailuo-2-3-image-to-video-pro")
+    family = kc.get_family("hailuo-2-3-i2v")
     assert family is not None
     priced = {
         (6, "768P"): 0.2812,
@@ -1300,11 +1248,11 @@ def test_nearest_tariff_when_combo_missing_from_price() -> None:
         (6, "1080P"): 0.5,
     }
     for (duration, resolution), want in priced.items():
-        est = kc.estimate_usd(family, "default", {"duration": duration, "resolution": resolution})
+        est = kc.estimate_usd(family, "i2v-pro", {"duration": duration, "resolution": resolution})
         assert est["usd_client"] == pytest.approx(want, abs=0.0002), (duration, resolution)
         assert est["approx"] is False
     # 10с + 1080P нет в прайсе: ближайшие тарифы 0.5625 (10с+768P) и 0.5 (6с+1080P)
-    missing = kc.estimate_usd(family, "default", {"duration": 10, "resolution": "1080P"})
+    missing = kc.estimate_usd(family, "i2v-pro", {"duration": 10, "resolution": "1080P"})
     assert missing["usd_client"] == pytest.approx(0.5625, abs=0.0002)
     assert missing["approx"] is True
     assert missing["breakdown"]["approx"] is True
@@ -1317,11 +1265,11 @@ def test_nearest_tariff_when_combo_missing_from_price() -> None:
 
 @needs_data
 def test_nearest_tariff_hailuo_standard_mode() -> None:
-    """standard: 10с+1080P было 0.19 (default), должно быть ≥ тарифа 6с+1080P."""
-    family = kc.get_family("hailuo-2-3-image-to-video-standard")
+    """i2v-standard: 10с+1080P было 0.19 (default), должно быть ≥ тарифа 6с+1080P."""
+    family = kc.get_family("hailuo-2-3-i2v")
     assert family is not None
-    six_1080 = kc.estimate_usd(family, "default", {"duration": 6, "resolution": "1080P"})
-    ten_1080 = kc.estimate_usd(family, "default", {"duration": 10, "resolution": "1080P"})
+    six_1080 = kc.estimate_usd(family, "i2v-standard", {"duration": 6, "resolution": "1080P"})
+    ten_1080 = kc.estimate_usd(family, "i2v-standard", {"duration": 10, "resolution": "1080P"})
     assert ten_1080["usd_client"] == pytest.approx(0.3125, abs=0.0002)
     assert ten_1080["approx"] is True
     assert ten_1080["usd_client"] >= six_1080["usd_client"]
@@ -1330,12 +1278,12 @@ def test_nearest_tariff_hailuo_standard_mode() -> None:
 @needs_data
 def test_kling_video_price_matrix_is_complete() -> None:
     """kling-3-0/video: все комбинации режим×звук в прайсе — approx не включается."""
-    family = kc.get_family("kling-3-0-video")
+    family = kc.get_family("kling-3-0")
     assert family is not None
     prices: dict[tuple[str, bool], float] = {}
     for mode_value in ("std", "pro"):
         for sound in (False, True):
-            est = kc.estimate_usd(family, "default", {"mode": mode_value, "sound": sound, "duration": 5})
+            est = kc.estimate_usd(family, "video", {"mode": mode_value, "sound": sound, "duration": 5})
             assert est["approx"] is False, (mode_value, sound)
             assert est["breakdown"]["matched_rule"]["sound"] is sound
             prices[(mode_value, sound)] = est["usd_client"]

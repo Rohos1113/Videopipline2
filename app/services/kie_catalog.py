@@ -2402,9 +2402,7 @@ def _mode_card(mode: dict[str, Any], fam: dict[str, Any]) -> dict[str, Any]:
         "kie_id": str(mode.get("kie_id") or ""),
         "task_type": str(mode.get("task_type") or ""),
         "api": str(mode.get("api") or "jobs"),
-        "media": _MEDIA_CORRECTIONS.get(
-            str(fam.get("id") or ""), str(mode.get("media") or fam.get("media") or "")
-        ),
+        "media": str(mode.get("media") or fam.get("media") or ""),
         "fields": mode.get("fields") or [],
         "pricing": pricing,
         "constraints": mode.get("constraints") or [],
@@ -2414,22 +2412,49 @@ def _mode_card(mode: dict[str, Any], fam: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-# Медиа, которые kie.ai отдаёт с ошибкой в taskType (проверено по raw models.json)
-# или которые не выводятся из taskType однозначно. Ключ — id docs-семьи.
-_MEDIA_CORRECTIONS: dict[str, str] = {
-    # API пишет "Text to Video", хотя id и прайс — про картинку
-    "ideogram-v3-text-to-image": "image",
-    # Lip Sync: аудио+картинка → видео, слова "Video" в taskType нет
-    "infinitalk-from-audio": "video",
-}
+def _primary_legacy(fam: dict[str, Any]) -> dict[str, Any] | None:
+    """Legacy-модель, чьи поля/цены берём для карточки семьи (совместимость UI)."""
+    fid = str(fam.get("id") or "")
+    for spec in MODELS:
+        if str(spec["id"]) == fid:
+            return spec
+    default_mode = get_mode(fam) or {}
+    kie_id = str(default_mode.get("kie_id") or "")
+    if kie_id:
+        for spec in MODELS:
+            if kie_id in _legacy_kie_ids(spec):
+                return spec
+    for spec in MODELS:
+        if _FAMILY_BY_LEGACY_ID.get(str(spec["id"])) is fam:
+            return spec
+    return None
 
 
-def _family_card(fam: dict[str, Any]) -> dict[str, Any]:
-    """Карточка семьи для UI: ровно docs-семья (id/label/media/modes как есть)."""
+def _audio_card(spec: dict[str, Any]) -> dict[str, Any]:
+    """Аудио/музыка/голос — как раньше, без семей и USD-наценки."""
+    return {
+        "id": spec["id"],
+        "label": spec["label"],
+        "category": spec["category"],
+        "media": _media_of(spec),
+        "desc": spec.get("desc") or "",
+        "hint": spec.get("hint") or "",
+        "is_top": bool(spec.get("is_top", False)),
+        "isTop": bool(spec.get("is_top", False)),
+        "badge": spec.get("badge") or "",
+        "result": spec.get("result"),
+        "fields": spec.get("fields") or [],
+        "pricing": spec.get("pricing") or {},
+    }
+
+
+def _family_card(fam: dict[str, Any], legacy: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Карточка семьи для UI: modes[] + legacy-поля для обратной совместимости."""
     modes = fam.get("modes") or []
     mode_cards = [_mode_card(mode, fam) for mode in modes]
     default_mode = get_mode(fam) or (modes[0] if modes else {})
-    fields = default_mode.get("fields") or []
+    default_fields = default_mode.get("fields") or []
+    fields = (legacy or {}).get("fields") or default_fields
     if not fields:
         for card in mode_cards:
             if card.get("fields"):
@@ -2445,22 +2470,24 @@ def _family_card(fam: dict[str, Any]) -> dict[str, Any]:
                 "desc": "неизвестно",
             }
         ]
-    pricing = _credits_pricing_from_usd(_mode_usd_pricing(default_mode))
-    fid = str(fam.get("id") or "")
-    media = _MEDIA_CORRECTIONS.get(fid, str(fam.get("media") or "video"))
-    category = media if media in ("video", "image", "audio") else "video"
+    pricing = (legacy or {}).get("pricing")
+    if not pricing:
+        pricing = _credits_pricing_from_usd(_mode_usd_pricing(default_mode))
+    is_top = bool((legacy or {}).get("is_top", fam.get("is_top", False)))
+    media = str(fam.get("media") or _media_of(legacy or {}) or "video")
+    category = str((legacy or {}).get("category") or ("video" if media == "video" else "image"))
     prices = [card["price_from_usd"] for card in mode_cards if card.get("price_from_usd")]
     return {
-        "id": str(fam.get("id") or ""),
-        "label": str(fam.get("label") or fam.get("id") or ""),
+        "id": str((legacy or {}).get("id") or fam.get("id")),
+        "label": str(fam.get("label") or (legacy or {}).get("label") or fam.get("id")),
         "category": category,
         "media": media,
-        "desc": str(fam.get("desc") or ""),
-        "hint": "",
-        "is_top": bool(fam.get("is_top", False)),
-        "isTop": bool(fam.get("is_top", False)),
-        "badge": "",
-        "result": media,
+        "desc": str(fam.get("desc") or (legacy or {}).get("desc") or ""),
+        "hint": str((legacy or {}).get("hint") or ""),
+        "is_top": is_top,
+        "isTop": is_top,
+        "badge": str((legacy or {}).get("badge") or ""),
+        "result": str((legacy or {}).get("result") or media),
         "fields": fields,
         "pricing": pricing,
         "brand": str(fam.get("brand") or ""),
@@ -2470,25 +2497,6 @@ def _family_card(fam: dict[str, Any]) -> dict[str, Any]:
         "modes": mode_cards,
         "modes_count": len(mode_cards),
         "price_from_usd": round(min(prices), 4) if prices else None,
-    }
-
-
-def _audio_card(spec: dict[str, Any]) -> dict[str, Any]:
-    """Аудио/музыка/голос — отдельная карточка без modes, во вкладку «Аудио»."""
-    return {
-        "id": spec["id"],
-        "label": spec["label"],
-        "category": spec["category"],
-        "media": _media_of(spec),
-        "audio": True,
-        "desc": spec.get("desc") or "",
-        "hint": spec.get("hint") or "",
-        "is_top": bool(spec.get("is_top", False)),
-        "isTop": bool(spec.get("is_top", False)),
-        "badge": spec.get("badge") or "",
-        "result": spec.get("result"),
-        "fields": spec.get("fields") or [],
-        "pricing": spec.get("pricing") or {},
     }
 
 
@@ -2506,19 +2514,28 @@ def _media_of(m: dict[str, Any]) -> str:
 
 
 def catalog_for_ui() -> dict[str, Any]:
-    """Каталог для фронта: 84 docs-семьи (медиа) + 9 аудио-карточек без modes.
+    """Каталог для фронта: семьи с режимами (медиа) + аудио как раньше.
 
-    FAMILIES — единственный источник состава для видео/картинок: id/label/media/
-    modes отдаются как есть, без переименований в legacy-id и без склейки
-    режимов. Legacy MODELS остаются для маршрутизации генерации и для аудио:
-    музыка/звук/голос (Suno, ElevenLabs) отдаются отдельными карточками с
-    media="audio", audio=true и без modes — чтобы UI клал их во вкладку «Аудио»,
-    а не в видео/картинки. Счётчики families_count/media аудио не включают.
+    Медиа: одна карточка на семейство, внутри modes[] со своими полями и
+    ценами в USD (pricing.usd_default_client). Старые одиночные модели без
+    семьи остаются карточкой с одним режимом «default».
+    Аудио/музыка/голос отдаются ровно как раньше — без семей и наценки.
     """
-    cards = [_family_card(fam) for fam in FAMILIES]
+    covered: set[str] = set()
+    cards: list[dict[str, Any]] = []
+    for fam in FAMILIES:
+        legacy = _primary_legacy(fam)
+        cards.append(_family_card(fam, legacy))
+        for spec in MODELS:
+            if _FAMILY_BY_LEGACY_ID.get(str(spec["id"])) is fam:
+                covered.add(str(spec["id"]))
     for spec in MODELS:
+        if str(spec["id"]) in covered:
+            continue
         if spec.get("category") in _AUDIO_CATEGORIES:
             cards.append(_audio_card(spec))
+            continue
+        cards.append(_family_card(_singleton_family(spec), spec))
     return {
         "credit_usd": CREDIT_USD,
         "markup": MARKUP,

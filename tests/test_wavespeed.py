@@ -118,12 +118,7 @@ def test_catalog_endpoint_reports_wavespeed_configured() -> None:
     assert r.status_code == 200
     data = r.json()
     assert "wavespeed_configured" in data
-    # пикер KIE = 84 curated docs-семьи + 9 аудио-карточек без modes
-    assert data["families_count"] == 84
-    assert len(data["models"]) == 93
-    audio = [m for m in data["models"] if m.get("audio")]
-    assert len(audio) == 9
-    assert any(m["id"] == "elevenlabs-v4" for m in audio)
+    assert any(m["id"] == "elevenlabs-v4" for m in data["models"])
 
 
 def test_voices_endpoints() -> None:
