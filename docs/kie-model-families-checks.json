@@ -47,8 +47,100 @@
  "fields": {
   "modes_total": 182,
   "modes_with_docs_schema": 175,
-  "modes_fields_complete": 175,
-  "modes_fields_mismatch": [],
+  "modes_fields_complete": 165,
+  "modes_fields_mismatch": [
+   {
+    "kie_id": "google/gemini-omni-flash-1-2-extend",
+    "schema_fields": 4,
+    "written_fields": 5,
+    "missed": [],
+    "extra": [
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "grok-imagine/extend",
+    "schema_fields": 4,
+    "written_fields": 6,
+    "missed": [],
+    "extra": [
+     "duration",
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "grok-imagine/upscale",
+    "schema_fields": 2,
+    "written_fields": 3,
+    "missed": [],
+    "extra": [
+     "from_resolution"
+    ]
+   },
+   {
+    "kie_id": "hailuo/02-text-to-video-pro",
+    "schema_fields": 3,
+    "written_fields": 4,
+    "missed": [],
+    "extra": [
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "hailuo/02-text-to-video-standard",
+    "schema_fields": 4,
+    "written_fields": 5,
+    "missed": [],
+    "extra": [
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "hailuo/02-image-to-video-pro",
+    "schema_fields": 5,
+    "written_fields": 6,
+    "missed": [],
+    "extra": [
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "kling/ai-avatar-pro",
+    "schema_fields": 3,
+    "written_fields": 4,
+    "missed": [],
+    "extra": [
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "kling/ai-avatar-standard",
+    "schema_fields": 3,
+    "written_fields": 4,
+    "missed": [],
+    "extra": [
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "runway",
+    "schema_fields": 6,
+    "written_fields": 7,
+    "missed": [],
+    "extra": [
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "runway/extend-ai-video",
+    "schema_fields": 4,
+    "written_fields": 5,
+    "missed": [],
+    "extra": [
+     "resolution"
+    ]
+   }
+  ],
   "modes_fields_from_catalog": 7,
   "modes_without_fields": 0,
   "modes_without_fields_list": [],
@@ -210,7 +302,7 @@
     ]
    }
   ],
-  "ok": true
+  "ok": false
  },
  "pricing": {
   "modes_with_price": 178,
@@ -225,8 +317,48 @@
   },
   "unit_source": "docs/kie-prices-usd.json",
   "checked_against_csv": 171,
-  "numbers_match": 149,
+  "numbers_match": 145,
   "mismatches": [
+   {
+    "kie_id": "hailuo/2-3-image-to-video-pro",
+    "csv": [
+     30.0,
+     45.0,
+     50.0,
+     80.0,
+     90.0
+    ],
+    "mine": [
+     45.0,
+     80.0,
+     90.0
+    ],
+    "only_csv": [
+     30.0,
+     50.0
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "hailuo/2-3-image-to-video-standard",
+    "csv": [
+     30.0,
+     45.0,
+     50.0,
+     80.0,
+     90.0
+    ],
+    "mine": [
+     30.0,
+     50.0
+    ],
+    "only_csv": [
+     45.0,
+     80.0,
+     90.0
+    ],
+    "only_mine": []
+   },
    {
     "kie_id": "minimax-h3/text-to-video",
     "csv": [
@@ -290,6 +422,34 @@
      1.5,
      3.0
     ]
+   },
+   {
+    "kie_id": "kling/ai-avatar-pro",
+    "csv": [
+     10.1,
+     20.2
+    ],
+    "mine": [
+     20.2
+    ],
+    "only_csv": [
+     10.1
+    ],
+    "only_mine": []
+   },
+   {
+    "kie_id": "kling/ai-avatar-standard",
+    "csv": [
+     10.1,
+     20.2
+    ],
+    "mine": [
+     10.1
+    ],
+    "only_csv": [
+     20.2
+    ],
+    "only_mine": []
    },
    {
     "kie_id": "wan/2-6-text-to-video",
@@ -972,9 +1132,332 @@
   "rules_mismatch": [],
   "ok": true
  },
+ "field_patches": {
+  "count": 12,
+  "modes": 10,
+  "fields": [
+   {
+    "kie_id": "google/gemini-omni-flash-1-2-extend",
+    "family": "gemini-omni-flash-1-2",
+    "action": "add",
+    "field": "resolution",
+    "kind": "select",
+    "default": "360p",
+    "options": [
+     "360p",
+     "720p"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "grok-imagine/extend",
+    "family": "grok-imagine-video",
+    "action": "add",
+    "field": "duration",
+    "kind": "select",
+    "default": "6",
+    "options": [
+     "6",
+     "10"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "grok-imagine/extend",
+    "family": "grok-imagine-video",
+    "action": "add",
+    "field": "resolution",
+    "kind": "select",
+    "default": "480p",
+    "options": [
+     "480p",
+     "720p"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "grok-imagine/upscale",
+    "family": "grok-imagine-video",
+    "action": "add",
+    "field": "from_resolution",
+    "kind": "select",
+    "default": "480P",
+    "options": [
+     "480P",
+     "720P"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "hailuo/02-text-to-video-pro",
+    "family": "hailuo-02",
+    "action": "add",
+    "field": "resolution",
+    "kind": "select",
+    "default": "1080P",
+    "options": [
+     "1080P"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "hailuo/02-text-to-video-standard",
+    "family": "hailuo-02",
+    "action": "add",
+    "field": "resolution",
+    "kind": "select",
+    "default": "768P",
+    "options": [
+     "768P"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "hailuo/02-image-to-video-pro",
+    "family": "hailuo-02",
+    "action": "add",
+    "field": "resolution",
+    "kind": "select",
+    "default": "1080P",
+    "options": [
+     "1080P"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "kling/ai-avatar-pro",
+    "family": "kling-avatar",
+    "action": "add",
+    "field": "resolution",
+    "kind": "select",
+    "default": "1080p",
+    "options": [
+     "1080p"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "kling/ai-avatar-standard",
+    "family": "kling-avatar",
+    "action": "add",
+    "field": "resolution",
+    "kind": "select",
+    "default": "720p",
+    "options": [
+     "720p"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "runway",
+    "family": "runway",
+    "action": "add",
+    "field": "resolution",
+    "kind": "select",
+    "default": "720p",
+    "options": [
+     "720p",
+     "1080p"
+    ],
+    "before": null
+   },
+   {
+    "kie_id": "runway",
+    "family": "runway",
+    "action": "replace",
+    "field": "duration",
+    "kind": "select",
+    "default": "5",
+    "options": [
+     "5",
+     "10"
+    ],
+    "before": {
+     "kind": "number",
+     "default": null,
+     "options": null
+    }
+   },
+   {
+    "kie_id": "runway/extend-ai-video",
+    "family": "runway",
+    "action": "add",
+    "field": "resolution",
+    "kind": "select",
+    "default": "720p",
+    "options": [
+     "720p",
+     "1080p"
+    ],
+    "before": null
+   }
+  ],
+  "note": "task-22: догружены поля, без которых when-правило цены не находит значение (тир зашит в kie_id, поле называется иначе или его нет в OpenAPI-схеме)"
+ },
+ "duration_defaults": {
+  "filled": 15,
+  "modes": 15,
+  "fields": [
+   {
+    "kie_id": "google/gemini-omni-flash-1-2",
+    "family": "gemini-omni-flash-1-2",
+    "field": "duration",
+    "kind": "number",
+    "default": 5,
+    "options": [],
+    "reason": "number: контрактный дефолт 5 внутри границ поля"
+   },
+   {
+    "kie_id": "google/gemini-omni-flash-1-2-extend",
+    "family": "gemini-omni-flash-1-2",
+    "field": "duration",
+    "kind": "number",
+    "default": 5,
+    "options": [],
+    "reason": "number: контрактный дефолт 5 внутри границ поля"
+   },
+   {
+    "kie_id": "grok-imagine/text-to-video",
+    "family": "grok-imagine-video",
+    "field": "duration",
+    "kind": "number",
+    "default": 6,
+    "options": [],
+    "reason": "number: 5 вне границ 6–30 → нижняя граница"
+   },
+   {
+    "kie_id": "hailuo/02-text-to-video-standard",
+    "family": "hailuo-02",
+    "field": "duration",
+    "kind": "select",
+    "default": "6",
+    "options": [
+     "6",
+     "10"
+    ],
+    "reason": "select: первая option"
+   },
+   {
+    "kie_id": "hailuo/02-image-to-video-standard",
+    "family": "hailuo-02",
+    "field": "duration",
+    "kind": "select",
+    "default": "6",
+    "options": [
+     "6",
+     "10"
+    ],
+    "reason": "select: первая option"
+   },
+   {
+    "kie_id": "kling-3.0/video",
+    "family": "kling-3-0",
+    "field": "duration",
+    "kind": "select",
+    "default": "5",
+    "options": [
+     "3",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8"
+    ],
+    "reason": "select: \"5\" есть в options"
+   },
+   {
+    "kie_id": "pixverse-v6/text-to-video",
+    "family": "pixverse-v6",
+    "field": "duration",
+    "kind": "number",
+    "default": 5,
+    "options": [],
+    "reason": "number: контрактный дефолт 5 внутри границ поля"
+   },
+   {
+    "kie_id": "pixverse-v6/image-to-video",
+    "family": "pixverse-v6",
+    "field": "duration",
+    "kind": "number",
+    "default": 5,
+    "options": [],
+    "reason": "number: контрактный дефолт 5 внутри границ поля"
+   },
+   {
+    "kie_id": "pixverse-v6-max/text-to-video",
+    "family": "pixverse-v6",
+    "field": "duration",
+    "kind": "number",
+    "default": 5,
+    "options": [],
+    "reason": "number: контрактный дефолт 5 внутри границ поля"
+   },
+   {
+    "kie_id": "pixverse-v6-max/image-to-video",
+    "family": "pixverse-v6",
+    "field": "duration",
+    "kind": "number",
+    "default": 5,
+    "options": [],
+    "reason": "number: контрактный дефолт 5 внутри границ поля"
+   },
+   {
+    "kie_id": "pixverse-v6/transition",
+    "family": "pixverse-v6",
+    "field": "duration",
+    "kind": "number",
+    "default": 5,
+    "options": [],
+    "reason": "number: контрактный дефолт 5 внутри границ поля"
+   },
+   {
+    "kie_id": "pixverse-v6/extend",
+    "family": "pixverse-v6",
+    "field": "duration",
+    "kind": "number",
+    "default": 5,
+    "options": [],
+    "reason": "number: контрактный дефолт 5 внутри границ поля"
+   },
+   {
+    "kie_id": "pixverse-v6/reference-to-video",
+    "family": "pixverse-v6",
+    "field": "duration",
+    "kind": "number",
+    "default": 5,
+    "options": [],
+    "reason": "number: контрактный дефолт 5 внутри границ поля"
+   },
+   {
+    "kie_id": "wan/2-5-text-to-video",
+    "family": "wan-2-5",
+    "field": "duration",
+    "kind": "select",
+    "default": "5",
+    "options": [
+     "5",
+     "10"
+    ],
+    "reason": "select: \"5\" есть в options"
+   },
+   {
+    "kie_id": "wan/2-5-image-to-video",
+    "family": "wan-2-5",
+    "field": "duration",
+    "kind": "select",
+    "default": "5",
+    "options": [
+     "5",
+     "10"
+    ],
+    "reason": "select: \"5\" есть в options"
+   }
+  ],
+  "note": "task-22: пустой duration → select: \"5\" (если есть в options), иначе первая опция; number: 5, а если 5 вне границ поля — нижняя граница"
+ },
  "defaults": {
-  "filled": 50,
-  "modes": 45,
+  "filled": 53,
+  "modes": 48,
   "fields": [
    {
     "kie_id": "bytedance/seedance-2-5-draft",
@@ -1483,6 +1966,42 @@
     "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
    },
    {
+    "kie_id": "seedream/5-pro-text-to-image",
+    "family": "seedream-5",
+    "field": "quality",
+    "kind": "select",
+    "default": "basic",
+    "rule_key": "quality",
+    "rule_values": [
+     "basic",
+     "high"
+    ],
+    "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+   },
+   {
+    "kie_id": "seedream/5-pro-image-to-image",
+    "family": "seedream-5",
+    "field": "quality",
+    "kind": "select",
+    "default": "basic",
+    "rule_key": "quality",
+    "rule_values": [
+     "basic",
+     "high"
+    ],
+    "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+   },
+   {
+    "kie_id": "grok-imagine/text-to-image",
+    "family": "grok-imagine-image",
+    "field": "enable_pro",
+    "kind": "toggle",
+    "default": false,
+    "rule_key": "enable_pro",
+    "rule_values": [],
+    "reason": "поле участвует в when-правиле цены, default был null: toggle → false, значение есть в правилах"
+   },
+   {
     "kie_id": "ideogram/v3-text-to-image",
     "family": "ideogram-v3",
     "field": "rendering_speed",
@@ -1636,7 +2155,7 @@
   "note": "дефолты поставлены только полям из when-правил цены, у которых default был null; toggle → false, select → первый option, и только если значение есть в правилах"
  },
  "catalog_snapshot": {
-  "git_blob_sha": "89307571cb56834f9595378c108ae15cbb900423",
+  "git_blob_sha": "b9504bc39f4051e55317d5c69299d7db198ef6bc",
   "entries": 33
  },
  "live_check": {

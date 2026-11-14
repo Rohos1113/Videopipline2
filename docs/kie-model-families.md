@@ -30,7 +30,7 @@
 ### Сверка 2 — поля против docs-схем
 
 - Режимов всего **182**.
-- С OpenAPI-схемой в docs.kie.ai: **175**, поля выписаны полностью у **175** (расхождений 0).
+- С OpenAPI-схемой в docs.kie.ai: **175**, поля выписаны полностью у **165** (расхождений 10).
 - Поля взяты из каталога студии (схемы в доках нет): **7**.
 - Без полей вообще (нет ни схемы, ни каталога): **0** — у таких режимов `fields_known: false` и `hint: «схема полей неизвестна»`, чтобы UI не подставлял поля карточки семейства; режим и цена сохранены.
 - `fields_known` у каждого режима: `true` — набор полей известен по схеме/каталогу, `false` — не угадываем. Сейчас `true` у 182 из 182.
@@ -43,15 +43,19 @@
 - Единицы (из прайса): 1m_tokens — 4, gen — 28, image — 72, mp — 2, sec — 72, unknown — 4
 - Единица в families.json совпала с прайсом у **178/178** режимов, где она в прайсе указана.
 - Набор правил (when + кредиты) совпал с прайсом у **178/178**.
-- Числа из `kie-ai-models.csv` — сверка справочная: 171 режимов, совпало 149, расхождений 22. CSV — снимок текста `pricingDesc`; в прайсе правила дробнее (тиры, звук, длительность, видеовход), поэтому набор кредитов в CSV может быть уже прайса. Деньги считает прайс.
+- Числа из `kie-ai-models.csv` — сверка справочная: 171 режимов, совпало 145, расхождений 26. CSV — снимок текста `pricingDesc`; в прайсе правила дробнее (тиры, звук, длительность, видеовход), поэтому набор кредитов в CSV может быть уже прайса. Деньги считает прайс.
 - Единиц, где families/прайс расходятся с CSV: 63 — это картинки (`image` в прайсе против «за картинку» → `gen` в CSV) и токены; единица взята из прайса.
 
 | id | числа в CSV | числа из моего разбора |
 |---|---|---|
+| `hailuo/2-3-image-to-video-pro` | [30.0, 45.0, 50.0, 80.0, 90.0] | [45.0, 80.0, 90.0] |
+| `hailuo/2-3-image-to-video-standard` | [30.0, 45.0, 50.0, 80.0, 90.0] | [30.0, 50.0] |
 | `minimax-h3/text-to-video` | [4.0, 8.0, 13.0] | [8.0, 13.0] |
 | `minimax-h3/image-to-video` | [4.0, 8.0, 13.0] | [8.0, 13.0] |
 | `minimax-h3/reference-to-video` | [4.0, 8.0, 13.0] | [8.0, 13.0] |
 | `video/upscale` | [6.0] | [1.5, 3.0, 6.0] |
+| `kling/ai-avatar-pro` | [10.1, 20.2] | [20.2] |
+| `kling/ai-avatar-standard` | [10.1, 20.2] | [10.1] |
 | `wan/2-6-text-to-video` | [210.0, 315.0] | [70.0, 105.0, 140.0, 210.0, 315.0] |
 | `wan/2-6-image-to-video` | [210.0, 315.0] | [70.0, 105.0, 140.0, 210.0, 315.0] |
 | `wan/2-6-video-to-video` | [210.0, 315.0] | [70.0, 105.0, 140.0, 210.0, 315.0] |
@@ -73,7 +77,7 @@
 
 ### Сверка 4 — дефолты полей, от которых зависит цена
 
-- Поставлено дефолтов: **50** у **45** режимов (было `default: null`). Правило: `toggle` → `false`, `select` → первый option, и только если это значение реально есть в правилах цены; остальным полям дефолт не выдумываем.
+- Поставлено дефолтов: **53** у **48** режимов (было `default: null`). Правило: `toggle` → `false`, `select` → первый option, и только если это значение реально есть в правилах цены; остальным полям дефолт не выдумываем.
 - Зачем: бэкенд сопоставляет правило по значению поля. Пока значение `null`, правило `when` не разрешается и `/estimate` берёт fallback-цену — в UI она расходится с выбранной настройкой (например, Kling 3.0 Omni 1080p: $0.47 вместо $0.63 из-за `audio:null`).
 
 | id | поле | тип | новый дефолт | ключ правила |
@@ -117,6 +121,9 @@
 | `flux-2/pro-image-to-image` | resolution | select | `1K` | resolution |
 | `flux-2/flex-text-to-image` | resolution | select | `1K` | resolution |
 | `flux-2/flex-image-to-image` | resolution | select | `1K` | resolution |
+| `seedream/5-pro-text-to-image` | quality | select | `basic` | quality |
+| `seedream/5-pro-image-to-image` | quality | select | `basic` | quality |
+| `grok-imagine/text-to-image` | enable_pro | toggle | false | enable_pro |
 | `ideogram/v3-text-to-image` | rendering_speed | select | `TURBO` | mode |
 | `gpt-image/1.5-text-to-image` | quality | select | `medium` | mode |
 | `gpt-image/1.5-image-to-image` | quality | select | `medium` | mode |
@@ -129,6 +136,47 @@
 | `qwen3/text-to-image` | resolution | select | `1K` | resolution |
 | `qwen3/pro-text-to-image` | resolution | select | `1K` | resolution |
 
+### Сверка 5 — поля догружены под правила цены (task-22)
+
+- Правок полей: **12** у **10** режимов: добавлены поля, без которых правило `when` не находит значение (тир зашит в `kie_id`, в схеме поле называется иначе или его нет). Было/стало — в `-checks.json` (`before`).
+
+| id | действие | поле | тип | новый дефолт | options |
+|---|---|---|---|---|---|
+| `google/gemini-omni-flash-1-2-extend` | add | resolution | select | `360p` | 360p, 720p |
+| `grok-imagine/extend` | add | duration | select | `6` | 6, 10 |
+| `grok-imagine/extend` | add | resolution | select | `480p` | 480p, 720p |
+| `grok-imagine/upscale` | add | from_resolution | select | `480P` | 480P, 720P |
+| `hailuo/02-text-to-video-pro` | add | resolution | select | `1080P` | 1080P |
+| `hailuo/02-text-to-video-standard` | add | resolution | select | `768P` | 768P |
+| `hailuo/02-image-to-video-pro` | add | resolution | select | `1080P` | 1080P |
+| `kling/ai-avatar-pro` | add | resolution | select | `1080p` | 1080p |
+| `kling/ai-avatar-standard` | add | resolution | select | `720p` | 720p |
+| `runway` | add | resolution | select | `720p` | 720p, 1080p |
+| `runway` | replace | duration | select | `5` | 5, 10 |
+| `runway/extend-ai-video` | add | resolution | select | `720p` | 720p, 1080p |
+
+### Сверка 6 — пустой duration получил дефолт (task-22)
+
+- Полей: **15** у **15** режимов. Правило: `select` → `"5"`, если он есть в `options`, иначе первая опция; `number` → `5`, а если 5 вне границ поля (по `min`/`max` или подсказке схемы) — нижняя граница.
+
+| id | поле | тип | дефолт | options | почему |
+|---|---|---|---|---|---|
+| `google/gemini-omni-flash-1-2` | duration | number | `5` |  | number: контрактный дефолт 5 внутри границ поля |
+| `google/gemini-omni-flash-1-2-extend` | duration | number | `5` |  | number: контрактный дефолт 5 внутри границ поля |
+| `grok-imagine/text-to-video` | duration | number | `6` |  | number: 5 вне границ 6–30 → нижняя граница |
+| `hailuo/02-text-to-video-standard` | duration | select | `6` | 6, 10 | select: первая option |
+| `hailuo/02-image-to-video-standard` | duration | select | `6` | 6, 10 | select: первая option |
+| `kling-3.0/video` | duration | select | `5` | 3, 4, 5, 6, 7, 8 | select: "5" есть в options |
+| `pixverse-v6/text-to-video` | duration | number | `5` |  | number: контрактный дефолт 5 внутри границ поля |
+| `pixverse-v6/image-to-video` | duration | number | `5` |  | number: контрактный дефолт 5 внутри границ поля |
+| `pixverse-v6-max/text-to-video` | duration | number | `5` |  | number: контрактный дефолт 5 внутри границ поля |
+| `pixverse-v6-max/image-to-video` | duration | number | `5` |  | number: контрактный дефолт 5 внутри границ поля |
+| `pixverse-v6/transition` | duration | number | `5` |  | number: контрактный дефолт 5 внутри границ поля |
+| `pixverse-v6/extend` | duration | number | `5` |  | number: контрактный дефолт 5 внутри границ поля |
+| `pixverse-v6/reference-to-video` | duration | number | `5` |  | number: контрактный дефолт 5 внутри границ поля |
+| `wan/2-5-text-to-video` | duration | select | `5` | 5, 10 | select: "5" есть в options |
+| `wan/2-5-image-to-video` | duration | select | `5` | 5, 10 | select: "5" есть в options |
+
 ## 3. Семейства по брендам — видео
 
 | Бренд | Семейство | Режимов | id | Режимы (kie_id) | Цена |
@@ -138,7 +186,7 @@
 |  | **Kling 2.6** (`kling-2-6`) | 3 | 3 | Текст → видео (`kling-2.6/text-to-video`), Картинка → видео (`kling-2.6/image-to-video`), Motion Control (`kling-2.6/motion-control`) | 63–252 кр/gen, 12.6–20.2 кр/sec |
 |  | **Kling 3.0** (`kling-3-0`) | 8 | 8 | Видео (Pro / Standard / 4K) (`kling-3.0/video`), Motion Control (`kling-3.0/motion-control`), Omni: текст → видео (`kling-3.0-omni/text-to-video`), Omni: картинка → видео (`kling-3.0-omni/image-to-video`), Omni: референс → видео (`kling-3.0-omni/reference-to-video`), Omni: трансформация (`kling-3.0-omni/transformation`), Turbo: текст → видео (`kling/v3-turbo-text-to-video`), Turbo: картинка → видео (`kling/v3-turbo-image-to-video`) | 15.1–75.5 кр/sec, 22.7–30.2 кр/sec, 22.7–75.5 кр/sec, 20.2–25.2 кр/sec |
 |  | **Kling 4.0** (`kling-4-0`) | 4 | 4 | Ключевые кадры → видео (`kling-4.0/keyframe-to-video`), Flash: ключевые кадры → видео (`kling-4.0/flash-keyframe-to-video`), Референс → видео (`kling-4.0/reference-to-video`), Flash: референс → видео (`kling-4.0/flash-reference-to-video`) | 28.5–42.5 кр/sec, 17 кр/sec, 17–42.5 кр/sec, 11.3–17 кр/sec |
-|  | **Kling AI Avatar** (`kling-avatar`) | 2 | 2 | Аватар (Pro) (`kling/ai-avatar-pro`), Аватар (Standard) (`kling/ai-avatar-standard`) | 10.1–20.2 кр/sec |
+|  | **Kling AI Avatar** (`kling-avatar`) | 2 | 2 | Аватар (Pro) (`kling/ai-avatar-pro`), Аватар (Standard) (`kling/ai-avatar-standard`) | 20.2 кр/sec, 10.1 кр/sec |
 | Wan | **WAN 2.2 A14B** (`wan-2-2`) | 3 | 3 | Текст → видео (Turbo) (`wan/2-2-a14b-text-to-video-turbo`), Картинка → видео (Turbo) (`wan/2-2-a14b-image-to-video-turbo`), Речь → видео (Turbo) (`wan/2-2-a14b-speech-to-video-turbo`) | 8–16 кр/sec, 12–24 кр/sec |
 |  | **WAN 2.2 Animate** (`wan-2-2-animate`) | 2 | 2 | Перенос движения (`wan/2-2-animate-move`), Замена персонажа (`wan/2-2-animate-replace`) | 12.5 кр/sec, 6–12.5 кр/sec |
 |  | **WAN 2.5** (`wan-2-5`) | 2 | 2 | Текст → видео (`wan/2-5-text-to-video`), Картинка → видео (`wan/2-5-image-to-video`) | 12–20 кр/sec |
@@ -154,7 +202,7 @@
 |  | **Gemini Omni Flash 1.1** (`gemini-omni-flash-1-1`) | 1 | 1 | Видео (текст / картинка / видео) (`google/gemini-omni-flash-1-1`) | 63–252 кр/gen |
 |  | **Gemini Omni Flash 1.2** (`gemini-omni-flash-1-2`) | 2 | 2 | Видео (текст / картинка / видео) (`google/gemini-omni-flash-1-2`), Продление видео (`google/gemini-omni-flash-1-2-extend`) | 4–22 кр/sec, 4–9 кр/sec |
 | Hailuo | **Hailuo 02** (`hailuo-02`) | 4 | 4 | Текст → видео (Pro) (`hailuo/02-text-to-video-pro`), Текст → видео (Standard) (`hailuo/02-text-to-video-standard`), Картинка → видео (Pro) (`hailuo/02-image-to-video-pro`), Картинка → видео (Standard) (`hailuo/02-image-to-video-standard`) | 9.5 кр/sec, 5 кр/sec, 2–5 кр/sec |
-|  | **Hailuo 2.3** (`hailuo-2-3`) | 2 | 2 | Картинка → видео (Pro) (`hailuo/2-3-image-to-video-pro`), Картинка → видео (Standard) (`hailuo/2-3-image-to-video-standard`) | 30–90 кр/gen |
+|  | **Hailuo 2.3** (`hailuo-2-3`) | 2 | 2 | Картинка → видео (Pro) (`hailuo/2-3-image-to-video-pro`), Картинка → видео (Standard) (`hailuo/2-3-image-to-video-standard`) | 45–90 кр/gen, 30–50 кр/gen |
 |  | **MiniMax H3 (видео)** (`minimax-h3`) | 3 | 3 | Текст → видео (`minimax-h3/text-to-video`), Картинка → видео (`minimax-h3/image-to-video`), Референс → видео (`minimax-h3/reference-to-video`) | 8–13 кр/sec |
 | Alibaba | **HappyHorse 1.1** (`happyhorse-1-1`) | 3 | 3 | Текст → видео (`happyhorse-1-1/text-to-video`), Картинка → видео (`happyhorse-1-1/image-to-video`), Референс → видео (`happyhorse-1-1/reference-to-video`) | 22.5–29 кр/sec |
 |  | **HappyHorse** (`happyhorse`) | 4 | 4 | Текст → видео (`happyhorse/text-to-video`), Картинка → видео (`happyhorse/image-to-video`), Референс → видео (`happyhorse/reference-to-video`), Редактирование видео (`happyhorse/video-edit`) | 28–48 кр/sec |

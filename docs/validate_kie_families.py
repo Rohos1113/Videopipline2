@@ -49,6 +49,8 @@ PRICE_FIELD_CANDIDATES = {
     "upscale": ("upscale_factor", "upscale", "scale", "factor"),
     "from_resolution": ("from_resolution", "source_resolution", "input_resolution"),
     "source_resolution": ("from_resolution", "source_resolution", "input_resolution"),
+    "enable_pro": ("enable_pro",),
+    "quality": ("quality",),
 }
 TIER_TO_RES = {"720p": {"720p", "std", "standard"}, "1080p": {"1080p", "pro"}}
 defaults_issues: list[dict] = []
@@ -219,6 +221,115 @@ def main() -> int:
         sound = next((x for x in kling26.get("fields") or [] if x.get("name") == "sound"), None)
         check(sound is not None and sound.get("default") is False,
               "kling-2.6/image-to-video: у sound должен быть default false")
+
+    # --- сверка правил цены families ↔ prices (task-22): те же when и деньги ---
+    rules_checked = 0
+    rule_mismatch: list[dict] = []
+    for fam in families:
+        for mode in fam.get("modes") or []:
+            kid = mode.get("kie_id")
+            rec = prices.get(kid) or {}
+            want = [{"when": r.get("when") or {}, "usd_kie": r.get("usd_kie")}
+                    for r in rec.get("rules") or []]
+            if not want:
+                continue
+            mine = [{"when": r.get("when") or {}, "usd_kie": r.get("usd_kie")}
+                    for r in (mode.get("pricing") or {}).get("rules") or []]
+            rules_checked += 1
+            if mine != want:
+                rule_mismatch.append({"kie_id": kid, "families": mine, "prices": want})
+    check(not rule_mismatch,
+          f"правила families != prices у {len(rule_mismatch)} режимов: "
+          + ", ".join(x["kie_id"] for x in rule_mismatch[:8]))
+    notes.append(f"правила цены в families = prices у {rules_checked}/{rules_checked} режимов")
+
+    # --- пустая длительность (task-22): select не должен остаться без default ---
+    duration_issues: list[dict] = []
+    duration_checked = 0
+    TASK22_DURATION = {
+        "hailuo/02-text-to-video-standard": "6",
+        "hailuo/02-image-to-video-standard": "6",
+        "kling-3.0/video": "5",
+        "wan/2-5-text-to-video": "5",
+        "wan/2-5-image-to-video": "5",
+    }
+    for fam in families:
+        for mode in fam.get("modes") or []:
+            for field in mode.get("fields") or []:
+                if field.get("name") not in PRICE_FIELD_CANDIDATES["duration"]:
+                    continue
+                if field.get("kind") != "select" or not (field.get("options") or []):
+                    continue
+                duration_checked += 1
+                opts = field["options"]
+                expected = "5" if "5" in opts else opts[0]
+                kid = mode.get("kie_id")
+                if kid in TASK22_DURATION:
+                    if str(field.get("default")) != TASK22_DURATION[kid]:
+                        duration_issues.append({"kie_id": kid, "field": field.get("name"),
+                                                "default": field.get("default"),
+                                                "expected": TASK22_DURATION[kid]})
+                elif field.get("default") is None:
+                    duration_issues.append({"kie_id": kid, "field": field.get("name"),
+                                            "default": None, "expected": expected})
+    check(not duration_issues,
+          f"у duration-select неверный дефолт у {len(duration_issues)}: "
+          + ", ".join(f"{x['kie_id']}={x['default']!r} (ждали {x['expected']!r})"
+                      for x in duration_issues[:8]))
+    notes.append(f"duration-select с дефолтом: {duration_checked - len(duration_issues)}/{duration_checked}")
+
+    # --- точечные ожидания task-22: поля/ключи под 8 ценовых правил ---
+    TASK22_FIELDS = {
+        "kling/ai-avatar-pro": ("resolution", "1080p"),
+        "kling/ai-avatar-standard": ("resolution", "720p"),
+        "runway": ("resolution", "720p"),
+        "runway/extend-ai-video": ("resolution", "720p"),
+        "grok-imagine/extend": ("duration", "6"),
+        "grok-imagine/upscale": ("from_resolution", "480P"),
+        "google/gemini-omni-flash-1-2-extend": ("resolution", "360p"),
+        "seedream/5-pro-text-to-image": ("quality", "basic"),
+        "seedream/5-pro-image-to-image": ("quality", "basic"),
+        "seedream/5-pro-layer-decomposition": ("size", None),
+        "grok-imagine/text-to-image": ("enable_pro", False),
+        "hailuo/02-text-to-video-pro": ("resolution", "1080P"),
+        "hailuo/02-image-to-video-pro": ("resolution", "1080P"),
+        "hailuo/02-text-to-video-standard": ("resolution", "768P"),
+    }
+    for kid, (fname, fdefault) in TASK22_FIELDS.items():
+        mode = next((m for f in families for m in f.get("modes") or []
+                     if m.get("kie_id") == kid), None)
+        check(mode is not None, f"нет режима {kid}")
+        if mode is None:
+            continue
+        field = next((x for x in mode.get("fields") or [] if x.get("name") == fname), None)
+        check(field is not None, f"{kid}: нет поля {fname} (task-22)")
+        if field is not None and fdefault is not None:
+            check(field.get("default") == fdefault,
+                  f"{kid}: {fname} default={field.get('default')!r}, ожидалось {fdefault!r}")
+    TASK22_RULE_KEYS = {
+        "kling/ai-avatar-pro": ({"resolution"}, {"1080p"}),
+        "kling/ai-avatar-standard": ({"resolution"}, {"720p"}),
+        "seedream/5-pro-text-to-image": ({"quality"}, {"basic", "high"}),
+        "seedream/5-pro-image-to-image": ({"quality"}, {"basic", "high"}),
+        "grok-imagine/text-to-image": ({"enable_pro"}, {False, True}),
+        "hailuo/2-3-image-to-video-pro": ({"duration", "resolution"}, {"6", "10", "768p", "1080p"}),
+        "hailuo/2-3-image-to-video-standard": ({"duration", "resolution"}, {"6", "10", "768p", "1080p"}),
+    }
+    for kid, (want_keys, want_values) in TASK22_RULE_KEYS.items():
+        mode = next((m for f in families for m in f.get("modes") or []
+                     if m.get("kie_id") == kid), None)
+        if mode is None:
+            continue
+        keys, values = set(), set()
+        for rule in (mode.get("pricing") or {}).get("rules") or []:
+            when = rule.get("when") or {}
+            keys |= set(when)
+            values |= set(when.values())
+        check(keys == want_keys,
+              f"{kid}: ключи when {sorted(keys)}, ожидалось {sorted(want_keys)} (task-22)")
+        check(values == want_values,
+              f"{kid}: значения when {sorted(map(str, values))}, ожидалось "
+              f"{sorted(map(str, want_values))} (task-22)")
 
     # --- сверка 1: покрытие живого API ---
     check(len(kie_ids) >= MIN_KIE_IDS,

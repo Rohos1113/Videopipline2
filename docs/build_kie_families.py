@@ -456,6 +456,7 @@ FIELD_LABELS = {
     "first_frame_url": "Первый кадр",
     "frame_count": "Число кадров",
     "frame_duration_ms": "Длительность кадра, мс",
+    "from_resolution": "Исходное разрешение",
     "generate_audio": "Генерировать звук",
     "generate_audio_switch": "Генерировать звук",
     "generate_multi_clip_switch": "Несколько клипов",
@@ -1140,6 +1141,8 @@ PRICE_KEY_FIELDS = {
     "scale": ("upscale_factor", "upscale", "scale", "factor"),
     "from_resolution": ("from_resolution", "source_resolution", "input_resolution"),
     "source_resolution": ("from_resolution", "source_resolution", "input_resolution"),
+    "enable_pro": ("enable_pro",),
+    "quality": ("quality",),
 }
 # тир в правилах может означать разрешение, а поле называться тиром: std=720p, pro=1080p
 RES_TIER_ALIASES = {
@@ -1226,6 +1229,166 @@ def fill_price_field_defaults(families: list[dict]) -> list[dict]:
                     "reason": ("поле участвует в when-правиле цены, default был null: "
                                + ("toggle → false" if kind == "toggle" else "select → первый option")
                                + ", значение есть в правилах"),
+                })
+    return fixes
+
+
+# ---------------------------------------------------------------------------
+# 6c. Поля под правила цены (task-22): догрузка/замена полей, которых нет в схеме
+# ---------------------------------------------------------------------------
+
+# Поля, без которых when-правило цены не находит значение (тир зашит в kie_id,
+# в OpenAPI-схеме поле называется иначе или его нет вовсе).
+FIELD_PATCHES: dict[str, list[dict]] = {
+    # kling ai-avatar: тир в kie_id, поля mode/resolution в схеме нет
+    "kling/ai-avatar-standard": [
+        {"name": "resolution", "label": "Разрешение", "kind": "select", "required": False,
+         "default": "720p", "options": ["720p"],
+         "hint": "720P Standard — единственный тир режима (правило цены: resolution=720p)"},
+    ],
+    "kling/ai-avatar-pro": [
+        {"name": "resolution", "label": "Разрешение", "kind": "select", "required": False,
+         "default": "1080p", "options": ["1080p"],
+         "hint": "1080P Pro — единственный тир режима (правило цены: resolution=1080p)"},
+    ],
+    # runway: правила по resolution+duration, в схеме resolution нет, duration — number
+    "runway": [
+        {"name": "resolution", "label": "Разрешение", "kind": "select", "required": False,
+         "default": "720p", "options": ["720p", "1080p"],
+         "hint": "Video resolution, 720p или 1080p (pricingDesc); 10 с доступно только в 720p"},
+        {"name": "duration", "label": "Длительность, сек", "kind": "select", "required": False,
+         "default": "5", "options": ["5", "10"],
+         "hint": "Video duration: 5 или 10 секунд; 10 с — только 720p"},
+    ],
+    "runway/extend-ai-video": [
+        {"name": "resolution", "label": "Разрешение", "kind": "select", "required": False,
+         "default": "720p", "options": ["720p", "1080p"],
+         "hint": "Video resolution, 720p или 1080p (pricingDesc)"},
+    ],
+    # grok extend: длительность и разрешение исходника
+    "grok-imagine/extend": [
+        {"name": "duration", "label": "Длительность, сек", "kind": "select", "required": False,
+         "default": "6", "options": ["6", "10"], "hint": "6 или 10 секунд продления"},
+        {"name": "resolution", "label": "Разрешение", "kind": "select", "required": False,
+         "default": "480p", "options": ["480p", "720p"],
+         "hint": "480p или 720p — разрешение исходного ролика"},
+    ],
+    # grok upscale: разрешение источника, без него правило не разрешается
+    "grok-imagine/upscale": [
+        {"name": "from_resolution", "label": "Исходное разрешение", "kind": "select",
+         "required": False, "default": "480P", "options": ["480P", "720P"],
+         "hint": "Разрешение исходного ролика: 480P или 720P"},
+    ],
+    # gemini omni flash 1.2 extend: правило по разрешению исходника
+    "google/gemini-omni-flash-1-2-extend": [
+        {"name": "resolution", "label": "Разрешение", "kind": "select", "required": False,
+         "default": "360p", "options": ["360p", "720p"],
+         "hint": "Разрешение исходного видео: 360p или 720p"},
+    ],
+    # hailuo 02: тир зашит в kie_id, а правило цены ключуется resolution — поле добавляем,
+    # иначе правило не разрешается (цена бралась из fallback, который совпадал случайно)
+    "hailuo/02-text-to-video-pro": [
+        {"name": "resolution", "label": "Разрешение", "kind": "select", "required": False,
+         "default": "1080P", "options": ["1080P"],
+         "hint": "1080P — единственное разрешение Pro-режима (правило цены: resolution=1080p)"},
+    ],
+    "hailuo/02-image-to-video-pro": [
+        {"name": "resolution", "label": "Разрешение", "kind": "select", "required": False,
+         "default": "1080P", "options": ["1080P"],
+         "hint": "1080P — единственное разрешение Pro-режима (правило цены: resolution=1080p)"},
+    ],
+    "hailuo/02-text-to-video-standard": [
+        {"name": "resolution", "label": "Разрешение", "kind": "select", "required": False,
+         "default": "768P", "options": ["768P"],
+         "hint": "768P — единственное разрешение Standard-режима (правило цены: resolution=768p)"},
+    ],
+}
+
+DURATION_FIELD_NAMES = PRICE_KEY_FIELDS["duration"]
+
+
+def apply_field_patches(families: list[dict]) -> list[dict]:
+    """Догружает поля из FIELD_PATCHES (или заменяет одноимённые) и пишет список правок."""
+    fixes: list[dict] = []
+    for fam in families:
+        for mode in fam["modes"]:
+            patches = FIELD_PATCHES.get(mode["kie_id"]) or []
+            if not patches:
+                continue
+            by_name = {f["name"]: f for f in mode["fields"]}
+            for patch in patches:
+                field = {k: v for k, v in patch.items() if v is not None}
+                field.setdefault("label", FIELD_LABELS.get(field["name"], field["name"]))
+                old = by_name.get(field["name"])
+                if old is not None:
+                    hint = field.get("hint") or old.get("hint")
+                    before = dict(old)
+                    old.clear()
+                    old.update(field)
+                    if hint:
+                        old["hint"] = hint
+                    action = "replace"
+                else:
+                    mode["fields"].append(field)
+                    action = "add"
+                fixes.append({
+                    "kie_id": mode["kie_id"], "family": fam["id"], "action": action,
+                    "field": field["name"], "kind": field["kind"],
+                    "default": field.get("default"), "options": field.get("options"),
+                    "before": ({"kind": before.get("kind"), "default": before.get("default"),
+                                "options": before.get("options")} if action == "replace" else None),
+                })
+    return fixes
+
+
+def _duration_limits(field: dict) -> tuple[int | None, int | None]:
+    lo, hi = field.get("min"), field.get("max")
+    if lo is not None and hi is not None:
+        return int(lo), int(hi)
+    hint = field.get("hint") or ""
+    for pattern in (r"\b(\d+)\s*[-–]\s*(\d+)\b", r"Minimum:\s*(\d+).*?Maximum:\s*(\d+)"):
+        m = re.search(pattern, hint)
+        if m:
+            return int(m.group(1)), int(m.group(2))
+    return None, None
+
+
+def fill_duration_defaults(families: list[dict]) -> list[dict]:
+    """Пустой duration → контрактный дефолт: select — 5, если он в options, иначе первая опция;
+    number — 5, а если 5 вне границ поля (по min/max или подсказке схемы) — нижняя граница.
+
+    Без этого UI показывает цену от контрактных 5 с, хотя ни одна опция не выбрана.
+    """
+    fixes: list[dict] = []
+    for fam in families:
+        for mode in fam["modes"]:
+            for field in mode["fields"]:
+                if field["name"] not in DURATION_FIELD_NAMES or field.get("default") is not None:
+                    continue
+                kind = field.get("kind")
+                if kind == "select":
+                    opts = field.get("options") or []
+                    if not opts:
+                        continue
+                    default = "5" if "5" in opts else opts[0]
+                    reason = 'select: "5" есть в options' if default == "5" else "select: первая option"
+                elif kind == "number":
+                    lo, hi = _duration_limits(field)
+                    if lo is not None and hi is not None and not lo <= 5 <= hi:
+                        default = lo
+                        reason = f"number: 5 вне границ {lo}–{hi} → нижняя граница"
+                    elif lo is not None and hi is not None:
+                        default = 5
+                        reason = "number: контрактный дефолт 5 внутри границ поля"
+                    else:
+                        continue
+                else:
+                    continue
+                field["default"] = default
+                fixes.append({
+                    "kie_id": mode["kie_id"], "family": fam["id"], "field": field["name"],
+                    "kind": kind, "default": default,
+                    "options": (field.get("options") or [])[:6], "reason": reason,
                 })
     return fixes
 
@@ -1647,6 +1810,34 @@ def write_md(families, checks, generated):
             add(f"| `{f['kie_id']}` | {f['field']} | {f['kind']} | "
                 f"{'false' if f['default'] is False else '`' + str(f['default']) + '`'} | "
                 f"{f['rule_key']} |")
+    fp = checks.get("field_patches") or {}
+    if fp.get("count"):
+        add("")
+        add("### Сверка 5 — поля догружены под правила цены (task-22)")
+        add("")
+        add(f"- Правок полей: **{fp['count']}** у **{fp['modes']}** режимов: добавлены поля, "
+            "без которых правило `when` не находит значение (тир зашит в `kie_id`, в схеме поле "
+            "называется иначе или его нет). Было/стало — в `-checks.json` (`before`).")
+        add("")
+        add("| id | действие | поле | тип | новый дефолт | options |")
+        add("|---|---|---|---|---|---|")
+        for f in fp["fields"]:
+            add(f"| `{f['kie_id']}` | {f['action']} | {f['field']} | {f['kind']} | "
+                f"`{f['default']}` | {', '.join(f['options'] or [])} |")
+    dd = checks.get("duration_defaults") or {}
+    if dd.get("filled"):
+        add("")
+        add("### Сверка 6 — пустой duration получил дефолт (task-22)")
+        add("")
+        add(f"- Полей: **{dd['filled']}** у **{dd['modes']}** режимов. Правило: `select` → "
+            "`\"5\"`, если он есть в `options`, иначе первая опция; `number` → `5`, а если 5 вне "
+            "границ поля (по `min`/`max` или подсказке схемы) — нижняя граница.")
+        add("")
+        add("| id | поле | тип | дефолт | options | почему |")
+        add("|---|---|---|---|---|---|")
+        for f in dd["fields"]:
+            add(f"| `{f['kie_id']}` | {f['field']} | {f['kind']} | `{f['default']}` | "
+                f"{', '.join(str(o) for o in f['options'])} | {f['reason']} |")
     add("")
     add("## 3. Семейства по брендам — видео")
     add("")
@@ -1795,8 +1986,24 @@ def _brand_table(add, families, media):
 def main():
     api_models, id_to_schema, rows, csv_by_id, catalog_mod, catalog_sha, prices = load_sources()
     families, catalog_by_model = build(api_models, id_to_schema, csv_by_id, catalog_mod, prices)
+    field_fixes = apply_field_patches(families)
     default_fixes = fill_price_field_defaults(families)
+    duration_fixes = fill_duration_defaults(families)
     checks = run_checks(families, api_models, csv_by_id, catalog_mod, id_to_schema, prices)
+    checks["field_patches"] = {
+        "count": len(field_fixes),
+        "modes": len({f["kie_id"] for f in field_fixes}),
+        "fields": field_fixes,
+        "note": ("task-22: догружены поля, без которых when-правило цены не находит значение "
+                 "(тир зашит в kie_id, поле называется иначе или его нет в OpenAPI-схеме)"),
+    }
+    checks["duration_defaults"] = {
+        "filled": len(duration_fixes),
+        "modes": len({f["kie_id"] for f in duration_fixes}),
+        "fields": duration_fixes,
+        "note": ("task-22: пустой duration → select: \"5\" (если есть в options), иначе первая опция; "
+                 "number: 5, а если 5 вне границ поля — нижняя граница"),
+    }
     checks["defaults"] = {
         "filled": len(default_fixes),
         "modes": len({f["kie_id"] for f in default_fixes}),

@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generated": "2026-11-14T13:27:34+03:00",
+  "generated": "2026-11-14T18:50:07+03:00",
   "branch": "test",
   "shape": "models — словарь по kie_id (182 записи); у каждой unit/formula/rules[{when,usd_kie,usd_client}]/default_usd_kie/default_usd_client/markup/source/note/affects_price",
   "source_prices": "docs/kie-ai-raw/models.json — GET https://api.kie.ai/api/v1/models, поле pricingDesc (снапшот 2026-11-13)",
@@ -2149,41 +2149,10 @@
     "Image to Video"
    ],
    "unit": "gen",
-   "formula": "фикс за ролик: тир (standard/pro) × длительность (6/10 с) × разрешение (768P/1080P)",
+   "formula": "фикс за ролик Pro: длительность (6/10 с) × разрешение (768P/1080P)",
    "rules": [
     {
      "when": {
-      "mode": "standard",
-      "duration": "6",
-      "resolution": "768p"
-     },
-     "credits": 30.0,
-     "usd_kie": 0.15,
-     "usd_client": 0.1875
-    },
-    {
-     "when": {
-      "mode": "standard",
-      "duration": "10",
-      "resolution": "768p"
-     },
-     "credits": 50.0,
-     "usd_kie": 0.25,
-     "usd_client": 0.3125
-    },
-    {
-     "when": {
-      "mode": "standard",
-      "duration": "6",
-      "resolution": "1080p"
-     },
-     "credits": 50.0,
-     "usd_kie": 0.25,
-     "usd_client": 0.3125
-    },
-    {
-     "when": {
-      "mode": "pro",
       "duration": "6",
       "resolution": "768p"
      },
@@ -2193,7 +2162,6 @@
     },
     {
      "when": {
-      "mode": "pro",
       "duration": "10",
       "resolution": "768p"
      },
@@ -2203,7 +2171,6 @@
     },
     {
      "when": {
-      "mode": "pro",
       "duration": "6",
       "resolution": "1080p"
      },
@@ -2215,18 +2182,17 @@
    "extra_charges": [],
    "duration_billing": null,
    "draft_inherits": null,
-   "default_usd_kie": 0.15,
-   "default_usd_client": 0.1875,
+   "default_usd_kie": 0.225,
+   "default_usd_client": 0.2812,
    "markup": 1.25,
    "source": "pricingDesc",
-   "note": "std 6с 768P 30, 10с 768P 50, 6с 1080P 50; pro 6с 768P 45, 10с 768P 90, 6с 1080P 80 кр",
+   "note": "pro 6с 768P 45, 10с 768P 90, 6с 1080P 80 кр",
    "affects_price": [
-    "mode",
     "duration",
     "resolution"
    ],
    "examples": [],
-   "arith_note": "в прайсе 50 кр подписаны как $0.26, по курсу 0.005 это $0.25 (опечатка прайса)",
+   "arith_note": null,
    "mapping_note": null,
    "pricing_desc": "Hailuo 2.3 Image-to-Video — Standard 6s 768P 30 credits ($0.15), Standard 10s 768P 50 credits ($0.26), Standard 6s 1080P 50 credits ($0.26), Pro 6s 768P 45 credits ($0.22), Pro 10s 768P 90 credits ($0.45), Pro 6s 1080P 80 credits ($0.39) — all priced 20% lower than the official rates.\nHigh-tier top-ups include +10% bonus credits. Effective pricing is approximately 10% lower than the above rates.",
    "schema_fields_present": true,
@@ -2240,11 +2206,10 @@
     "Image to Video"
    ],
    "unit": "gen",
-   "formula": "фикс за ролик: тир (standard/pro) × длительность (6/10 с) × разрешение (768P/1080P)",
+   "formula": "фикс за ролик Standard: длительность (6/10 с) × разрешение (768P/1080P)",
    "rules": [
     {
      "when": {
-      "mode": "standard",
       "duration": "6",
       "resolution": "768p"
      },
@@ -2254,7 +2219,6 @@
     },
     {
      "when": {
-      "mode": "standard",
       "duration": "10",
       "resolution": "768p"
      },
@@ -2264,43 +2228,12 @@
     },
     {
      "when": {
-      "mode": "standard",
       "duration": "6",
       "resolution": "1080p"
      },
      "credits": 50.0,
      "usd_kie": 0.25,
      "usd_client": 0.3125
-    },
-    {
-     "when": {
-      "mode": "pro",
-      "duration": "6",
-      "resolution": "768p"
-     },
-     "credits": 45.0,
-     "usd_kie": 0.225,
-     "usd_client": 0.2812
-    },
-    {
-     "when": {
-      "mode": "pro",
-      "duration": "10",
-      "resolution": "768p"
-     },
-     "credits": 90.0,
-     "usd_kie": 0.45,
-     "usd_client": 0.5625
-    },
-    {
-     "when": {
-      "mode": "pro",
-      "duration": "6",
-      "resolution": "1080p"
-     },
-     "credits": 80.0,
-     "usd_kie": 0.4,
-     "usd_client": 0.5
     }
    ],
    "extra_charges": [],
@@ -2310,9 +2243,8 @@
    "default_usd_client": 0.1875,
    "markup": 1.25,
    "source": "pricingDesc",
-   "note": "std 6с 768P 30, 10с 768P 50, 6с 1080P 50; pro 6с 768P 45, 10с 768P 90, 6с 1080P 80 кр",
+   "note": "std 6с 768P 30, 10с 768P 50, 6с 1080P 50 кр",
    "affects_price": [
-    "mode",
     "duration",
     "resolution"
    ],
@@ -2562,11 +2494,11 @@
     "Text to Image"
    ],
    "unit": "gen",
-   "formula": "фикс за генерацию: тир standard/quality; в генерации 2 картинки по умолчанию",
+   "formula": "фикс за генерацию: enable_pro false (standard) / true (quality); в генерации 2 картинки",
    "rules": [
     {
      "when": {
-      "mode": "standard"
+      "enable_pro": false
      },
      "credits": 4.0,
      "usd_kie": 0.02,
@@ -2574,7 +2506,7 @@
     },
     {
      "when": {
-      "mode": "quality"
+      "enable_pro": true
      },
      "credits": 5.0,
      "usd_kie": 0.025,
@@ -2590,7 +2522,7 @@
    "source": "pricingDesc",
    "note": "standard 4 кр, quality 5 кр за генерацию (2 картинки)",
    "affects_price": [
-    "mode"
+    "enable_pro"
    ],
    "examples": [],
    "arith_note": null,
@@ -3493,25 +3425,15 @@
     "Lip Sync"
    ],
    "unit": "sec",
-   "formula": "кр/сек × длительность; 720P Standard / 1080P Pro",
+   "formula": "кр/сек × длительность; 720P Standard",
    "rules": [
     {
      "when": {
-      "resolution": "720p",
-      "mode": "standard"
+      "resolution": "720p"
      },
      "credits": 10.1,
      "usd_kie": 0.0505,
      "usd_client": 0.0631
-    },
-    {
-     "when": {
-      "resolution": "1080p",
-      "mode": "pro"
-     },
-     "credits": 20.2,
-     "usd_kie": 0.101,
-     "usd_client": 0.1263
     }
    ],
    "extra_charges": [],
@@ -3521,7 +3443,7 @@
    "default_usd_client": 0.0631,
    "markup": 1.25,
    "source": "pricingDesc",
-   "note": "10.1 credits/s ($0.0505) for 720P (Standard), 20.2 credits/s ($0.101) for 1080P (Pro), up to 300 seconds per generation — about 10% below Kling's official pricing.",
+   "note": "10.1 credits/s ($0.0505) — 720P Standard",
    "affects_price": [
     "resolution",
     "duration"
@@ -3541,21 +3463,11 @@
     "Lip Sync"
    ],
    "unit": "sec",
-   "formula": "кр/сек × длительность; 720P Standard / 1080P Pro",
+   "formula": "кр/сек × длительность; 1080P Pro",
    "rules": [
     {
      "when": {
-      "resolution": "720p",
-      "mode": "standard"
-     },
-     "credits": 10.1,
-     "usd_kie": 0.0505,
-     "usd_client": 0.0631
-    },
-    {
-     "when": {
-      "resolution": "1080p",
-      "mode": "pro"
+      "resolution": "1080p"
      },
      "credits": 20.2,
      "usd_kie": 0.101,
@@ -3565,11 +3477,11 @@
    "extra_charges": [],
    "duration_billing": null,
    "draft_inherits": null,
-   "default_usd_kie": 0.0505,
-   "default_usd_client": 0.0631,
+   "default_usd_kie": 0.101,
+   "default_usd_client": 0.1263,
    "markup": 1.25,
    "source": "pricingDesc",
-   "note": "10.1 credits/s ($0.0505) for 720P (Standard), 20.2 credits/s ($0.101) for 1080P (Pro), up to 300 seconds per generation — about 10% below Kling's official pricing.",
+   "note": "20.2 credits/s ($0.101) — 1080P Pro",
    "affects_price": [
     "resolution",
     "duration"
@@ -5667,11 +5579,11 @@
     "Text to Image"
    ],
    "unit": "image",
-   "formula": "за картинку 1K 7 кр / 2K 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
+   "formula": "за картинку basic (1K) 7 кр / high (2K) 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
    "rules": [
     {
      "when": {
-      "resolution": "1K"
+      "quality": "basic"
      },
      "credits": 7.0,
      "usd_kie": 0.035,
@@ -5679,7 +5591,7 @@
     },
     {
      "when": {
-      "resolution": "2K"
+      "quality": "high"
      },
      "credits": 14.0,
      "usd_kie": 0.07,
@@ -5703,9 +5615,9 @@
    "default_usd_client": 0.0438,
    "markup": 1.25,
    "source": "pricingDesc",
-   "note": "1K 7 кр, 2K 14 кр, входные картинки 0.5 кр (первая бесплатно)",
+   "note": "basic 7 кр, high 14 кр, входные картинки 0.5 кр (первая бесплатно)",
    "affects_price": [
-    "resolution",
+    "quality",
     "input_images"
    ],
    "examples": [],
@@ -5723,11 +5635,11 @@
     "Image to Image"
    ],
    "unit": "image",
-   "formula": "за картинку 1K 7 кр / 2K 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
+   "formula": "за картинку basic (1K) 7 кр / high (2K) 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
    "rules": [
     {
      "when": {
-      "resolution": "1K"
+      "quality": "basic"
      },
      "credits": 7.0,
      "usd_kie": 0.035,
@@ -5735,7 +5647,7 @@
     },
     {
      "when": {
-      "resolution": "2K"
+      "quality": "high"
      },
      "credits": 14.0,
      "usd_kie": 0.07,
@@ -5759,9 +5671,9 @@
    "default_usd_client": 0.0438,
    "markup": 1.25,
    "source": "pricingDesc",
-   "note": "1K 7 кр, 2K 14 кр, входные картинки 0.5 кр (первая бесплатно)",
+   "note": "basic 7 кр, high 14 кр, входные картинки 0.5 кр (первая бесплатно)",
    "affects_price": [
-    "resolution",
+    "quality",
     "input_images"
    ],
    "examples": [],
@@ -10403,7 +10315,7 @@
    "note": "длительность (4/6/8 с) в цену не входит; отдельно veo/get-1080p-video 5 кр и veo/get-4k-video 120 кр за апскейл"
   },
   "hailuo-2-3": {
-   "formula": "фикс за ролик: тир (standard/pro) × длительность (6/10 с) × разрешение (768P/1080P)",
+   "formula": "фикс за ролик Pro: длительность (6/10 с) × разрешение (768P/1080P)",
    "examples": [
     {
      "cfg": {
@@ -10612,10 +10524,10 @@
  },
  "studio_diff": {
   "source": "app/services/kie_catalog.py @HEAD (git show HEAD:...)",
-  "catalog_git_blob": "b9702e01f087",
+  "catalog_git_blob": "b9504bc39f40",
   "studio_models": 33,
   "mapped_pairs": 106,
-  "matched_rules": 106,
+  "matched_rules": 92,
   "rows": [
    {
     "studio_id": "veo-3-1",
@@ -11635,12 +11547,12 @@
     },
     "studio_credits": 30.0,
     "studio_usd_at_kie_rate": 0.15,
-    "kie_credits": 30.0,
-    "kie_usd": 0.15,
-    "client_usd_markup25": 0.1875,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11653,12 +11565,12 @@
     },
     "studio_credits": 50.0,
     "studio_usd_at_kie_rate": 0.25,
-    "kie_credits": 50.0,
-    "kie_usd": 0.25,
-    "client_usd_markup25": 0.3125,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11671,12 +11583,12 @@
     },
     "studio_credits": 50.0,
     "studio_usd_at_kie_rate": 0.25,
-    "kie_credits": 50.0,
-    "kie_usd": 0.25,
-    "client_usd_markup25": 0.3125,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11689,12 +11601,12 @@
     },
     "studio_credits": 45.0,
     "studio_usd_at_kie_rate": 0.225,
-    "kie_credits": 45.0,
-    "kie_usd": 0.225,
-    "client_usd_markup25": 0.2812,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11707,12 +11619,12 @@
     },
     "studio_credits": 90.0,
     "studio_usd_at_kie_rate": 0.45,
-    "kie_credits": 90.0,
-    "kie_usd": 0.45,
-    "client_usd_markup25": 0.5625,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11725,12 +11637,12 @@
     },
     "studio_credits": 80.0,
     "studio_usd_at_kie_rate": 0.4,
-    "kie_credits": 80.0,
-    "kie_usd": 0.4,
-    "client_usd_markup25": 0.5,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11743,12 +11655,12 @@
     },
     "studio_credits": 30.0,
     "studio_usd_at_kie_rate": 0.15,
-    "kie_credits": 30.0,
-    "kie_usd": 0.15,
-    "client_usd_markup25": 0.1875,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11761,12 +11673,12 @@
     },
     "studio_credits": 50.0,
     "studio_usd_at_kie_rate": 0.25,
-    "kie_credits": 50.0,
-    "kie_usd": 0.25,
-    "client_usd_markup25": 0.3125,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11779,12 +11691,12 @@
     },
     "studio_credits": 50.0,
     "studio_usd_at_kie_rate": 0.25,
-    "kie_credits": 50.0,
-    "kie_usd": 0.25,
-    "client_usd_markup25": 0.3125,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11797,12 +11709,12 @@
     },
     "studio_credits": 45.0,
     "studio_usd_at_kie_rate": 0.225,
-    "kie_credits": 45.0,
-    "kie_usd": 0.225,
-    "client_usd_markup25": 0.2812,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11815,12 +11727,12 @@
     },
     "studio_credits": 90.0,
     "studio_usd_at_kie_rate": 0.45,
-    "kie_credits": 90.0,
-    "kie_usd": 0.45,
-    "client_usd_markup25": 0.5625,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "hailuo-2-3-i2v",
@@ -11833,12 +11745,12 @@
     },
     "studio_credits": 80.0,
     "studio_usd_at_kie_rate": 0.4,
-    "kie_credits": 80.0,
-    "kie_usd": 0.4,
-    "client_usd_markup25": 0.5,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "wan-2-7-t2v",
@@ -12087,12 +11999,12 @@
     },
     "studio_credits": 7.0,
     "studio_usd_at_kie_rate": 0.035,
-    "kie_credits": 7.0,
-    "kie_usd": 0.035,
-    "client_usd_markup25": 0.0438,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.1,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "seedream-5-pro",
@@ -12103,12 +12015,12 @@
     },
     "studio_credits": 14.0,
     "studio_usd_at_kie_rate": 0.07,
-    "kie_credits": 14.0,
-    "kie_usd": 0.07,
-    "client_usd_markup25": 0.0875,
-    "delta_pricelist_vs_studio_pct": 0.0,
-    "delta_client_vs_studio_pct": 25.0,
-    "matched": true
+    "kie_credits": null,
+    "kie_usd": null,
+    "client_usd_markup25": null,
+    "delta_pricelist_vs_studio_pct": null,
+    "delta_client_vs_studio_pct": null,
+    "matched": false
    },
    {
     "studio_id": "qwen3-image",
@@ -13012,67 +12924,16 @@
   "covered_both": 182,
   "only_in_families": [],
   "only_in_us": [],
-  "credits_agree": 164,
+  "credits_agree": 165,
   "credits_differ": [
-   {
-    "kie_id": "ai-music-api/cover-generate",
-    "families_credits": [],
-    "our_credits": [
-     0.0
-    ],
-    "only_families": [],
-    "only_ours": [
-     0.0
-    ],
-    "explained": "в прайсе «free» — у нас 0 кр"
-   },
-   {
-    "kie_id": "bytedance/seedance-1.5-pro",
-    "families_credits": [],
-    "our_credits": [
-     1.75,
-     3.5,
-     7.0,
-     7.5,
-     15.0
-    ],
-    "only_families": [],
-    "only_ours": [
-     1.75,
-     3.5,
-     7.0,
-     7.5,
-     15.0
-    ],
-    "explained": "в прайсе kie.ai цены нет (в живом API модели тоже нет) — цена из каталога студии @HEAD"
-   },
-   {
-    "kie_id": "bytedance/seedance-2-5-draft",
-    "families_credits": [],
-    "our_credits": [
-     17.0,
-     28.0,
-     38.0,
-     63.0,
-     95.0,
-     158.0
-    ],
-    "only_families": [],
-    "only_ours": [
-     17.0,
-     28.0,
-     38.0,
-     63.0,
-     95.0,
-     158.0
-    ],
-    "explained": "draft своих ставок не имеет — наследует ставки Seedance 2.5 по режиму источника"
-   },
    {
     "kie_id": "gpt-image-2-6/flare-image-to-image",
     "families_credits": [
-     36.0,
-     900.0
+     225.0,
+     360.0,
+     900.0,
+     1440.0,
+     5400.0
     ],
     "our_credits": [
      36.0,
@@ -13087,21 +12948,21 @@
     ],
     "only_families": [],
     "only_ours": [
+     36.0,
      216.0,
-     225.0,
-     360.0,
-     1440.0,
      1800.0,
-     2160.0,
-     5400.0
+     2160.0
     ],
     "explained": "у нас вся токен-таблица (см. flare-text-to-image)"
    },
    {
     "kie_id": "gpt-image-2-6/flare-text-to-image",
     "families_credits": [
-     36.0,
-     900.0
+     225.0,
+     360.0,
+     900.0,
+     1440.0,
+     5400.0
     ],
     "our_credits": [
      36.0,
@@ -13116,21 +12977,21 @@
     ],
     "only_families": [],
     "only_ours": [
+     36.0,
      216.0,
-     225.0,
-     360.0,
-     1440.0,
      1800.0,
-     2160.0,
-     5400.0
+     2160.0
     ],
     "explained": "семьи оставили только токены, у которых в тексте есть слово «credits» (900 и 36); у нас — вся токен-таблица, включая 225/1 440/5 400/SVG-авторов, взятые из строки цены"
    },
    {
     "kie_id": "gpt-image-2-6/sunburst-image-to-image",
     "families_credits": [
-     36.0,
-     900.0
+     225.0,
+     360.0,
+     900.0,
+     1440.0,
+     5400.0
     ],
     "our_credits": [
      36.0,
@@ -13145,21 +13006,21 @@
     ],
     "only_families": [],
     "only_ours": [
+     36.0,
      216.0,
-     225.0,
-     360.0,
-     1440.0,
      1800.0,
-     2160.0,
-     5400.0
+     2160.0
     ],
     "explained": "у нас вся токен-таблица (см. flare-text-to-image)"
    },
    {
     "kie_id": "gpt-image-2-6/sunburst-text-to-image",
     "families_credits": [
-     36.0,
-     900.0
+     225.0,
+     360.0,
+     900.0,
+     1440.0,
+     5400.0
     ],
     "our_credits": [
      36.0,
@@ -13174,630 +13035,274 @@
     ],
     "only_families": [],
     "only_ours": [
+     36.0,
      216.0,
-     225.0,
-     360.0,
-     1440.0,
      1800.0,
-     2160.0,
-     5400.0
+     2160.0
     ],
     "explained": "у нас вся токен-таблица (см. flare-text-to-image)"
    },
    {
-    "kie_id": "grok-imagine-image-2-0/segment-map",
-    "families_credits": [],
+    "kie_id": "minimax-h3/image-edit",
+    "families_credits": [
+     1.8,
+     5.5
+    ],
     "our_credits": [
-     0.0
+     0.5,
+     1.8,
+     5.5
     ],
     "only_families": [],
     "only_ours": [
-     0.0
+     0.5
     ],
-    "explained": "в прайсе «free» — у нас 0 кр"
+    "explained": null
+   },
+   {
+    "kie_id": "minimax-h3/image-to-video",
+    "families_credits": [
+     8.0,
+     13.0
+    ],
+    "our_credits": [
+     4.0,
+     8.0,
+     13.0
+    ],
+    "only_families": [],
+    "only_ours": [
+     4.0
+    ],
+    "explained": "семьи положили доплату 4 кр за картинку в правила; у нас это extra_charges"
+   },
+   {
+    "kie_id": "minimax-h3/reference-to-video",
+    "families_credits": [
+     8.0,
+     13.0
+    ],
+    "our_credits": [
+     4.0,
+     8.0,
+     13.0
+    ],
+    "only_families": [],
+    "only_ours": [
+     4.0
+    ],
+    "explained": "семьи положили доплату 4 кр за картинку в правила; у нас это extra_charges"
+   },
+   {
+    "kie_id": "minimax-h3/text-to-video",
+    "families_credits": [
+     8.0,
+     13.0
+    ],
+    "our_credits": [
+     4.0,
+     8.0,
+     13.0
+    ],
+    "only_families": [],
+    "only_ours": [
+     4.0
+    ],
+    "explained": "семьи положили доплату 4 кр за картинку в правила; у нас это extra_charges"
+   },
+   {
+    "kie_id": "qwen/image-edit",
+    "families_credits": [
+     6.0
+    ],
+    "our_credits": [],
+    "only_families": [
+     6.0
+    ],
+    "only_ours": [],
+    "explained": null
+   },
+   {
+    "kie_id": "qwen2/image-edit",
+    "families_credits": [
+     6.0
+    ],
+    "our_credits": [],
+    "only_families": [
+     6.0
+    ],
+    "only_ours": [],
+    "explained": null
+   },
+   {
+    "kie_id": "qwen2/text-to-image",
+    "families_credits": [
+     6.0
+    ],
+    "our_credits": [],
+    "only_families": [
+     6.0
+    ],
+    "only_ours": [],
+    "explained": null
+   },
+   {
+    "kie_id": "qwen3/image-to-image",
+    "families_credits": [
+     4.8
+    ],
+    "our_credits": [
+     0.5,
+     4.8
+    ],
+    "only_families": [],
+    "only_ours": [
+     0.5
+    ],
+    "explained": "у нас 0.5 кр за вход отдельным extra_charge"
+   },
+   {
+    "kie_id": "qwen3/pro-image-to-image",
+    "families_credits": [
+     6.4,
+     12.0
+    ],
+    "our_credits": [
+     0.5,
+     6.4,
+     12.0
+    ],
+    "only_families": [],
+    "only_ours": [
+     0.5
+    ],
+    "explained": "у нас 0.5 кр за вход отдельным extra_charge"
    },
    {
     "kie_id": "seedream/5-5-image-to-image",
     "families_credits": [
-     1.44,
      3.6,
-     6.3,
-     9.18
+     6.3
     ],
     "our_credits": [
      1.44,
      3.6,
      6.3
     ],
-    "only_families": [
-     9.18
+    "only_families": [],
+    "only_ours": [
+     1.44
     ],
-    "only_ours": [],
     "explained": "у нас раздельно: ставка 1.44 кр за вход отдельным extra_charge (в семьях слито в правила)"
    },
    {
     "kie_id": "seedream/5-5-layer-decomposition",
     "families_credits": [
-     1.44,
      3.6,
-     6.3,
-     15.84
+     6.3
     ],
     "our_credits": [
      1.44,
      3.6,
      6.3
     ],
-    "only_families": [
-     15.84
+    "only_families": [],
+    "only_ours": [
+     1.44
     ],
-    "only_ours": [],
     "explained": "у нас раздельно: ставка 1.44 кр за вход отдельным extra_charge"
    },
    {
-    "kie_id": "video/upscale",
-    "families_credits": [
-     6.0
-    ],
-    "our_credits": [
-     1.5,
-     3.0,
-     6.0
-    ],
-    "only_families": [],
-    "only_ours": [
-     1.5,
-     3.0
-    ],
-    "explained": "семьи из строки «1.5 / 3 / 6 кредитов» взяли только 6; у нас все три ставки (1080P/2K/4K)"
-   },
-   {
-    "kie_id": "wan/2-6-flash-image-to-video",
-    "families_credits": [
-     60.0,
-     90.0,
-     120.0,
-     180.0
-    ],
-    "our_credits": [
-     20.0,
-     30.0,
-     40.0,
-     60.0,
-     80.0,
-     90.0,
-     120.0,
-     180.0
-    ],
-    "only_families": [],
-    "only_ours": [
-     20.0,
-     30.0,
-     40.0,
-     80.0
-    ],
-    "explained": "семьи потеряли ставки без звука (20/40/60 и 1080p без звука); у нас полная таблица"
-   },
-   {
-    "kie_id": "wan/2-6-flash-video-to-video",
-    "families_credits": [
-     40.0,
-     60.0,
-     80.0,
-     120.0
-    ],
-    "our_credits": [
-     20.0,
-     30.0,
-     40.0,
-     60.0,
-     80.0,
-     120.0
-    ],
-    "only_families": [],
-    "only_ours": [
-     20.0,
-     30.0
-    ],
-    "explained": "семьи потеряли ставки без звука; у нас полная таблица"
-   },
-   {
-    "kie_id": "wan/2-6-image-to-video",
-    "families_credits": [
-     210.0,
-     315.0
-    ],
-    "our_credits": [
-     70.0,
-     105.0,
-     140.0,
-     210.0,
-     315.0
-    ],
-    "only_families": [],
-    "only_ours": [
-     70.0,
-     105.0,
-     140.0
-    ],
-    "explained": "семьи потеряли строки 720p для 5/10/15 с; у нас полная таблица"
-   },
-   {
-    "kie_id": "wan/2-6-text-to-video",
-    "families_credits": [
-     210.0,
-     315.0
-    ],
-    "our_credits": [
-     70.0,
-     105.0,
-     140.0,
-     210.0,
-     315.0
-    ],
-    "only_families": [],
-    "only_ours": [
-     70.0,
-     105.0,
-     140.0
-    ],
-    "explained": "семьи потеряли строки 720p для 5/10/15 с (70/140/210); у нас полная таблица длительность × разрешение"
-   },
-   {
-    "kie_id": "wan/2-6-video-to-video",
-    "families_credits": [
-     210.0,
-     315.0
-    ],
-    "our_credits": [
-     70.0,
-     105.0,
-     140.0,
-     210.0,
-     315.0
-    ],
-    "only_families": [],
-    "only_ours": [
-     70.0,
-     105.0,
-     140.0
-    ],
-    "explained": "семьи потеряли строки 720p для 5/10/15 с; у нас полная таблица"
-   },
-   {
-    "kie_id": "wan/2-7-image",
-    "families_credits": [
-     4.8,
-     12.0
-    ],
-    "our_credits": [
-     4.8
-    ],
-    "only_families": [
-     12.0
-    ],
-    "only_ours": [],
-    "explained": "в одном описании обе модели (4.8 и 12) — у нас по своей цене на модель"
-   },
-   {
-    "kie_id": "wan/2-7-image-pro",
-    "families_credits": [
-     4.8,
-     12.0
-    ],
-    "our_credits": [
-     12.0
-    ],
-    "only_families": [
-     4.8
-    ],
-    "only_ours": [],
-    "explained": "в одном описании обе модели (4.8 и 12) — у нас по своей цене на модель"
-   }
-  ],
-  "credits_differ_unexplained": [],
-  "unit_differ": [
-   {
-    "kie_id": "4o-image-api",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "ai-music-api/cover-generate",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "bytedance/seedance-2-5-draft",
-    "families_unit": "gen",
-    "our_unit": "sec"
-   },
-   {
-    "kie_id": "bytedance/seedream",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "bytedance/seedream-v4-edit",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "bytedance/seedream-v4-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "bytedance/v1-lite-image-to-video",
-    "families_unit": "gen",
-    "our_unit": "sec"
-   },
-   {
-    "kie_id": "bytedance/v1-lite-text-to-video",
-    "families_unit": "gen",
-    "our_unit": "sec"
-   },
-   {
-    "kie_id": "bytedance/v1-pro-image-to-video",
-    "families_unit": "gen",
-    "our_unit": "sec"
-   },
-   {
-    "kie_id": "bytedance/v1-pro-text-to-video",
-    "families_unit": "gen",
-    "our_unit": "sec"
-   },
-   {
-    "kie_id": "flux-2/flex-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "flux-2/flex-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "flux-2/pro-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "flux-2/pro-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "flux-3/klein-edit-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "flux-3/klein-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "flux1-kontext",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "google/imagen4",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "google/imagen4-fast",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "google/imagen4-ultra",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "google/nano-banana",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "google/nano-banana-edit",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image-2-5-flare-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image-2-5-flare-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image-2-5-sunburst-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image-2-5-sunburst-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image-2-6/economy-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image-2-6/economy-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image-2-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image-2-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image/1.5-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "gpt-image/1.5-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "grok-imagine-image-2-0/image-edit",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "grok-imagine-image-2-0/segment-edit",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "grok-imagine-image-2-0/segment-map",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "grok-imagine-image-2-0/text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "grok-imagine/image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "grok-imagine/image-to-video",
-    "families_unit": "gen",
-    "our_unit": "sec"
-   },
-   {
-    "kie_id": "grok-imagine/text-to-video",
-    "families_unit": "gen",
-    "our_unit": "sec"
-   },
-   {
-    "kie_id": "ideogram/character",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "ideogram/character-edit",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "ideogram/character-remix",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "ideogram/v3-edit",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "ideogram/v3-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "kie/image-upscale",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "minimax-h3/image-edit",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "minimax-h3/text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "nano-banana-2",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "nano-banana-2-1",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "nano-banana-2-lite",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "nano-banana-pro",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "qwen/image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "qwen2-1/image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "qwen2-1/text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "qwen2/image-edit",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "qwen2/text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "qwen3/image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "qwen3/pro-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "qwen3/pro-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "qwen3/text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "recraft/crisp-upscale",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "recraft/remove-background",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/4.5-edit",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/4.5-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/5-5-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/5-5-layer-decomposition",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/5-5-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/5-flash-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/5-flash-layer-decomposition",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/5-flash-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/5-lite-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/5-lite-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
     "kie_id": "seedream/5-pro-image-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "seedream/5-pro-layer-decomposition",
-    "families_unit": "gen",
-    "our_unit": "image"
+    "families_credits": [
+     7.0,
+     14.0
+    ],
+    "our_credits": [
+     0.5,
+     7.0,
+     14.0
+    ],
+    "only_families": [],
+    "only_ours": [
+     0.5
+    ],
+    "explained": "у нас 0.5 кр за вход отдельным extra_charge"
    },
    {
     "kie_id": "seedream/5-pro-text-to-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "topaz/image-upscale",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "wan/2-2-a14b-speech-to-video-turbo",
-    "families_unit": "gen",
-    "our_unit": "sec"
-   },
-   {
-    "kie_id": "wan/2-7-image",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "wan/2-7-image-pro",
-    "families_unit": "gen",
-    "our_unit": "image"
-   },
-   {
-    "kie_id": "z-image",
-    "families_unit": "gen",
-    "our_unit": "image"
+    "families_credits": [
+     7.0,
+     14.0
+    ],
+    "our_credits": [
+     0.5,
+     7.0,
+     14.0
+    ],
+    "only_families": [],
+    "only_ours": [
+     0.5
+    ],
+    "explained": "у нас 0.5 кр за вход отдельным extra_charge"
    }
-  ]
+  ],
+  "credits_differ_unexplained": [
+   {
+    "kie_id": "minimax-h3/image-edit",
+    "families_credits": [
+     1.8,
+     5.5
+    ],
+    "our_credits": [
+     0.5,
+     1.8,
+     5.5
+    ],
+    "only_families": [],
+    "only_ours": [
+     0.5
+    ],
+    "explained": null
+   },
+   {
+    "kie_id": "qwen/image-edit",
+    "families_credits": [
+     6.0
+    ],
+    "our_credits": [],
+    "only_families": [
+     6.0
+    ],
+    "only_ours": [],
+    "explained": null
+   },
+   {
+    "kie_id": "qwen2/image-edit",
+    "families_credits": [
+     6.0
+    ],
+    "our_credits": [],
+    "only_families": [
+     6.0
+    ],
+    "only_ours": [],
+    "explained": null
+   },
+   {
+    "kie_id": "qwen2/text-to-image",
+    "families_credits": [
+     6.0
+    ],
+    "our_credits": [],
+    "only_families": [
+     6.0
+    ],
+    "only_ours": [],
+    "explained": null
+   }
+  ],
+  "unit_differ": []
  },
  "checks": {
   "coverage": {
@@ -13818,16 +13323,16 @@
     "omnihuman-1-5/subject-detection"
    ],
    "unknown_count": 4,
-   "rules_total": 542,
+   "rules_total": 534,
    "extra_charges_total": 34,
    "rules_per_model_hist": {
     "0": 4,
-    "1": 43,
-    "2": 53,
-    "3": 43,
+    "1": 45,
+    "2": 51,
+    "3": 45,
     "4": 8,
     "5": 5,
-    "6": 12,
+    "6": 10,
     "7": 1,
     "8": 9,
     "9": 1,
@@ -13835,11 +13340,14 @@
     "15": 1,
     "20": 1
    },
-   "avg_rules_per_priced": 3.04,
+   "avg_rules_per_priced": 3.0,
    "with_schema": 145,
    "price_settings_pairs": 175,
    "price_settings_mentioned_in_price": 100,
-   "gaps": [],
+   "gaps": [
+    "seedream/5-pro-text-to-image: resolution упомянут в прайсе, но правилом не покрыт",
+    "seedream/5-pro-image-to-image: resolution упомянут в прайсе, но правилом не покрыт"
+   ],
    "explained_gaps": [
     {
      "kie_id": "kling-3.0/video",
@@ -13985,6 +13493,41 @@
    "unmatched": [],
    "mentions_explained": [
     {
+     "kie_id": "hailuo/2-3-image-to-video-pro",
+     "reason": "в прайсе общая матрица mode×duration×resolution: у Pro-режима только 45/90/80 кр",
+     "missing": [
+      30.0,
+      50.0
+     ],
+     "extra": []
+    },
+    {
+     "kie_id": "hailuo/2-3-image-to-video-standard",
+     "reason": "в прайсе общая матрица mode×duration×resolution: у Standard-режима только 30/50/50 кр",
+     "missing": [
+      45.0,
+      80.0,
+      90.0
+     ],
+     "extra": []
+    },
+    {
+     "kie_id": "kling/ai-avatar-standard",
+     "reason": "в прайсе общий блок на два id (10.1 и 20.2 кр/с): 10.1 — Standard, 20.2 — Pro",
+     "missing": [
+      20.2
+     ],
+     "extra": []
+    },
+    {
+     "kie_id": "kling/ai-avatar-pro",
+     "reason": "в прайсе общий блок на два id (10.1 и 20.2 кр/с): 10.1 — Standard, 20.2 — Pro",
+     "missing": [
+      10.1
+     ],
+     "extra": []
+    },
+    {
      "kie_id": "ai-music-api/cover-generate",
      "reason": "в прайсе «free» — числа кредитов нет, ставим 0",
      "missing": [],
@@ -14125,7 +13668,7 @@
     "mp": 2,
     "1m_tokens": 4
    },
-   "markup_checked": 542,
+   "markup_checked": 534,
    "markup_bad": [],
    "unit_phrase_ok": 139,
    "unit_phrase_missing": [

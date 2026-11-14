@@ -575,13 +575,19 @@ for _mid in ("kling/v3-turbo-text-to-video", "kling/v3-turbo-image-to-video"):
         formula="кр/сек × длительность",
         affects_price=["resolution", "duration"],
     )
-for _mid in ("kling/ai-avatar-standard", "kling/ai-avatar-pro"):
+for _mid, _res, _cr, _tier in (
+    ("kling/ai-avatar-standard", "720P", 10.1, "720P Standard"),
+    ("kling/ai-avatar-pro", "1080P", 20.2, "1080P Pro"),
+):
+    # task-22: правила были {'resolution', 'mode'} — в режиме нет поля mode и тир
+    # зашит в сам kie_id, поэтому правило не разрешалось; разнесли по режимам.
     reg(
         _mid,
         unit="sec",
-        rules=[R(10.1, resolution="720P", mode="standard"), R(20.2, resolution="1080P", mode="pro")],
-        formula="кр/сек × длительность; 720P Standard / 1080P Pro",
+        rules=[R(_cr, resolution=_res)],
+        formula=f"кр/сек × длительность; {_tier}",
         affects_price=["resolution", "duration"],
+        note=f"{_cr} credits/s (${usd_kie(_cr):.4g}) — {_tier}",
     )
 
 # --- Kling 4.0 --------------------------------------------------------------
@@ -684,23 +690,33 @@ reg(
 )
 
 # --- Hailuo 2.3: матрица mode × duration × resolution ----------------------
-for _mid in ("hailuo/2-3-image-to-video-pro", "hailuo/2-3-image-to-video-standard"):
-    reg(
-        _mid,
-        unit="gen",
-        rules=[
-            R(30, mode="standard", duration=6, resolution="768P"),
-            R(50, mode="standard", duration=10, resolution="768P"),
-            R(50, mode="standard", duration=6, resolution="1080P"),
-            R(45, mode="pro", duration=6, resolution="768P"),
-            R(90, mode="pro", duration=10, resolution="768P"),
-            R(80, mode="pro", duration=6, resolution="1080P"),
-        ],
-        formula="фикс за ролик: тир (standard/pro) × длительность (6/10 с) × разрешение (768P/1080P)",
-        affects_price=["mode", "duration", "resolution"],
-        note="std 6с 768P 30, 10с 768P 50, 6с 1080P 50; pro 6с 768P 45, 10с 768P 90, 6с 1080P 80 кр",
-        arith_note="в прайсе 50 кр подписаны как $0.26, по курсу 0.005 это $0.25 (опечатка прайса)",
-    )
+# task-22: ключ mode в when дублировал kie_id (тир зашит в сам id), из-за чего
+# правило не находилось — разнесли по режимам и убрали mode из when.
+reg(
+    "hailuo/2-3-image-to-video-pro",
+    unit="gen",
+    rules=[
+        R(45, duration=6, resolution="768P"),
+        R(90, duration=10, resolution="768P"),
+        R(80, duration=6, resolution="1080P"),
+    ],
+    formula="фикс за ролик Pro: длительность (6/10 с) × разрешение (768P/1080P)",
+    affects_price=["duration", "resolution"],
+    note="pro 6с 768P 45, 10с 768P 90, 6с 1080P 80 кр",
+)
+reg(
+    "hailuo/2-3-image-to-video-standard",
+    unit="gen",
+    rules=[
+        R(30, duration=6, resolution="768P"),
+        R(50, duration=10, resolution="768P"),
+        R(50, duration=6, resolution="1080P"),
+    ],
+    formula="фикс за ролик Standard: длительность (6/10 с) × разрешение (768P/1080P)",
+    affects_price=["duration", "resolution"],
+    note="std 6с 768P 30, 10с 768P 50, 6с 1080P 50 кр",
+    arith_note="в прайсе 50 кр подписаны как $0.26, по курсу 0.005 это $0.25 (опечатка прайса)",
+)
 
 # --- Hailuo 02 --------------------------------------------------------------
 reg(
@@ -949,9 +965,10 @@ reg(
 reg(
     "grok-imagine/text-to-image",
     unit="gen",
-    rules=[R(4, mode="standard"), R(5, mode="quality")],
-    formula="фикс за генерацию: тир standard/quality; в генерации 2 картинки по умолчанию",
-    affects_price=["mode"],
+    # task-22: поле схемы — enable_pro (toggle), а не mode: false = standard, true = quality.
+    rules=[R(4, enable_pro=False), R(5, enable_pro=True)],
+    formula="фикс за генерацию: enable_pro false (standard) / true (quality); в генерации 2 картинки",
+    affects_price=["enable_pro"],
     note="standard 4 кр, quality 5 кр за генерацию (2 картинки)",
 )
 for _mid in ("grok-imagine/image-to-image", "grok-imagine-image-2-0/text-to-image", "grok-imagine-image-2-0/image-edit", "grok-imagine-image-2-0/segment-edit"):
@@ -1046,13 +1063,14 @@ reg(
 reg(
     "seedream/5-pro-text-to-image",
     unit="image",
-    rules=[R(7, resolution="1K"), R(14, resolution="2K")],
+    # task-22: поле схемы — quality (basic/high), а не resolution: basic = 1K, high = 2K.
+    rules=[R(7, quality="basic"), R(14, quality="high")],
     extra_charges=[
         {"what": "входная картинка (первая бесплатно)", "credits": 0.5, "usd_kie": usd_kie(0.5), "usd_client": usd_client(usd_kie(0.5)), "free_first": 1, "per": "image", "source": "pricingDesc"}
     ],
-    formula="за картинку 1K 7 кр / 2K 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
-    affects_price=["resolution", "input_images"],
-    note="1K 7 кр, 2K 14 кр, входные картинки 0.5 кр (первая бесплатно)",
+    formula="за картинку basic (1K) 7 кр / high (2K) 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
+    affects_price=["quality", "input_images"],
+    note="basic 7 кр, high 14 кр, входные картинки 0.5 кр (первая бесплатно)",
 )
 SPECIAL["seedream/5-pro-image-to-image"] = dict(SPECIAL["seedream/5-pro-text-to-image"])
 reg(
@@ -1667,6 +1685,11 @@ MENTION_EXCEPTIONS = {
     "gpt-image-2-6/flare-image-to-image": "токен-тариф: часть чисел в прайсе без слова «credits» — взяты из строки цены",
     "gpt-image-2-6/sunburst-text-to-image": "токен-тариф: часть чисел в прайсе без слова «credits» — взяты из строки цены",
     "gpt-image-2-6/sunburst-image-to-image": "токен-тариф: часть чисел в прайсе без слова «credits» — взяты из строки цены",
+    # task-22: один блок прайса обслуживает два kie_id — тир в id, в правилах только свои числа
+    "kling/ai-avatar-pro": "в прайсе общий блок на два id (10.1 и 20.2 кр/с): 10.1 — Standard, 20.2 — Pro",
+    "kling/ai-avatar-standard": "в прайсе общий блок на два id (10.1 и 20.2 кр/с): 10.1 — Standard, 20.2 — Pro",
+    "hailuo/2-3-image-to-video-pro": "в прайсе общая матрица mode×duration×resolution: у Pro-режима только 45/90/80 кр",
+    "hailuo/2-3-image-to-video-standard": "в прайсе общая матрица mode×duration×resolution: у Standard-режима только 30/50/50 кр",
 }
 
 
@@ -1966,22 +1989,32 @@ STUDIO_TO_KIE: dict[str, list[str]] = {
 def load_studio_models() -> list[dict]:
     """Цены студии из ЗАКОММИЧЕННОЙ версии (HEAD) — рабочая копия может правиться шагом 8."""
     import subprocess
+    import sys
+    import types
 
-    txt = ""
-    with contextlib.suppress(Exception):
-        txt = (
-            subprocess.run(
-                ["git", "show", "HEAD:app/services/kie_catalog.py"],
-                cwd=ROOT,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                check=False,
-            ).stdout
-            or ""
-        )
+    def _head(relpath: str) -> str:
+        return subprocess.run(
+            ["git", "show", f"HEAD:{relpath}"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False,
+        ).stdout or ""
+
+    txt = _head("app/services/kie_catalog.py")
     if not txt.strip():
         txt = (ROOT / "app/services/kie_catalog.py").read_text(encoding="utf-8")
+    # HEAD kie_catalog импортирует app.services.kie_catalog_families — подставляем
+    # HEAD-версию модуля, иначе ModuleNotFoundError / расхождение с рабочим деревом.
+    fam_txt = _head("app/services/kie_catalog_families.py")
+    if fam_txt.strip():
+        pkg_app = types.ModuleType("app")
+        pkg_app.__path__ = [str(ROOT / "app")]
+        pkg_services = types.ModuleType("app.services")
+        pkg_services.__path__ = [str(ROOT / "app" / "services")]
+        fam_mod = types.ModuleType("app.services.kie_catalog_families")
+        fam_mod.__file__ = str(ROOT / "app" / "services" / "kie_catalog_families.py")
+        exec(compile(fam_txt, "<kie_catalog_families HEAD>", "exec"), fam_mod.__dict__)  # noqa: S102
+        sys.modules.setdefault("app", pkg_app)
+        sys.modules.setdefault("app.services", pkg_services)
+        sys.modules["app.services.kie_catalog_families"] = fam_mod
     ns: dict = {"__name__": "_kie_catalog_head"}
     exec(compile(txt, "<kie_catalog HEAD>", "exec"), ns)  # noqa: S102
     return list(ns["MODELS"])

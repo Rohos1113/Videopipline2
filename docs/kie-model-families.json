@@ -6,7 +6,7 @@
   "source_table": "docs/kie-ai-models.csv",
   "source_catalog": "app/services/kie_catalog.py @ HEAD",
   "source_prices": "docs/kie-prices-usd.json (первичен по деньгам: unit/rules/default)",
-  "catalog_git_blob_sha": "89307571cb56834f9595378c108ae15cbb900423",
+  "catalog_git_blob_sha": "b9504bc39f4051e55317d5c69299d7db198ef6bc",
   "credit_usd": 0.005,
   "counts": {
    "api_models_total": 251,
@@ -67,8 +67,100 @@
    "fields": {
     "modes_total": 182,
     "modes_with_docs_schema": 175,
-    "modes_fields_complete": 175,
-    "modes_fields_mismatch": [],
+    "modes_fields_complete": 165,
+    "modes_fields_mismatch": [
+     {
+      "kie_id": "google/gemini-omni-flash-1-2-extend",
+      "schema_fields": 4,
+      "written_fields": 5,
+      "missed": [],
+      "extra": [
+       "resolution"
+      ]
+     },
+     {
+      "kie_id": "grok-imagine/extend",
+      "schema_fields": 4,
+      "written_fields": 6,
+      "missed": [],
+      "extra": [
+       "duration",
+       "resolution"
+      ]
+     },
+     {
+      "kie_id": "grok-imagine/upscale",
+      "schema_fields": 2,
+      "written_fields": 3,
+      "missed": [],
+      "extra": [
+       "from_resolution"
+      ]
+     },
+     {
+      "kie_id": "hailuo/02-text-to-video-pro",
+      "schema_fields": 3,
+      "written_fields": 4,
+      "missed": [],
+      "extra": [
+       "resolution"
+      ]
+     },
+     {
+      "kie_id": "hailuo/02-text-to-video-standard",
+      "schema_fields": 4,
+      "written_fields": 5,
+      "missed": [],
+      "extra": [
+       "resolution"
+      ]
+     },
+     {
+      "kie_id": "hailuo/02-image-to-video-pro",
+      "schema_fields": 5,
+      "written_fields": 6,
+      "missed": [],
+      "extra": [
+       "resolution"
+      ]
+     },
+     {
+      "kie_id": "kling/ai-avatar-pro",
+      "schema_fields": 3,
+      "written_fields": 4,
+      "missed": [],
+      "extra": [
+       "resolution"
+      ]
+     },
+     {
+      "kie_id": "kling/ai-avatar-standard",
+      "schema_fields": 3,
+      "written_fields": 4,
+      "missed": [],
+      "extra": [
+       "resolution"
+      ]
+     },
+     {
+      "kie_id": "runway",
+      "schema_fields": 6,
+      "written_fields": 7,
+      "missed": [],
+      "extra": [
+       "resolution"
+      ]
+     },
+     {
+      "kie_id": "runway/extend-ai-video",
+      "schema_fields": 4,
+      "written_fields": 5,
+      "missed": [],
+      "extra": [
+       "resolution"
+      ]
+     }
+    ],
     "modes_fields_from_catalog": 7,
     "modes_without_fields": 0,
     "modes_without_fields_list": [],
@@ -230,7 +322,7 @@
       ]
      }
     ],
-    "ok": true
+    "ok": false
    },
    "pricing": {
     "modes_with_price": 178,
@@ -245,8 +337,48 @@
     },
     "unit_source": "docs/kie-prices-usd.json",
     "checked_against_csv": 171,
-    "numbers_match": 149,
+    "numbers_match": 145,
     "mismatches": [
+     {
+      "kie_id": "hailuo/2-3-image-to-video-pro",
+      "csv": [
+       30.0,
+       45.0,
+       50.0,
+       80.0,
+       90.0
+      ],
+      "mine": [
+       45.0,
+       80.0,
+       90.0
+      ],
+      "only_csv": [
+       30.0,
+       50.0
+      ],
+      "only_mine": []
+     },
+     {
+      "kie_id": "hailuo/2-3-image-to-video-standard",
+      "csv": [
+       30.0,
+       45.0,
+       50.0,
+       80.0,
+       90.0
+      ],
+      "mine": [
+       30.0,
+       50.0
+      ],
+      "only_csv": [
+       45.0,
+       80.0,
+       90.0
+      ],
+      "only_mine": []
+     },
      {
       "kie_id": "minimax-h3/text-to-video",
       "csv": [
@@ -310,6 +442,34 @@
        1.5,
        3.0
       ]
+     },
+     {
+      "kie_id": "kling/ai-avatar-pro",
+      "csv": [
+       10.1,
+       20.2
+      ],
+      "mine": [
+       20.2
+      ],
+      "only_csv": [
+       10.1
+      ],
+      "only_mine": []
+     },
+     {
+      "kie_id": "kling/ai-avatar-standard",
+      "csv": [
+       10.1,
+       20.2
+      ],
+      "mine": [
+       10.1
+      ],
+      "only_csv": [
+       20.2
+      ],
+      "only_mine": []
      },
      {
       "kie_id": "wan/2-6-text-to-video",
@@ -992,9 +1152,332 @@
     "rules_mismatch": [],
     "ok": true
    },
+   "field_patches": {
+    "count": 12,
+    "modes": 10,
+    "fields": [
+     {
+      "kie_id": "google/gemini-omni-flash-1-2-extend",
+      "family": "gemini-omni-flash-1-2",
+      "action": "add",
+      "field": "resolution",
+      "kind": "select",
+      "default": "360p",
+      "options": [
+       "360p",
+       "720p"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "grok-imagine/extend",
+      "family": "grok-imagine-video",
+      "action": "add",
+      "field": "duration",
+      "kind": "select",
+      "default": "6",
+      "options": [
+       "6",
+       "10"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "grok-imagine/extend",
+      "family": "grok-imagine-video",
+      "action": "add",
+      "field": "resolution",
+      "kind": "select",
+      "default": "480p",
+      "options": [
+       "480p",
+       "720p"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "grok-imagine/upscale",
+      "family": "grok-imagine-video",
+      "action": "add",
+      "field": "from_resolution",
+      "kind": "select",
+      "default": "480P",
+      "options": [
+       "480P",
+       "720P"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "hailuo/02-text-to-video-pro",
+      "family": "hailuo-02",
+      "action": "add",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1080P",
+      "options": [
+       "1080P"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "hailuo/02-text-to-video-standard",
+      "family": "hailuo-02",
+      "action": "add",
+      "field": "resolution",
+      "kind": "select",
+      "default": "768P",
+      "options": [
+       "768P"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "hailuo/02-image-to-video-pro",
+      "family": "hailuo-02",
+      "action": "add",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1080P",
+      "options": [
+       "1080P"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "kling/ai-avatar-pro",
+      "family": "kling-avatar",
+      "action": "add",
+      "field": "resolution",
+      "kind": "select",
+      "default": "1080p",
+      "options": [
+       "1080p"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "kling/ai-avatar-standard",
+      "family": "kling-avatar",
+      "action": "add",
+      "field": "resolution",
+      "kind": "select",
+      "default": "720p",
+      "options": [
+       "720p"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "runway",
+      "family": "runway",
+      "action": "add",
+      "field": "resolution",
+      "kind": "select",
+      "default": "720p",
+      "options": [
+       "720p",
+       "1080p"
+      ],
+      "before": null
+     },
+     {
+      "kie_id": "runway",
+      "family": "runway",
+      "action": "replace",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "options": [
+       "5",
+       "10"
+      ],
+      "before": {
+       "kind": "number",
+       "default": null,
+       "options": null
+      }
+     },
+     {
+      "kie_id": "runway/extend-ai-video",
+      "family": "runway",
+      "action": "add",
+      "field": "resolution",
+      "kind": "select",
+      "default": "720p",
+      "options": [
+       "720p",
+       "1080p"
+      ],
+      "before": null
+     }
+    ],
+    "note": "task-22: догружены поля, без которых when-правило цены не находит значение (тир зашит в kie_id, поле называется иначе или его нет в OpenAPI-схеме)"
+   },
+   "duration_defaults": {
+    "filled": 15,
+    "modes": 15,
+    "fields": [
+     {
+      "kie_id": "google/gemini-omni-flash-1-2",
+      "family": "gemini-omni-flash-1-2",
+      "field": "duration",
+      "kind": "number",
+      "default": 5,
+      "options": [],
+      "reason": "number: контрактный дефолт 5 внутри границ поля"
+     },
+     {
+      "kie_id": "google/gemini-omni-flash-1-2-extend",
+      "family": "gemini-omni-flash-1-2",
+      "field": "duration",
+      "kind": "number",
+      "default": 5,
+      "options": [],
+      "reason": "number: контрактный дефолт 5 внутри границ поля"
+     },
+     {
+      "kie_id": "grok-imagine/text-to-video",
+      "family": "grok-imagine-video",
+      "field": "duration",
+      "kind": "number",
+      "default": 6,
+      "options": [],
+      "reason": "number: 5 вне границ 6–30 → нижняя граница"
+     },
+     {
+      "kie_id": "hailuo/02-text-to-video-standard",
+      "family": "hailuo-02",
+      "field": "duration",
+      "kind": "select",
+      "default": "6",
+      "options": [
+       "6",
+       "10"
+      ],
+      "reason": "select: первая option"
+     },
+     {
+      "kie_id": "hailuo/02-image-to-video-standard",
+      "family": "hailuo-02",
+      "field": "duration",
+      "kind": "select",
+      "default": "6",
+      "options": [
+       "6",
+       "10"
+      ],
+      "reason": "select: первая option"
+     },
+     {
+      "kie_id": "kling-3.0/video",
+      "family": "kling-3-0",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "options": [
+       "3",
+       "4",
+       "5",
+       "6",
+       "7",
+       "8"
+      ],
+      "reason": "select: \"5\" есть в options"
+     },
+     {
+      "kie_id": "pixverse-v6/text-to-video",
+      "family": "pixverse-v6",
+      "field": "duration",
+      "kind": "number",
+      "default": 5,
+      "options": [],
+      "reason": "number: контрактный дефолт 5 внутри границ поля"
+     },
+     {
+      "kie_id": "pixverse-v6/image-to-video",
+      "family": "pixverse-v6",
+      "field": "duration",
+      "kind": "number",
+      "default": 5,
+      "options": [],
+      "reason": "number: контрактный дефолт 5 внутри границ поля"
+     },
+     {
+      "kie_id": "pixverse-v6-max/text-to-video",
+      "family": "pixverse-v6",
+      "field": "duration",
+      "kind": "number",
+      "default": 5,
+      "options": [],
+      "reason": "number: контрактный дефолт 5 внутри границ поля"
+     },
+     {
+      "kie_id": "pixverse-v6-max/image-to-video",
+      "family": "pixverse-v6",
+      "field": "duration",
+      "kind": "number",
+      "default": 5,
+      "options": [],
+      "reason": "number: контрактный дефолт 5 внутри границ поля"
+     },
+     {
+      "kie_id": "pixverse-v6/transition",
+      "family": "pixverse-v6",
+      "field": "duration",
+      "kind": "number",
+      "default": 5,
+      "options": [],
+      "reason": "number: контрактный дефолт 5 внутри границ поля"
+     },
+     {
+      "kie_id": "pixverse-v6/extend",
+      "family": "pixverse-v6",
+      "field": "duration",
+      "kind": "number",
+      "default": 5,
+      "options": [],
+      "reason": "number: контрактный дефолт 5 внутри границ поля"
+     },
+     {
+      "kie_id": "pixverse-v6/reference-to-video",
+      "family": "pixverse-v6",
+      "field": "duration",
+      "kind": "number",
+      "default": 5,
+      "options": [],
+      "reason": "number: контрактный дефолт 5 внутри границ поля"
+     },
+     {
+      "kie_id": "wan/2-5-text-to-video",
+      "family": "wan-2-5",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "options": [
+       "5",
+       "10"
+      ],
+      "reason": "select: \"5\" есть в options"
+     },
+     {
+      "kie_id": "wan/2-5-image-to-video",
+      "family": "wan-2-5",
+      "field": "duration",
+      "kind": "select",
+      "default": "5",
+      "options": [
+       "5",
+       "10"
+      ],
+      "reason": "select: \"5\" есть в options"
+     }
+    ],
+    "note": "task-22: пустой duration → select: \"5\" (если есть в options), иначе первая опция; number: 5, а если 5 вне границ поля — нижняя граница"
+   },
    "defaults": {
-    "filled": 50,
-    "modes": 45,
+    "filled": 53,
+    "modes": 48,
     "fields": [
      {
       "kie_id": "bytedance/seedance-2-5-draft",
@@ -1503,6 +1986,42 @@
       "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
      },
      {
+      "kie_id": "seedream/5-pro-text-to-image",
+      "family": "seedream-5",
+      "field": "quality",
+      "kind": "select",
+      "default": "basic",
+      "rule_key": "quality",
+      "rule_values": [
+       "basic",
+       "high"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "seedream/5-pro-image-to-image",
+      "family": "seedream-5",
+      "field": "quality",
+      "kind": "select",
+      "default": "basic",
+      "rule_key": "quality",
+      "rule_values": [
+       "basic",
+       "high"
+      ],
+      "reason": "поле участвует в when-правиле цены, default был null: select → первый option, значение есть в правилах"
+     },
+     {
+      "kie_id": "grok-imagine/text-to-image",
+      "family": "grok-imagine-image",
+      "field": "enable_pro",
+      "kind": "toggle",
+      "default": false,
+      "rule_key": "enable_pro",
+      "rule_values": [],
+      "reason": "поле участвует в when-правиле цены, default был null: toggle → false, значение есть в правилах"
+     },
+     {
       "kie_id": "ideogram/v3-text-to-image",
       "family": "ideogram-v3",
       "field": "rendering_speed",
@@ -1656,7 +2175,7 @@
     "note": "дефолты поставлены только полям из when-правил цены, у которых default был null; toggle → false, select → первый option, и только если значение есть в правилах"
    },
    "catalog_snapshot": {
-    "git_blob_sha": "89307571cb56834f9595378c108ae15cbb900423",
+    "git_blob_sha": "b9504bc39f4051e55317d5c69299d7db198ef6bc",
     "entries": 33
    },
    "live_check": {
@@ -5424,7 +5943,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": false,
-       "default": null,
+       "default": 5,
        "min": 3,
        "max": 15,
        "hint": "Duration of the generated video in seconds. Send an integer. - Text / reference images / characters (no first frame, no video): **required**, **3–15** - First frame only: **required**, **3–15** - First and last frame: **"
@@ -5603,7 +6122,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": true,
-       "default": null,
+       "default": 5,
        "min": 3,
        "max": 10,
        "hint": "How many seconds to extend from the end. Required. Integer **3–10**. This is the length of the new segment, not the full output. Full duration is about source length + `duration`."
@@ -5616,6 +6135,18 @@
        "default": null,
        "max_items": 3,
        "hint": "Reference image URLs, max **3**. Used to keep people and objects consistent. Limits: - Use publicly accessible image URLs - Supported formats: png / jpeg / webp - Each file must be no larger than `20MB`"
+      },
+      {
+       "name": "resolution",
+       "label": "Разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "360p",
+       "options": [
+        "360p",
+        "720p"
+       ],
+       "hint": "Разрешение исходного видео: 360p или 720p"
       }
      ],
      "pricing": {
@@ -5717,7 +6248,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": false,
-       "default": null,
+       "default": 6,
        "hint": "The duration of the generated video (in seconds) (6-30). (Minimum: 6, Maximum: 30, Step: 1)"
       },
       {
@@ -5982,6 +6513,30 @@
         "10"
        ],
        "hint": "6 or 10 (seconds)."
+      },
+      {
+       "name": "duration",
+       "label": "Длительность, сек",
+       "kind": "select",
+       "required": false,
+       "default": "6",
+       "options": [
+        "6",
+        "10"
+       ],
+       "hint": "6 или 10 секунд продления"
+      },
+      {
+       "name": "resolution",
+       "label": "Разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "480p",
+       "options": [
+        "480p",
+        "720p"
+       ],
+       "hint": "480p или 720p — разрешение исходного ролика"
       }
      ],
      "pricing": {
@@ -6070,6 +6625,18 @@
         "1080p"
        ],
        "hint": "Video generation resolution."
+      },
+      {
+       "name": "from_resolution",
+       "label": "Исходное разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "480P",
+       "options": [
+        "480P",
+        "720P"
+       ],
+       "hint": "Разрешение исходного ролика: 480P или 720P"
       }
      ],
      "pricing": {
@@ -6341,6 +6908,17 @@
        "required": false,
        "default": null,
        "hint": "Defaults to false. When false, no additional content filtering is applied and results are returned directly by the model."
+      },
+      {
+       "name": "resolution",
+       "label": "Разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "1080P",
+       "options": [
+        "1080P"
+       ],
+       "hint": "1080P — единственное разрешение Pro-режима (правило цены: resolution=1080p)"
       }
      ],
      "pricing": {
@@ -6394,7 +6972,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "6",
        "options": [
         "6",
         "10"
@@ -6416,6 +6994,17 @@
        "required": false,
        "default": null,
        "hint": "Defaults to false. When false, no additional content filtering is applied and results are returned directly by the model."
+      },
+      {
+       "name": "resolution",
+       "label": "Разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "768P",
+       "options": [
+        "768P"
+       ],
+       "hint": "768P — единственное разрешение Standard-режима (правило цены: resolution=768p)"
       }
      ],
      "pricing": {
@@ -6497,6 +7086,17 @@
        "required": false,
        "default": null,
        "hint": "Defaults to false. When false, no additional content filtering is applied and results are returned directly by the model."
+      },
+      {
+       "name": "resolution",
+       "label": "Разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "1080P",
+       "options": [
+        "1080P"
+       ],
+       "hint": "1080P — единственное разрешение Pro-режима (правило цены: resolution=1080p)"
       }
      ],
      "pricing": {
@@ -6570,7 +7170,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "6",
        "options": [
         "6",
         "10"
@@ -6711,37 +7311,6 @@
       "rules": [
        {
         "when": {
-         "mode": "standard",
-         "duration": "6",
-         "resolution": "768p"
-        },
-        "credits": 30.0,
-        "usd_kie": 0.15,
-        "usd_client": 0.1875
-       },
-       {
-        "when": {
-         "mode": "standard",
-         "duration": "10",
-         "resolution": "768p"
-        },
-        "credits": 50.0,
-        "usd_kie": 0.25,
-        "usd_client": 0.3125
-       },
-       {
-        "when": {
-         "mode": "standard",
-         "duration": "6",
-         "resolution": "1080p"
-        },
-        "credits": 50.0,
-        "usd_kie": 0.25,
-        "usd_client": 0.3125
-       },
-       {
-        "when": {
-         "mode": "pro",
          "duration": "6",
          "resolution": "768p"
         },
@@ -6751,7 +7320,6 @@
        },
        {
         "when": {
-         "mode": "pro",
          "duration": "10",
          "resolution": "768p"
         },
@@ -6761,7 +7329,6 @@
        },
        {
         "when": {
-         "mode": "pro",
          "duration": "6",
          "resolution": "1080p"
         },
@@ -6770,16 +7337,15 @@
         "usd_client": 0.5
        }
       ],
-      "default": 30.0,
+      "default": 45.0,
       "note": "за генерацию/ролик/картинку; кредиты: 30, 45, 50, 80, 90; прайс kie.ai: Hailuo 2.3 Image-to-Video — Standard 6s 768P 30 credits ($0.15), Standard 10s 768P 50 credits ($0.26), Standard 6s 1080P 50 credits ($0.26), Pro 6s 768P 45 credits ($0.22), Pro 10s 768P 90 credits ($0.45), Pro 6s 1080P 80 credits ($0.39) — all priced 20% lower",
       "credit_usd": 0.005,
       "source_text": "Hailuo 2.3 Image-to-Video — Standard 6s 768P 30 credits ($0.15), Standard 10s 768P 50 credits ($0.26), Standard 6s 1080P 50 credits ($0.26), Pro 6s 768P 45 credits ($0.22), Pro 10s 768P 90 credits ($0.45), Pro 6s 1080P 80 credits ($0.39) — all priced 20% lower than the official rates. High-tier top-ups include +10% bonus credits. Effective pricing is approximately 10% lower than the above rates.",
       "affects_price": [
-       "mode",
        "duration",
        "resolution"
       ],
-      "formula": "фикс за ролик: тир (standard/pro) × длительность (6/10 с) × разрешение (768P/1080P)",
+      "formula": "фикс за ролик Pro: длительность (6/10 с) × разрешение (768P/1080P)",
       "pricing_source": "docs/kie-prices-usd.json"
      },
      "constraints": [
@@ -6854,7 +7420,6 @@
       "rules": [
        {
         "when": {
-         "mode": "standard",
          "duration": "6",
          "resolution": "768p"
         },
@@ -6864,7 +7429,6 @@
        },
        {
         "when": {
-         "mode": "standard",
          "duration": "10",
          "resolution": "768p"
         },
@@ -6874,43 +7438,12 @@
        },
        {
         "when": {
-         "mode": "standard",
          "duration": "6",
          "resolution": "1080p"
         },
         "credits": 50.0,
         "usd_kie": 0.25,
         "usd_client": 0.3125
-       },
-       {
-        "when": {
-         "mode": "pro",
-         "duration": "6",
-         "resolution": "768p"
-        },
-        "credits": 45.0,
-        "usd_kie": 0.225,
-        "usd_client": 0.2812
-       },
-       {
-        "when": {
-         "mode": "pro",
-         "duration": "10",
-         "resolution": "768p"
-        },
-        "credits": 90.0,
-        "usd_kie": 0.45,
-        "usd_client": 0.5625
-       },
-       {
-        "when": {
-         "mode": "pro",
-         "duration": "6",
-         "resolution": "1080p"
-        },
-        "credits": 80.0,
-        "usd_kie": 0.4,
-        "usd_client": 0.5
        }
       ],
       "default": 30.0,
@@ -6918,11 +7451,10 @@
       "credit_usd": 0.005,
       "source_text": "Hailuo 2.3 Image-to-Video — Standard 6s 768P 30 credits ($0.15), Standard 10s 768P 50 credits ($0.26), Standard 6s 1080P 50 credits ($0.26), Pro 6s 768P 45 credits ($0.22), Pro 10s 768P 90 credits ($0.45), Pro 6s 1080P 80 credits ($0.39) — all priced 20% lower than the official rates. High-tier top-ups include +10% bonus credits. Effective pricing is approximately 10% lower than the above rates.",
       "affects_price": [
-       "mode",
        "duration",
        "resolution"
       ],
-      "formula": "фикс за ролик: тир (standard/pro) × длительность (6/10 с) × разрешение (768P/1080P)",
+      "formula": "фикс за ролик Standard: длительность (6/10 с) × разрешение (768P/1080P)",
       "pricing_source": "docs/kie-prices-usd.json"
      },
      "constraints": [
@@ -8501,7 +9033,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "3",
         "4",
@@ -10174,6 +10706,17 @@
        "required": true,
        "default": null,
        "hint": "Required, non-empty. Describe the avatar's expression, movement and camera; the speech comes from audio_url. Up to 5,000 characters. (макс. 5000 симв.)"
+      },
+      {
+       "name": "resolution",
+       "label": "Разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "1080p",
+       "options": [
+        "1080p"
+       ],
+       "hint": "1080P Pro — единственный тир режима (правило цены: resolution=1080p)"
       }
      ],
      "pricing": {
@@ -10181,24 +10724,14 @@
       "rules": [
        {
         "when": {
-         "resolution": "720p",
-         "mode": "standard"
-        },
-        "credits": 10.1,
-        "usd_kie": 0.0505,
-        "usd_client": 0.0631
-       },
-       {
-        "when": {
-         "resolution": "1080p",
-         "mode": "pro"
+         "resolution": "1080p"
         },
         "credits": 20.2,
         "usd_kie": 0.101,
         "usd_client": 0.1263
        }
       ],
-      "default": 10.1,
+      "default": 20.2,
       "note": "за секунду; кредиты: 10.1, 20.2; прайс kie.ai: 10.1 credits/s ($0.0505) for 720P (Standard), 20.2 credits/s ($0.101) for 1080P (Pro), up to 300 seconds per generation — about 10% below Kling's official pricing.",
       "credit_usd": 0.005,
       "source_text": "10.1 credits/s ($0.0505) for 720P (Standard), 20.2 credits/s ($0.101) for 1080P (Pro), up to 300 seconds per generation — about 10% below Kling's official pricing. High-tier top-ups come with bonus credits that lower the effective price by about 10%.",
@@ -10206,7 +10739,7 @@
        "resolution",
        "duration"
       ],
-      "formula": "кр/сек × длительность; 720P Standard / 1080P Pro",
+      "formula": "кр/сек × длительность; 1080P Pro",
       "pricing_source": "docs/kie-prices-usd.json"
      },
      "constraints": [
@@ -10252,6 +10785,17 @@
        "required": true,
        "default": null,
        "hint": "Required, non-empty. Describe the avatar's expression, movement and camera; the speech comes from audio_url. Up to 5,000 characters. (макс. 5000 симв.)"
+      },
+      {
+       "name": "resolution",
+       "label": "Разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "720p",
+       "options": [
+        "720p"
+       ],
+       "hint": "720P Standard — единственный тир режима (правило цены: resolution=720p)"
       }
      ],
      "pricing": {
@@ -10259,21 +10803,11 @@
       "rules": [
        {
         "when": {
-         "resolution": "720p",
-         "mode": "standard"
+         "resolution": "720p"
         },
         "credits": 10.1,
         "usd_kie": 0.0505,
         "usd_client": 0.0631
-       },
-       {
-        "when": {
-         "resolution": "1080p",
-         "mode": "pro"
-        },
-        "credits": 20.2,
-        "usd_kie": 0.101,
-        "usd_client": 0.1263
        }
       ],
       "default": 10.1,
@@ -10284,7 +10818,7 @@
        "resolution",
        "duration"
       ],
-      "formula": "кр/сек × длительность; 720P Standard / 1080P Pro",
+      "formula": "кр/сек × длительность; 720P Standard",
       "pricing_source": "docs/kie-prices-usd.json"
      },
      "constraints": [
@@ -10552,7 +11086,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": true,
-       "default": null,
+       "default": 5,
        "min": 1,
        "max": 15,
        "hint": "Required. Output video duration in seconds. PixVerse V6 supports 1–15 seconds."
@@ -10726,7 +11260,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": true,
-       "default": null,
+       "default": 5,
        "min": 1,
        "max": 15,
        "hint": "Generated video duration in seconds, ranging from 1 to 15. Required when template_id is not passed; if template_id is passed, the video duration is fixed by the selected template, please do not pass this parameter at the"
@@ -10970,7 +11504,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": true,
-       "default": null,
+       "default": 5,
        "min": 1,
        "max": 15,
        "hint": "Required. Output video duration in seconds. PixVerse V6 Max supports 1–15 seconds."
@@ -11136,7 +11670,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": true,
-       "default": null,
+       "default": 5,
        "min": 1,
        "max": 15,
        "hint": "Required. Output video duration in seconds. PixVerse V6 Max supports 1–15 seconds."
@@ -11312,7 +11846,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": true,
-       "default": null,
+       "default": 5,
        "min": 1,
        "max": 15,
        "hint": "Required. Output video duration in seconds. PixVerse V6 supports 1–15 seconds."
@@ -11457,7 +11991,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": true,
-       "default": null,
+       "default": 5,
        "min": 1,
        "max": 15,
        "hint": "Generated video duration in seconds. Current validation range is 1-15."
@@ -11673,7 +12207,7 @@
        "label": "Длительность, сек",
        "kind": "number",
        "required": true,
-       "default": null,
+       "default": 5,
        "min": 1,
        "max": 15,
        "hint": "Required. Output video duration in seconds, 1–15."
@@ -11833,10 +12367,14 @@
       {
        "name": "duration",
        "label": "Длительность, сек",
-       "kind": "number",
-       "required": true,
-       "default": null,
-       "hint": "Video duration, optional values are 5 or 10. If 10-second video is selected, 1080p resolution cannot be used"
+       "kind": "select",
+       "required": false,
+       "default": "5",
+       "options": [
+        "5",
+        "10"
+       ],
+       "hint": "Video duration: 5 или 10 секунд; 10 с — только 720p"
       },
       {
        "name": "quality",
@@ -11868,6 +12406,18 @@
        "required": false,
        "default": null,
        "hint": "Video watermark text content. An empty string indicates no watermark, while a non-empty string will display the specified text as a watermark in the bottom right corner of the video."
+      },
+      {
+       "name": "resolution",
+       "label": "Разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "720p",
+       "options": [
+        "720p",
+        "1080p"
+       ],
+       "hint": "Video resolution, 720p или 1080p (pricingDesc); 10 с доступно только в 720p"
       }
      ],
      "pricing": {
@@ -11960,6 +12510,18 @@
        "required": false,
        "default": null,
        "hint": "Video watermark text content. An empty string indicates no watermark, while a non-empty string will display the specified text as a watermark in the bottom right corner of the video."
+      },
+      {
+       "name": "resolution",
+       "label": "Разрешение",
+       "kind": "select",
+       "required": false,
+       "default": "720p",
+       "options": [
+        "720p",
+        "1080p"
+       ],
+       "hint": "Video resolution, 720p или 1080p (pricingDesc)"
       }
      ],
      "pricing": {
@@ -13200,7 +13762,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "5",
         "10"
@@ -13334,7 +13896,7 @@
        "label": "Длительность, сек",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "5",
        "options": [
         "5",
         "10"
@@ -16780,7 +17342,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "basic",
        "options": [
         "basic",
         "high"
@@ -16813,7 +17375,7 @@
       "rules": [
        {
         "when": {
-         "resolution": "1K"
+         "quality": "basic"
         },
         "credits": 7.0,
         "usd_kie": 0.035,
@@ -16821,7 +17383,7 @@
        },
        {
         "when": {
-         "resolution": "2K"
+         "quality": "high"
         },
         "credits": 14.0,
         "usd_kie": 0.07,
@@ -16833,10 +17395,10 @@
       "credit_usd": 0.005,
       "source_text": "1K: 7 credits per image ($0.035), 2K: 14 credits per image ($0.07). Input images cost 0.5 credits each ($0.0025), with the first input image free — approximately 20% cheaper than official rates. High-tier top-ups include +10% bonus credits, making the effective cost about 10% lower than the listed pricing.",
       "affects_price": [
-       "resolution",
+       "quality",
        "input_images"
       ],
-      "formula": "за картинку 1K 7 кр / 2K 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
+      "formula": "за картинку basic (1K) 7 кр / high (2K) 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
       "pricing_source": "docs/kie-prices-usd.json"
      },
      "constraints": [
@@ -16895,7 +17457,7 @@
        "label": "Качество",
        "kind": "select",
        "required": true,
-       "default": null,
+       "default": "basic",
        "options": [
         "basic",
         "high"
@@ -16928,7 +17490,7 @@
       "rules": [
        {
         "when": {
-         "resolution": "1K"
+         "quality": "basic"
         },
         "credits": 7.0,
         "usd_kie": 0.035,
@@ -16936,7 +17498,7 @@
        },
        {
         "when": {
-         "resolution": "2K"
+         "quality": "high"
         },
         "credits": 14.0,
         "usd_kie": 0.07,
@@ -16948,10 +17510,10 @@
       "credit_usd": 0.005,
       "source_text": "1K: 7 credits per image ($0.035), 2K: 14 credits per image ($0.07). Input images cost 0.5 credits each ($0.0025), with the first input image free — approximately 20% cheaper than official rates. High-tier top-ups include +10% bonus credits, making the effective cost about 10% lower than the listed pricing.",
       "affects_price": [
-       "resolution",
+       "quality",
        "input_images"
       ],
-      "formula": "за картинку 1K 7 кр / 2K 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
+      "formula": "за картинку basic (1K) 7 кр / high (2K) 14 кр + 0.5 кр за каждую входную картинку (первая бесплатно)",
       "pricing_source": "docs/kie-prices-usd.json"
      },
      "constraints": [
@@ -18985,7 +19547,7 @@
        "label": "Pro-режим",
        "kind": "toggle",
        "required": false,
-       "default": null,
+       "default": false,
        "hint": "Controls the request processing strategy. - `false`: Corresponds to **speed mode**. The system prioritizes response time and throughput, suitable for latency-sensitive scenarios. - `true`: Corresponds to **quality mode**"
       }
      ],
@@ -18994,7 +19556,7 @@
       "rules": [
        {
         "when": {
-         "mode": "standard"
+         "enable_pro": false
         },
         "credits": 4.0,
         "usd_kie": 0.02,
@@ -19002,7 +19564,7 @@
        },
        {
         "when": {
-         "mode": "quality"
+         "enable_pro": true
         },
         "credits": 5.0,
         "usd_kie": 0.025,
@@ -19014,9 +19576,9 @@
       "credit_usd": 0.005,
       "source_text": "Standard: 4 credits ($0.02) per generation; Quality: 5 credits ($0.025) per generation. Each generation outputs 2 images by default. High-tier top-ups (+10% bonus) bring effective pricing down to ~$0.018 per generation in Standard mode and ~$0.022 per generation in Quality mode.",
       "affects_price": [
-       "mode"
+       "enable_pro"
       ],
-      "formula": "фикс за генерацию: тир standard/quality; в генерации 2 картинки по умолчанию",
+      "formula": "фикс за генерацию: enable_pro false (standard) / true (quality); в генерации 2 картинки",
       "pricing_source": "docs/kie-prices-usd.json"
      },
      "constraints": [
