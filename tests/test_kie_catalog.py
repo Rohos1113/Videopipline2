@@ -10,15 +10,20 @@ def test_catalog_covers_categories() -> None:
     cats = {c["id"] for c in cat["categories"]}
     assert {"video", "image", "music", "sound", "voice", "tools"} <= cats
     cards = cat["models"]
-    # FAMILIES — единственный источник состава: 84 docs-семьи, по одной карточке
+    media_cards = [m for m in cards if m["media"] in ("video", "image")]
+    audio_cards = [m for m in cards if m["media"] == "audio" or m.get("audio")]
+    # FAMILIES — единственный источник состава для медиа: 84 docs-семьи, по карточке
     assert cat["families_count"] == 84
-    assert len(cards) == 84
-    assert len({m["id"] for m in cards}) == 84
-    video = {m["id"] for m in cards if m["media"] == "video"}
-    image = {m["id"] for m in cards if m["media"] == "image"}
+    assert len(media_cards) == 84
+    assert len({m["id"] for m in cards}) == 93
+    # аудио (Suno/ElevenLabs) — отдельные 9 карточек без modes, во вкладку «Аудио»
+    assert len(audio_cards) == 9
+    assert {"suno-music", "elevenlabs-v4"} <= {m["id"] for m in audio_cards}
+    assert not [m for m in audio_cards if "modes" in m]
+    video = {m["id"] for m in media_cards if m["media"] == "video"}
+    image = {m["id"] for m in media_cards if m["media"] == "image"}
     assert len(video) == len(image) == 42
-    # аудио в пикер KIE не входит (у владельца в таблице только видео/картинки)
-    assert not [m for m in cards if m["category"] in ("music", "sound", "voice")]
+    assert not [m for m in media_cards if m["category"] in ("music", "sound", "voice")]
     assert {"topaz-video-upscale", "kling-3-0-video", "hailuo-2-3-image-to-video-pro"} <= video
     assert {"topaz-image-upscale", "kie-image-upscale", "gpt-image-2-text-to-image"} <= image
     # media берём из данных, но чиним известные ошибки kie.ai (taskType врёт)
@@ -28,7 +33,7 @@ def test_catalog_covers_categories() -> None:
     for m in cards:
         assert m["fields"], m["id"]
     # у двух omnihuman цены нет вовсе — старый UI видит честный флаг unknown
-    for m in cards:
+    for m in media_cards:
         if m["id"] in {"omnihuman-1-5-human-identification", "omnihuman-1-5-subject-detection"}:
             assert m["pricing"].get("unknown") is True, m["id"]
 

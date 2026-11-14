@@ -2474,12 +2474,13 @@ def _family_card(fam: dict[str, Any]) -> dict[str, Any]:
 
 
 def _audio_card(spec: dict[str, Any]) -> dict[str, Any]:
-    """Аудио/музыка/голос — как раньше, без семей и USD-наценки."""
+    """Аудио/музыка/голос — отдельная карточка без modes, во вкладку «Аудио»."""
     return {
         "id": spec["id"],
         "label": spec["label"],
         "category": spec["category"],
         "media": _media_of(spec),
+        "audio": True,
         "desc": spec.get("desc") or "",
         "hint": spec.get("hint") or "",
         "is_top": bool(spec.get("is_top", False)),
@@ -2505,14 +2506,19 @@ def _media_of(m: dict[str, Any]) -> str:
 
 
 def catalog_for_ui() -> dict[str, Any]:
-    """Каталог для фронта: ровно docs-семьи (одна строка таблицы = одна карточка).
+    """Каталог для фронта: 84 docs-семьи (медиа) + 9 аудио-карточек без modes.
 
-    FAMILIES — единственный источник состава: id/label/media/modes отдаются как
-    есть, без переименований в legacy-id и без склейки режимов. Legacy MODELS
-    остаются только для маршрутизации генерации (get_model/get_family по
-    старым id и kie_id), в пикер они не попадают.
+    FAMILIES — единственный источник состава для видео/картинок: id/label/media/
+    modes отдаются как есть, без переименований в legacy-id и без склейки
+    режимов. Legacy MODELS остаются для маршрутизации генерации и для аудио:
+    музыка/звук/голос (Suno, ElevenLabs) отдаются отдельными карточками с
+    media="audio", audio=true и без modes — чтобы UI клал их во вкладку «Аудио»,
+    а не в видео/картинки. Счётчики families_count/media аудио не включают.
     """
     cards = [_family_card(fam) for fam in FAMILIES]
+    for spec in MODELS:
+        if spec.get("category") in _AUDIO_CATEGORIES:
+            cards.append(_audio_card(spec))
     return {
         "credit_usd": CREDIT_USD,
         "markup": MARKUP,

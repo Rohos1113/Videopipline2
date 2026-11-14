@@ -412,18 +412,29 @@ def test_catalog_cards_have_modes_and_usd_pricing() -> None:
     catalog = kc.catalog_for_ui()
     assert catalog["markup"] == 1.25
     cards = catalog["models"]
-    # FAMILIES — единственный источник состава: ровно docs-семьи, без legacy-карточек
+    # FAMILIES — единственный источник состава для медиа: 84 docs-семьи,
+    # плюс отдельные аудио-карточки (без modes) для вкладки «Аудио»
     assert catalog["families_count"] == len(kc.FAMILIES) == 84
-    assert len(cards) == 84
+    media_cards = [card for card in cards if card["media"] in ("video", "image")]
+    audio_cards = [card for card in cards if card["media"] == "audio" or card.get("audio")]
+    assert len(media_cards) == 84
+    assert len(audio_cards) == 9
+    assert len(cards) == 93
     ids = [card["id"] for card in cards]
-    assert len(set(ids)) == 84, [i for i in ids if ids.count(i) > 1]
-    assert ids == [fam["id"] for fam in kc.FAMILIES]
-    assert [card["label"] for card in cards] == [fam["label"] for fam in kc.FAMILIES]
-    assert sum(card["media"] == "video" for card in cards) == 42
-    assert sum(card["media"] == "image" for card in cards) == 42
-    assert not [c for c in cards if c["category"] in ("music", "sound", "voice")], "аудио в пикере не нужно"
+    assert len(set(ids)) == 93, [i for i in ids if ids.count(i) > 1]
+    assert [card["id"] for card in media_cards] == [fam["id"] for fam in kc.FAMILIES]
+    assert [card["label"] for card in media_cards] == [fam["label"] for fam in kc.FAMILIES]
+    assert sum(card["media"] == "video" for card in media_cards) == 42
+    assert sum(card["media"] == "image" for card in media_cards) == 42
+    # аудио не должно попадать в медиа-группы и не иметь modes
+    for card in audio_cards:
+        assert card["media"] == "audio"
+        assert card.get("audio") is True
+        assert "modes" not in card
+        assert card["category"] in ("music", "sound", "voice")
+    assert not [card for card in media_cards if card["category"] in ("music", "sound", "voice")]
     mode_kie_ids: list[str] = []
-    for card in cards:
+    for card in media_cards:
         assert card["fields"], card["id"]
         assert card.get("modes"), card["id"]
         assert card["modes_count"] == len(card["modes"]) == 1, card["id"]
@@ -439,7 +450,7 @@ def test_catalog_cards_have_modes_and_usd_pricing() -> None:
             assert "usd_rules" in pricing
     assert len(mode_kie_ids) == len(set(mode_kie_ids)) == 84
     # media: ideogram — картинка (в kie.ai врёт taskType), infinitalk — видео (Lip Sync)
-    by_id = {card["id"]: card for card in cards}
+    by_id = {card["id"]: card for card in media_cards}
     assert by_id["ideogram-v3-text-to-image"]["media"] == "image"
     assert by_id["infinitalk-from-audio"]["media"] == "video"
 
