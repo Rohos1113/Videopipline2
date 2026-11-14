@@ -1223,10 +1223,21 @@ def defaults_for(spec: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _is_unset(val: Any) -> bool:
+    """«Поле не задано»: None или пустая строка — UI присылает так нетронутые поля."""
+    return val is None or (isinstance(val, str) and not val.strip())
+
+
 def normalize_values(spec: dict[str, Any], values: dict[str, Any]) -> dict[str, Any]:
-    """Значения с дефолтами каталога (для прайсинга и валидации)."""
+    """Значения с дефолтами каталога (для прайсинга и валидации).
+
+    Явный null/"" в values — это «пользователь не трогал поле», а не «сбросить
+    значение»: берём дефолт режима, иначе null глушит when-условие цены.
+    """
     merged = defaults_for(spec)
     for k, v in (values or {}).items():
+        if _is_unset(v):
+            continue
         merged[k] = v
     return merged
 
@@ -1392,7 +1403,7 @@ def build_payload(spec: dict[str, Any], values: dict[str, Any]) -> dict[str, Any
     body: dict[str, Any] = {}
     fields = spec.get("fields")
     if not fields:
-        body = dict(values)
+        body = {k: v for k, v in merged.items() if not _is_unset(v)}
     else:
         for f in fields:
             name = f["name"]
@@ -1878,8 +1889,9 @@ def estimate_usd(
         when = rule.get("when") or {}
         if not _match_usd_rule(when, merged, spec):
             continue
-        # specificity: правило с большим числом условий точнее общего
-        score = len(when)
+        # specificity: больше условий — точнее правило; наличие видео/картинки на входе
+        # (это факт payload, а не дефолт формы) весит больше обычного условия
+        score = sum(2 if str(k).strip().lower() in _INPUT_FLAG_KEYS else 1 for k in when)
         if score > best_score:
             matched = rule
             best_score = score
@@ -2154,6 +2166,7 @@ _WHEN_KEY_ALIASES: dict[str, tuple[str, ...]] = {
 _TIER_KEYS = frozenset({"mode", "tier"})
 _VIDEO_FLAG_KEYS = frozenset({"with_video", "_has_videos", "has_videos", "has_video", "video_input"})
 _IMAGE_FLAG_KEYS = frozenset({"with_images", "_has_images", "has_images", "has_image"})
+_INPUT_FLAG_KEYS = _VIDEO_FLAG_KEYS | _IMAGE_FLAG_KEYS
 # ключи, которым нужен внешний контекст (токены/апскейл источника): правило не применяем
 _UNRESOLVED_ONLY_KEYS = frozenset({"token_kind", "from_resolution", "source_resolution"})
 

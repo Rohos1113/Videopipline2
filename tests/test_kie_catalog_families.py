@@ -802,6 +802,14 @@ def _rule_fits(rule: dict[str, Any], chosen: dict[str, Any]) -> bool:
     return True
 
 
+def _rule_score(rule: dict[str, Any]) -> int:
+    """Как в estimate_usd: наличие видео/картинки на входе весит больше."""
+    return sum(
+        2 if str(k).strip().lower() in (_VIDEO_WHEN_KEYS | _IMAGE_WHEN_KEYS) else 1
+        for k in rule.get("when") or {}
+    )
+
+
 def _coerce_field_value(spec: dict[str, Any], field_name: str, want: Any) -> Any:
     field = next(f for f in spec.get("fields") or [] if f["name"] == field_name)
     if isinstance(want, bool):
@@ -932,9 +940,7 @@ def test_every_price_rule_resolves_to_its_price() -> None:
             values, chosen = built
             expected = rule
             for cand in rules:
-                if _rule_fits(cand, chosen) and (
-                    expected is None or len(cand.get("when") or {}) > len(expected.get("when") or {})
-                ):
+                if _rule_fits(cand, chosen) and (expected is None or _rule_score(cand) > _rule_score(expected)):
                     expected = cand
             est = kc.estimate_usd(family, mode["id"], values)
             unit_price = est.get("unit_usd_client")
@@ -1079,3 +1085,58 @@ def test_resolution_derived_from_upscale_factor() -> None:
         est = kc.estimate_usd(family, "upscale", {"upscale_factor": factor})
         assert est["breakdown"]["matched_rule"] is not None, factor
         assert est["breakdown"]["matched_rule"]["resolution"] == resolution
+
+
+@needs_data
+def test_explicit_null_values_fall_back_to_mode_defaults() -> None:
+    """UI шлёт null/"" для нетронутых полей: это «не задано», а не сброс цены."""
+    family = kc.get_family("kling-3-0")
+    assert family is not None
+    base = kc.estimate_usd(family, "omni-i2v", {"resolution": "1080p"})
+    for unset in (None, ""):
+        est = kc.estimate_usd(family, "omni-i2v", {"resolution": "1080p", "audio": unset})
+        assert est["breakdown"]["matched_rule"] == base["breakdown"]["matched_rule"]
+        assert est["usd_client"] == pytest.approx(0.6315, abs=0.0002)
+    with_false = kc.estimate_usd(family, "omni-i2v", {"resolution": "1080p", "audio": False})
+    assert with_false["usd_client"] == pytest.approx(0.6315, abs=0.0002)
+    family_26 = kc.get_family("kling-2-6")
+    assert family_26 is not None
+    with_null = kc.estimate_usd(family_26, "i2v", {"duration": 10, "sound": None})
+    without = kc.estimate_usd(family_26, "i2v", {"duration": 10})
+    assert with_null["breakdown"]["matched_rule"] == without["breakdown"]["matched_rule"]
+    assert with_null["usd_client"] == pytest.approx(0.7875, abs=0.0002)
+
+
+@needs_data
+def test_null_values_do_not_go_to_payload_as_unset() -> None:
+    """null в values не должен ни глушить дефолт, ни уезжать в тело запроса пустым."""
+    family = kc.get_family("kling-3-0")
+    assert family is not None
+    payload = kc.build_mode_payload(family, "omni-i2v", {"resolution": "1080p", "audio": None})
+    body = payload["input"]
+    assert body["resolution"] == "1080p"
+    assert body["audio"] is False
+    assert None not in body.values()
+
+
+@needs_data
+def test_estimate_endpoint_null_value_keeps_mode_default() -> None:
+    """Живой репро с 8777: POST /estimate с audio=null, а не с отсутствующим ключом."""
+    client = TestClient(_app())
+    r = client.post(
+        "/api/kie-create/estimate",
+        json={
+            "model_id": "kling-3-0",
+            "mode": "omni-i2v",
+            "values": {
+                "resolution": "1080p",
+                "audio": None,
+                "prompt": "x",
+                "image_urls": ["https://example.com/a.png"],
+            },
+        },
+    )
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["errors"] == []
+    assert data["usd_client"] == pytest.approx(0.6315, abs=0.0002)
