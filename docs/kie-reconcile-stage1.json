@@ -1,0 +1,2117 @@
+{
+ "stage": 1,
+ "generated": "2026-11-14T14:07:34+03:00",
+ "sources": {
+  "live_api": "GET https://api.kie.ai/api/v1/models",
+  "snapshot": "docs/kie-ai-raw/models.json (2026-11-13)",
+  "families": "docs/kie-model-families.json",
+  "prices": "docs/kie-prices-usd.json"
+ },
+ "live": {
+  "total_models": 253,
+  "media_total": 181,
+  "video": 100,
+  "image": 81,
+  "added_since_snapshot": [
+   "gemini-4-hydrogen",
+   "gemini-4-hydrogen-openai"
+  ],
+  "removed_since_snapshot": [],
+  "changed_since_snapshot": [],
+  "added_media": []
+ },
+ "coverage": {
+  "families": 72,
+  "modes": 182,
+  "placed_ids_unique": 182,
+  "live_media_ids": 181,
+  "missing_from_families": [],
+  "extra_not_in_live": [
+   "bytedance/seedance-1.5-pro"
+  ],
+  "extra_expected": [
+   "bytedance/seedance-1.5-pro"
+  ],
+  "duplicates": {},
+  "in_live_api_flag_bad": []
+ },
+ "task_type": {
+  "mismatches": [
+   {
+    "kie_id": "ideogram/v3-text-to-image",
+    "issue": "task_type не совпадает",
+    "json": [
+     "Text to Video (ошибка kie.ai: модель картинная)"
+    ],
+    "live": [
+     "Text to Video"
+    ]
+   }
+  ]
+ },
+ "media": {
+  "conflicts": [
+   {
+    "family": "ideogram-v3",
+    "family_media": "image",
+    "kie_id": "ideogram/v3-text-to-image",
+    "live_media": "video",
+    "live_taskType": [
+     "Text to Video"
+    ]
+   }
+  ]
+ },
+ "families": {
+  "count": 72,
+  "mixed_generations": []
+ },
+ "prices": {
+  "modes_with_pricing": 171,
+  "rules_credits_not_in_desc": [],
+  "desc_credits_not_in_rules": [],
+  "unit_or_arithmetic_issues": [
+   {
+    "kie_id": "bytedance/v1-pro-text-to-video",
+    "issue": "unit=gen, а в прайсе цена за секунду",
+    "desc_head": "For Seedance V1 Pro, generating 1 second of video costs about 2.8 credits ($0.014) at 480p, 6 credits ($0.030) at 720p, and 14 credits ($0.070) at 108"
+   },
+   {
+    "kie_id": "bytedance/v1-pro-image-to-video",
+    "issue": "unit=gen, а в прайсе цена за секунду",
+    "desc_head": "For Seedance V1 Pro, generating 1 second of video costs about 2.8 credits ($0.014) at 480p, 6 credits ($0.030) at 720p, and 14 credits ($0.070) at 108"
+   },
+   {
+    "kie_id": "bytedance/v1-lite-text-to-video",
+    "issue": "unit=gen, а в прайсе цена за секунду",
+    "desc_head": "For Seedance V1 Lite, generating 1 second of video costs about 2 credits ($0.010) at 480p, 4.5 credits ($0.0225) at 720p, and 10 credits ($0.050) at 1"
+   },
+   {
+    "kie_id": "hailuo/2-3-image-to-video-pro",
+    "bad_credit_usd_pairs": [
+     {
+      "credits": 50.0,
+      "usd": 0.26,
+      "calc": 0.25
+     },
+     {
+      "credits": 50.0,
+      "usd": 0.26,
+      "calc": 0.25
+     },
+     {
+      "credits": 80.0,
+      "usd": 0.39,
+      "calc": 0.4
+     }
+    ]
+   },
+   {
+    "kie_id": "hailuo/2-3-image-to-video-standard",
+    "bad_credit_usd_pairs": [
+     {
+      "credits": 50.0,
+      "usd": 0.26,
+      "calc": 0.25
+     },
+     {
+      "credits": 50.0,
+      "usd": 0.26,
+      "calc": 0.25
+     },
+     {
+      "credits": 80.0,
+      "usd": 0.39,
+      "calc": 0.4
+     }
+    ]
+   },
+   {
+    "kie_id": "video/upscale",
+    "bad_credit_usd_pairs": [
+     {
+      "credits": 6.0,
+      "usd": 0.0075,
+      "calc": 0.03
+     }
+    ]
+   },
+   {
+    "kie_id": "wan/2-2-animate-move",
+    "issue": "unit=sec, а в прайсе нет «за секунду»",
+    "desc_head": "Your request will cost 12.5 Kie credits per video-second at 720p (≈ $0.0625). Each job can be up to 30 seconds long, and this rate is about 22 % cheap"
+   },
+   {
+    "kie_id": "wan/2-2-animate-replace",
+    "issue": "unit=sec, а в прайсе нет «за секунду»",
+    "desc_head": "Your request will cost 12.5 Kie credits per video-second for 720 p (≈ $0.0625), 9.5 Kie credits per video-second for 580 p (≈ $0.0475), and 6 Kie cred"
+   }
+  ]
+ },
+ "prices_json": {
+  "entries": 182,
+  "rules_total": 542,
+  "credit_usd_bad": [],
+  "credit_usd_bad_count": 0,
+  "markup_bad": [],
+  "markup_bad_count": 0,
+  "families_vs_prices_mismatch": [
+   {
+    "kie_id": "runway",
+    "families_credits": [
+     12.0,
+     30.0
+    ],
+    "prices_credits": [
+     12.0,
+     30.0,
+     30.0
+    ],
+    "note": "12 кр (5с 720p), 30 кр (10с 720p или 5с 1080p)"
+   },
+   {
+    "kie_id": "topaz/video-upscale",
+    "families_credits": [
+     8.0,
+     14.0
+    ],
+    "prices_credits": [
+     8.0,
+     8.0,
+     14.0
+    ],
+    "note": "Upscaling video with Topaz costs 8 credits ($0.04) per second for \"1×\" and \"2×\", 14 credits ($0.07) for \"4×\"."
+   },
+   {
+    "kie_id": "nano-banana-pro",
+    "families_credits": [
+     18.0,
+     24.0
+    ],
+    "prices_credits": [
+     18.0,
+     18.0,
+     24.0
+    ],
+    "note": "18 credits (~$0.09) for 1K/2K and 24 credits (~$0.12) for 4K—flat rate up to 50 % below official pricing."
+   },
+   {
+    "kie_id": "wan/2-6-text-to-video",
+    "families_credits": [
+     210.0,
+     315.0
+    ],
+    "prices_credits": [
+     70.0,
+     140.0,
+     210.0,
+     105.0,
+     210.0,
+     315.0
+    ],
+    "note": "720p 70/140/210 кр, 1080p 105/210/315 кр (5/10/15 с)"
+   },
+   {
+    "kie_id": "wan/2-6-image-to-video",
+    "families_credits": [
+     210.0,
+     315.0
+    ],
+    "prices_credits": [
+     70.0,
+     140.0,
+     210.0,
+     105.0,
+     210.0,
+     315.0
+    ],
+    "note": "720p 70/140/210 кр, 1080p 105/210/315 кр (5/10/15 с)"
+   },
+   {
+    "kie_id": "wan/2-6-video-to-video",
+    "families_credits": [
+     210.0,
+     315.0
+    ],
+    "prices_credits": [
+     70.0,
+     140.0,
+     210.0,
+     105.0,
+     210.0,
+     315.0
+    ],
+    "note": "720p 70/140/210 кр, 1080p 105/210/315 кр (5/10/15 с)"
+   },
+   {
+    "kie_id": "ai-music-api/cover-generate",
+    "families_credits": [],
+    "prices_credits": [
+     0.0
+    ],
+    "note": "в прайсе: free"
+   },
+   {
+    "kie_id": "wan/2-7-image",
+    "families_credits": [
+     12.0,
+     4.8
+    ],
+    "prices_credits": [
+     4.8
+    ],
+    "note": "4.8 кр за картинку"
+   },
+   {
+    "kie_id": "wan/2-7-image-pro",
+    "families_credits": [
+     12.0,
+     4.8
+    ],
+    "prices_credits": [
+     12.0
+    ],
+    "note": "12 кр за картинку"
+   },
+   {
+    "kie_id": "gemini-omni-video",
+    "families_credits": [
+     63.0,
+     84.0,
+     105.0,
+     126.0,
+     147.0,
+     168.0,
+     189.0,
+     210.0,
+     168.0,
+     252.0
+    ],
+    "prices_credits": [
+     63.0,
+     84.0,
+     105.0,
+     126.0,
+     63.0,
+     84.0,
+     105.0,
+     126.0,
+     147.0,
+     168.0
+    ],
+    "note": "720P/1080P 63/84/105/126, 4K 147/168/189/210 (4/6/8/10 с); с видео 168/252 кр"
+   },
+   {
+    "kie_id": "seedream/5-pro-text-to-image",
+    "families_credits": [
+     7.0,
+     14.0,
+     0.5
+    ],
+    "prices_credits": [
+     7.0,
+     14.0
+    ],
+    "note": "1K 7 кр, 2K 14 кр, входные картинки 0.5 кр (первая бесплатно)"
+   },
+   {
+    "kie_id": "seedream/5-pro-image-to-image",
+    "families_credits": [
+     7.0,
+     14.0,
+     0.5
+    ],
+    "prices_credits": [
+     7.0,
+     14.0
+    ],
+    "note": "1K 7 кр, 2K 14 кр, входные картинки 0.5 кр (первая бесплатно)"
+   },
+   {
+    "kie_id": "qwen3/pro-image-to-image",
+    "families_credits": [
+     6.4,
+     12.0,
+     0.5
+    ],
+    "prices_credits": [
+     6.4,
+     12.0
+    ],
+    "note": "Qwen Image 3.0 Pro image to image costs 6.4 credits per image (≈ $0.032) for 1K output and 12 credits per image (≈ $0.06) for 2K output.   Input images cost 0.5 credits per image."
+   },
+   {
+    "kie_id": "minimax-h3/text-to-video",
+    "families_credits": [
+     8.0,
+     13.0,
+     4.0
+    ],
+    "prices_credits": [
+     8.0,
+     13.0
+    ],
+    "note": "768P 8 кр/с, 2K 13 кр/с; доп. картинки свыше 5 — 4 кр/шт; видео на входе по тому же тарифу"
+   },
+   {
+    "kie_id": "minimax-h3/image-to-video",
+    "families_credits": [
+     8.0,
+     13.0,
+     4.0
+    ],
+    "prices_credits": [
+     8.0,
+     13.0
+    ],
+    "note": "768P 8 кр/с, 2K 13 кр/с; доп. картинки свыше 5 — 4 кр/шт; видео на входе по тому же тарифу"
+   },
+   {
+    "kie_id": "minimax-h3/reference-to-video",
+    "families_credits": [
+     8.0,
+     13.0,
+     4.0
+    ],
+    "prices_credits": [
+     8.0,
+     13.0
+    ],
+    "note": "768P 8 кр/с, 2K 13 кр/с; доп. картинки свыше 5 — 4 кр/шт; видео на входе по тому же тарифу"
+   },
+   {
+    "kie_id": "qwen3/image-to-image",
+    "families_credits": [
+     4.8,
+     0.5
+    ],
+    "prices_credits": [
+     4.8,
+     4.8
+    ],
+    "note": "Qwen image 3.0 Image-to-Image costs 4.8 credits per image (≈ $0.024) for 1K/2K output.   Input images are charged at 0.5 credits per image."
+   },
+   {
+    "kie_id": "qwen3/text-to-image",
+    "families_credits": [
+     4.8
+    ],
+    "prices_credits": [
+     4.8,
+     4.8
+    ],
+    "note": "Qwen image 3.0 text-to-Image costs 4.8 credits per image (≈ $0.024) for 1K/2K output."
+   },
+   {
+    "kie_id": "seedream/5-pro-layer-decomposition",
+    "families_credits": [
+     7.0,
+     14.0
+    ],
+    "prices_credits": [
+     7.0,
+     7.0,
+     14.0
+    ],
+    "note": "биллинг по числу выходных картинок"
+   },
+   {
+    "kie_id": "grok-imagine-image-2-0/segment-map",
+    "families_credits": [],
+    "prices_credits": [
+     0.0
+    ],
+    "note": "в прайсе: free"
+   },
+   {
+    "kie_id": "google/gemini-omni-flash-1-1",
+    "families_credits": [
+     63.0,
+     84.0,
+     105.0,
+     126.0,
+     147.0,
+     168.0,
+     189.0,
+     210.0,
+     168.0,
+     252.0
+    ],
+    "prices_credits": [
+     63.0,
+     84.0,
+     105.0,
+     126.0,
+     63.0,
+     84.0,
+     105.0,
+     126.0,
+     63.0,
+     84.0
+    ],
+    "note": "360P/720P/1080P 63/84/105/126, 4K 147/168/189/210; с видео 168/252 кр"
+   },
+   {
+    "kie_id": "seedream/5-flash-text-to-image",
+    "families_credits": [
+     3.24
+    ],
+    "prices_credits": [
+     3.24,
+     3.24,
+     3.24
+    ],
+    "note": "3.24 кр за картинку"
+   },
+   {
+    "kie_id": "seedream/5-flash-image-to-image",
+    "families_credits": [
+     3.24
+    ],
+    "prices_credits": [
+     3.24,
+     3.24,
+     3.24
+    ],
+    "note": "3.24 кр за картинку"
+   },
+   {
+    "kie_id": "seedream/5-flash-layer-decomposition",
+    "families_credits": [
+     3.24
+    ],
+    "prices_credits": [
+     3.24,
+     3.24,
+     3.24
+    ],
+    "note": "3.24 кр за картинку"
+   },
+   {
+    "kie_id": "bytedance/seedance-2-5-draft",
+    "families_credits": [],
+    "prices_credits": [
+     17.0,
+     28.0,
+     38.0,
+     63.0,
+     95.0,
+     158.0
+    ],
+    "note": "наследует биллинг исходного драфта; отдельной цены в прайсе нет — берём ставки Seedance 2.5"
+   },
+   {
+    "kie_id": "wan/2-6-flash-video-to-video",
+    "families_credits": [
+     80.0,
+     40.0,
+     120.0,
+     60.0
+    ],
+    "prices_credits": [
+     40.0,
+     80.0,
+     20.0,
+     40.0,
+     60.0,
+     120.0,
+     30.0,
+     60.0
+    ],
+    "note": "720p со звуком 40/80, без 20/40; 1080p со звуком 60/120, без 30/60 кр"
+   },
+   {
+    "kie_id": "wan/2-6-flash-image-to-video",
+    "families_credits": [
+     120.0,
+     60.0,
+     180.0,
+     90.0
+    ],
+    "prices_credits": [
+     40.0,
+     80.0,
+     120.0,
+     20.0,
+     40.0,
+     60.0,
+     60.0,
+     120.0,
+     180.0,
+     30.0
+    ],
+    "note": "720p со звуком 40/80/120, без 20/40/60; 1080p со звуком 60/120/180, без 30/60/90 кр"
+   },
+   {
+    "kie_id": "gpt-image-2-6/flare-text-to-image",
+    "families_credits": [
+     900.0,
+     36.0
+    ],
+    "prices_credits": [
+     900.0,
+     225.0,
+     1440.0,
+     360.0,
+     5400.0,
+     5400.0
+    ],
+    "note": "фиксированной цены за картинку нет — зависит от числа токенов; SVG — плюс токены автор-модели"
+   },
+   {
+    "kie_id": "gpt-image-2-6/flare-image-to-image",
+    "families_credits": [
+     900.0,
+     36.0
+    ],
+    "prices_credits": [
+     900.0,
+     225.0,
+     1440.0,
+     360.0,
+     5400.0,
+     5400.0
+    ],
+    "note": "фиксированной цены за картинку нет — зависит от числа токенов; SVG — плюс токены автор-модели"
+   },
+   {
+    "kie_id": "gpt-image-2-6/sunburst-text-to-image",
+    "families_credits": [
+     900.0,
+     36.0
+    ],
+    "prices_credits": [
+     900.0,
+     225.0,
+     1440.0,
+     360.0,
+     5400.0,
+     5400.0
+    ],
+    "note": "фиксированной цены за картинку нет — зависит от числа токенов; SVG — плюс токены автор-модели"
+   },
+   {
+    "kie_id": "gpt-image-2-6/sunburst-image-to-image",
+    "families_credits": [
+     900.0,
+     36.0
+    ],
+    "prices_credits": [
+     900.0,
+     225.0,
+     1440.0,
+     360.0,
+     5400.0,
+     5400.0
+    ],
+    "note": "фиксированной цены за картинку нет — зависит от числа токенов; SVG — плюс токены автор-модели"
+   },
+   {
+    "kie_id": "video/upscale",
+    "families_credits": [
+     6.0
+    ],
+    "prices_credits": [
+     1.5,
+     3.0,
+     6.0
+    ],
+    "note": "1.5 / 3 / 6 кр за секунду исходника для 1080P / 2K / 4K"
+   },
+   {
+    "kie_id": "seedream/5-5-layer-decomposition",
+    "families_credits": [
+     3.6,
+     6.3,
+     1.44,
+     15.84
+    ],
+    "prices_credits": [
+     3.6,
+     3.6,
+     6.3
+    ],
+    "note": "пример прайса: 4 слоя 1K + вход = 1.44 + 4×3.6 = 15.84 кр ($0.0792)"
+   },
+   {
+    "kie_id": "seedream/5-5-image-to-image",
+    "families_credits": [
+     3.6,
+     6.3,
+     1.44,
+     9.18
+    ],
+    "prices_credits": [
+     3.6,
+     3.6,
+     6.3
+    ],
+    "note": "пример прайса: 2K + 2 входные = 6.3 + 2×1.44 = 9.18 кр ($0.0459)"
+   },
+   {
+    "kie_id": "seedream/5-5-text-to-image",
+    "families_credits": [
+     3.6,
+     6.3
+    ],
+    "prices_credits": [
+     3.6,
+     3.6,
+     6.3
+    ],
+    "note": "3.6 / 6.3 кр"
+   },
+   {
+    "kie_id": "minimax-h3/image-edit",
+    "families_credits": [
+     1.8,
+     5.5,
+     0.5
+    ],
+    "prices_credits": [
+     1.8,
+     1.8,
+     5.5
+    ],
+    "note": "1K/2K 1.8 кр, 4K 5.5 кр, +0.5 кр за референс"
+   },
+   {
+    "kie_id": "minimax-h3/text-to-image",
+    "families_credits": [
+     1.8,
+     5.5
+    ],
+    "prices_credits": [
+     1.8,
+     1.8,
+     5.5
+    ],
+    "note": "1K/2K — 1.8 кр, 4K — 5.5 кр"
+   },
+   {
+    "kie_id": "bytedance/seedance-1.5-pro",
+    "families_credits": [],
+    "prices_credits": [
+     1.75,
+     3.5,
+     3.5,
+     7.0,
+     7.5,
+     15.0
+    ],
+    "note": "в живом каталоге kie.ai модели нет; в студии была (1.75/3.5/7/7.5/15 кр за секунду, звук вдвое). Цена только из каталога студии — прайс kie.ai её не подтверждает"
+   }
+  ]
+ },
+ "sample": [
+  {
+   "family": "seedance-2-0",
+   "label": "Seedance 2.0",
+   "brand": "ByteDance",
+   "media": "video",
+   "modes": [
+    {
+     "id": "standard",
+     "kie_id": "bytedance/seedance-2",
+     "task_type": "Image to Video, Video to Video, Text to Video",
+     "fields": 13,
+     "rules": 8,
+     "unit": "sec"
+    },
+    {
+     "id": "fast",
+     "kie_id": "bytedance/seedance-2-fast",
+     "task_type": "Text to Video, Image to Video, Video to Video",
+     "fields": 13,
+     "rules": 4,
+     "unit": "sec"
+    },
+    {
+     "id": "mini",
+     "kie_id": "bytedance/seedance-2-mini",
+     "task_type": "Text to Video, Image to Video, Video to Video",
+     "fields": 12,
+     "rules": 4,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 11.5, 19, 25, 41, 62, 102, 128, 208; прайс kie.ai: 480P: 11.5 credits",
+    "за секунду; кредиты: 6.8, 11.7, 15, 24.8; прайс kie.ai: 480P: 6.8 credits/s ($0.034/s, wit",
+    "за секунду; кредиты: 2.4, 3.8, 5, 8.2; прайс kie.ai: 480p — 2.4 credits/s ($0.012/s, with "
+   ]
+  },
+  {
+   "family": "seedance-2-5",
+   "label": "Seedance 2.5",
+   "brand": "ByteDance",
+   "media": "video",
+   "modes": [
+    {
+     "id": "standard",
+     "kie_id": "bytedance/seedance-2-5",
+     "task_type": "Video to Video, Image to Video, Text to Video",
+     "fields": 16,
+     "rules": 6,
+     "unit": "sec"
+    },
+    {
+     "id": "draft",
+     "kie_id": "bytedance/seedance-2-5-draft",
+     "task_type": "Video to Video",
+     "fields": 5,
+     "rules": 0,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": false,
+   "pricing_notes": [
+    "за секунду; кредиты: 17, 28, 38, 63, 95, 158; прайс kie.ai: 480P: 17 credits/s ($0.085/s, ",
+    "за генерацию/ролик/картинку; прайс kie.ai: The upgrade step inherits the billing mode (wit"
+   ]
+  },
+  {
+   "family": "seedance-1-5",
+   "label": "Seedance 1.5",
+   "brand": "ByteDance",
+   "media": "video",
+   "modes": [
+    {
+     "id": "pro",
+     "kie_id": "bytedance/seedance-1.5-pro",
+     "task_type": "неизвестно",
+     "fields": 6,
+     "rules": 0,
+     "unit": "unknown"
+    }
+   ],
+   "all_ids_live": false,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "цена в прайсе не указана"
+   ]
+  },
+  {
+   "family": "kling-2-5-turbo",
+   "label": "Kling 2.5 Turbo",
+   "brand": "Kling",
+   "media": "video",
+   "modes": [
+    {
+     "id": "t2v-pro",
+     "kie_id": "kling/v2-5-turbo-text-to-video-pro",
+     "task_type": "Text to Video",
+     "fields": 0,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "i2v-pro",
+     "kie_id": "kling/v2-5-turbo-image-to-video-pro",
+     "task_type": "Image to Video",
+     "fields": 0,
+     "rules": 2,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 63, 126; прайс kie.ai: 63 credits per 5-second video",
+    "за генерацию/ролик/картинку; кредиты: 63, 126; прайс kie.ai: 63 credits per 5-second video"
+   ]
+  },
+  {
+   "family": "kling-2-6",
+   "label": "Kling 2.6",
+   "brand": "Kling",
+   "media": "video",
+   "modes": [
+    {
+     "id": "t2v",
+     "kie_id": "kling-2.6/text-to-video",
+     "task_type": "Text to Video",
+     "fields": 5,
+     "rules": 4,
+     "unit": "gen"
+    },
+    {
+     "id": "i2v",
+     "kie_id": "kling-2.6/image-to-video",
+     "task_type": "Image to Video",
+     "fields": 4,
+     "rules": 4,
+     "unit": "gen"
+    },
+    {
+     "id": "motion-control",
+     "kie_id": "kling-2.6/motion-control",
+     "task_type": "Video to Video",
+     "fields": 0,
+     "rules": 2,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 63, 126, 252; прайс kie.ai: 5-second video: 63 credi",
+    "за генерацию/ролик/картинку; кредиты: 63, 126, 252; прайс kie.ai: 5-second video: 63 credi",
+    "за секунду; кредиты: 12.6, 20.2; прайс kie.ai: 12.6 credits/s ($0.063) for 720P, 20.2 cred"
+   ]
+  },
+  {
+   "family": "kling-3-0",
+   "label": "Kling 3.0",
+   "brand": "Kling",
+   "media": "video",
+   "modes": [
+    {
+     "id": "video",
+     "kie_id": "kling-3.0/video",
+     "task_type": "Text to Video, Image to Video",
+     "fields": 9,
+     "rules": 5,
+     "unit": "sec"
+    },
+    {
+     "id": "motion-control",
+     "kie_id": "kling-3.0/motion-control",
+     "task_type": "Video to Video",
+     "fields": 5,
+     "rules": 2,
+     "unit": "sec"
+    },
+    {
+     "id": "omni-t2v",
+     "kie_id": "kling-3.0-omni/text-to-video",
+     "task_type": "Text to Video",
+     "fields": 7,
+     "rules": 5,
+     "unit": "sec"
+    },
+    {
+     "id": "omni-i2v",
+     "kie_id": "kling-3.0-omni/image-to-video",
+     "task_type": "Image to Video",
+     "fields": 10,
+     "rules": 5,
+     "unit": "sec"
+    },
+    {
+     "id": "omni-r2v",
+     "kie_id": "kling-3.0-omni/reference-to-video",
+     "task_type": "Video Editing",
+     "fields": 11,
+     "rules": 7,
+     "unit": "sec"
+    },
+    {
+     "id": "omni-transformation",
+     "kie_id": "kling-3.0-omni/transformation",
+     "task_type": "Video Editing",
+     "fields": 8,
+     "rules": 3,
+     "unit": "sec"
+    },
+    {
+     "id": "turbo-t2v",
+     "kie_id": "kling/v3-turbo-text-to-video",
+     "task_type": "Text to Video",
+     "fields": 4,
+     "rules": 2,
+     "unit": "sec"
+    },
+    {
+     "id": "turbo-i2v",
+     "kie_id": "kling/v3-turbo-image-to-video",
+     "task_type": "Image to Video",
+     "fields": 4,
+     "rules": 2,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 15.1, 20.2, 22.7, 30.2, 75.5; прайс kie.ai: 720P (Standard): 15.1 cre",
+    "за секунду; кредиты: 22.7, 30.2; прайс kie.ai: 22.7 credits/s ($0.1135) for 720P, 30.2 cre",
+    "за секунду; кредиты: 15.1, 20.2, 25.2, 75.5; прайс kie.ai: 720P: 15.1 credits/s ($0.0755, ",
+    "за секунду; кредиты: 15.1, 20.2, 25.2, 75.5; прайс kie.ai: 720P: 15.1 credits/s ($0.0755, ",
+    "за секунду; кредиты: 15.1, 20.2, 22.7, 25.2, 30.2, 75.5; прайс kie.ai: 720P: 15.1 credits/",
+    "за секунду; кредиты: 22.7, 30.2, 75.5; прайс kie.ai: 720P: 22.7 credits/s ($0.1135) 1080P:",
+    "за секунду; кредиты: 20.2, 25.2; прайс kie.ai: 720P: 20.2 credits/s ($0.101), 1080P: 25.2 ",
+    "за секунду; кредиты: 20.2, 25.2; прайс kie.ai: 720P: 20.2 credits/s ($0.101), 1080P: 25.2 "
+   ]
+  },
+  {
+   "family": "kling-4-0",
+   "label": "Kling 4.0",
+   "brand": "Kling",
+   "media": "video",
+   "modes": [
+    {
+     "id": "keyframe",
+     "kie_id": "kling-4.0/keyframe-to-video",
+     "task_type": "Text to Video, Image to Video",
+     "fields": 7,
+     "rules": 2,
+     "unit": "sec"
+    },
+    {
+     "id": "keyframe-flash",
+     "kie_id": "kling-4.0/flash-keyframe-to-video",
+     "task_type": "Text to Video, Image to Video, Video to Video",
+     "fields": 5,
+     "rules": 1,
+     "unit": "sec"
+    },
+    {
+     "id": "r2v",
+     "kie_id": "kling-4.0/reference-to-video",
+     "task_type": "Text to Video, Image to Video",
+     "fields": 9,
+     "rules": 4,
+     "unit": "sec"
+    },
+    {
+     "id": "r2v-flash",
+     "kie_id": "kling-4.0/flash-reference-to-video",
+     "task_type": "Text to Video, Image to Video",
+     "fields": 8,
+     "rules": 2,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 28.5, 42.5; прайс kie.ai: 720P: 28.5 credits/s ($0.1425), 1080P: 42.5",
+    "за секунду; кредиты: 17; прайс kie.ai: 720P: 17 credits/s ($0.085/s) — billed on the outpu",
+    "за секунду; кредиты: 17, 25.5, 28.5, 42.5; прайс kie.ai: 720P: 17 credits/s ($0.085/s, wit",
+    "за секунду; кредиты: 11.3, 17; прайс kie.ai: 720P: 11.3 credits/s ($0.0565/s, with video) "
+   ]
+  },
+  {
+   "family": "veo-3-1",
+   "label": "Veo 3.1",
+   "brand": "Google",
+   "media": "video",
+   "modes": [
+    {
+     "id": "generate",
+     "kie_id": "veo-3-1",
+     "task_type": "Text to Video, Image to Video",
+     "fields": 10,
+     "rules": 9,
+     "unit": "gen"
+    },
+    {
+     "id": "extend",
+     "kie_id": "veo/extend",
+     "task_type": "Text to Video",
+     "fields": 5,
+     "rules": 3,
+     "unit": "gen"
+    },
+    {
+     "id": "upscale-1080p",
+     "kie_id": "veo/get-1080p-video",
+     "task_type": "Video to Video",
+     "fields": 0,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "upscale-4k",
+     "kie_id": "veo/get-4k-video",
+     "task_type": "Video to Video",
+     "fields": 2,
+     "rules": 1,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 30, 35, 60, 65, 150, 180, 250, 255, 370; прайс kie.a",
+    "за генерацию/ролик/картинку; кредиты: 30, 60, 250; прайс kie.ai: Lite mode 30 credits ($0.",
+    "за генерацию/ролик/картинку; кредиты: 5; прайс kie.ai: 1080P video output: 5 credits per v",
+    "за генерацию/ролик/картинку; кредиты: 120; прайс kie.ai: 4K video generation: 120 credits "
+   ]
+  },
+  {
+   "family": "hailuo-2-3",
+   "label": "Hailuo 2.3",
+   "brand": "Hailuo",
+   "media": "video",
+   "modes": [
+    {
+     "id": "i2v-pro",
+     "kie_id": "hailuo/2-3-image-to-video-pro",
+     "task_type": "Image to Video",
+     "fields": 4,
+     "rules": 6,
+     "unit": "gen"
+    },
+    {
+     "id": "i2v-standard",
+     "kie_id": "hailuo/2-3-image-to-video-standard",
+     "task_type": "Image to Video",
+     "fields": 5,
+     "rules": 6,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 30, 45, 50, 80, 90; прайс kie.ai: Hailuo 2.3 Image-t",
+    "за генерацию/ролик/картинку; кредиты: 30, 45, 50, 80, 90; прайс kie.ai: Hailuo 2.3 Image-t"
+   ]
+  },
+  {
+   "family": "hailuo-02",
+   "label": "Hailuo 02",
+   "brand": "Hailuo",
+   "media": "video",
+   "modes": [
+    {
+     "id": "t2v-pro",
+     "kie_id": "hailuo/02-text-to-video-pro",
+     "task_type": "Text to Video",
+     "fields": 3,
+     "rules": 1,
+     "unit": "sec"
+    },
+    {
+     "id": "t2v-standard",
+     "kie_id": "hailuo/02-text-to-video-standard",
+     "task_type": "Text to Video",
+     "fields": 4,
+     "rules": 1,
+     "unit": "sec"
+    },
+    {
+     "id": "i2v-pro",
+     "kie_id": "hailuo/02-image-to-video-pro",
+     "task_type": "Image to Video",
+     "fields": 5,
+     "rules": 1,
+     "unit": "sec"
+    },
+    {
+     "id": "i2v-standard",
+     "kie_id": "hailuo/02-image-to-video-standard",
+     "task_type": "Image to Video",
+     "fields": 7,
+     "rules": 2,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 9.5; прайс kie.ai: Generate 1080p video from an image with Hailuo 02 ",
+    "за секунду; кредиты: 5; прайс kie.ai: Hailuo 02 standard text-to-video costs 5 credits ($0",
+    "за секунду; кредиты: 9.5; прайс kie.ai: Generate 1080p video from an image with Hailuo 02 ",
+    "за секунду; кредиты: 2, 5; прайс kie.ai: Hailuo 02 standard image-to-video costs 5 credits"
+   ]
+  },
+  {
+   "family": "minimax-h3",
+   "label": "MiniMax H3 (видео)",
+   "brand": "Hailuo",
+   "media": "video",
+   "modes": [
+    {
+     "id": "t2v",
+     "kie_id": "minimax-h3/text-to-video",
+     "task_type": "Text to Video",
+     "fields": 4,
+     "rules": 3,
+     "unit": "sec"
+    },
+    {
+     "id": "i2v",
+     "kie_id": "minimax-h3/image-to-video",
+     "task_type": "Image to Video",
+     "fields": 5,
+     "rules": 3,
+     "unit": "sec"
+    },
+    {
+     "id": "r2v",
+     "kie_id": "minimax-h3/reference-to-video",
+     "task_type": "Image to Video",
+     "fields": 0,
+     "rules": 3,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 4, 8, 13; прайс kie.ai: Video generation & video input — 768P: 8 cred",
+    "за секунду; кредиты: 4, 8, 13; прайс kie.ai: Video generation & video input — 768P: 8 cred",
+    "за секунду; кредиты: 4, 8, 13; прайс kie.ai: Video generation & video input — 768P: 8 cred"
+   ]
+  },
+  {
+   "family": "wan-2-5",
+   "label": "WAN 2.5",
+   "brand": "Wan",
+   "media": "video",
+   "modes": [
+    {
+     "id": "t2v",
+     "kie_id": "wan/2-5-text-to-video",
+     "task_type": "Text to Video",
+     "fields": 0,
+     "rules": 2,
+     "unit": "sec"
+    },
+    {
+     "id": "i2v",
+     "kie_id": "wan/2-5-image-to-video",
+     "task_type": "Image to Video",
+     "fields": 0,
+     "rules": 2,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 12, 20; прайс kie.ai: 12 credits per second for 720p (~$0.06) and 20 ",
+    "за секунду; кредиты: 12, 20; прайс kie.ai: 12 credits per second for 720p (~$0.06) and 20 "
+   ]
+  },
+  {
+   "family": "wan-2-6",
+   "label": "WAN 2.6",
+   "brand": "Wan",
+   "media": "video",
+   "modes": [
+    {
+     "id": "t2v",
+     "kie_id": "wan/2-6-text-to-video",
+     "task_type": "Text to Video",
+     "fields": 0,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "i2v",
+     "kie_id": "wan/2-6-image-to-video",
+     "task_type": "Image to Video",
+     "fields": 6,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "v2v",
+     "kie_id": "wan/2-6-video-to-video",
+     "task_type": "Video to Video",
+     "fields": 0,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "flash-i2v",
+     "kie_id": "wan/2-6-flash-image-to-video",
+     "task_type": "Image to Video",
+     "fields": 0,
+     "rules": 4,
+     "unit": "gen"
+    },
+    {
+     "id": "flash-v2v",
+     "kie_id": "wan/2-6-flash-video-to-video",
+     "task_type": "Video to Video",
+     "fields": 0,
+     "rules": 4,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 210, 315; прайс kie.ai: 70 / 140 / 210 credits (~$0.",
+    "за генерацию/ролик/картинку; кредиты: 210, 315; прайс kie.ai: 70 / 140 / 210 credits (~$0.",
+    "за генерацию/ролик/картинку; кредиты: 210, 315; прайс kie.ai: 70 / 140 / 210 credits (~$0.",
+    "за генерацию/ролик/картинку; кредиты: 60, 90, 120, 180; прайс kie.ai: 720p with audio: 40 ",
+    "за генерацию/ролик/картинку; кредиты: 40, 60, 80, 120; прайс kie.ai: 720p with audio: 40 /"
+   ]
+  },
+  {
+   "family": "wan-2-2",
+   "label": "WAN 2.2 A14B",
+   "brand": "Wan",
+   "media": "video",
+   "modes": [
+    {
+     "id": "t2v-turbo",
+     "kie_id": "wan/2-2-a14b-text-to-video-turbo",
+     "task_type": "Text to Video",
+     "fields": 0,
+     "rules": 2,
+     "unit": "sec"
+    },
+    {
+     "id": "i2v-turbo",
+     "kie_id": "wan/2-2-a14b-image-to-video-turbo",
+     "task_type": "Image to Video",
+     "fields": 7,
+     "rules": 2,
+     "unit": "sec"
+    },
+    {
+     "id": "s2v-turbo",
+     "kie_id": "wan/2-2-a14b-speech-to-video-turbo",
+     "task_type": "Speech to Video",
+     "fields": 0,
+     "rules": 3,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 8, 16; прайс kie.ai: wan v2.2-a14b turbo costs 16 credits per video s",
+    "за секунду; кредиты: 8, 16; прайс kie.ai: wan v2.2-a14b turbo costs 16 credits per video s",
+    "за генерацию/ролик/картинку; кредиты: 12, 18, 24; прайс kie.ai: WAN 2.2 Speech-to-Video：72"
+   ]
+  },
+  {
+   "family": "qwen-image",
+   "label": "Qwen Image",
+   "brand": "Qwen",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i",
+     "kie_id": "qwen/text-to-image",
+     "task_type": "Text to Image",
+     "fields": 10,
+     "rules": 1,
+     "unit": "megapixel"
+    },
+    {
+     "id": "i2i",
+     "kie_id": "qwen/image-to-image",
+     "task_type": "Image to Image",
+     "fields": 11,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "edit",
+     "kie_id": "qwen/image-edit",
+     "task_type": "Image to Image",
+     "fields": 12,
+     "rules": 0,
+     "unit": "megapixel"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": false,
+   "pricing_notes": [
+    "за мегапиксель; кредиты: 4; прайс kie.ai: Qwen Image is priced at 4 credits per megapixel ",
+    "за генерацию/ролик/картинку; кредиты: 4; прайс kie.ai: Qwen Image-to-Image costs 4 credits",
+    "за мегапиксель; прайс kie.ai: Price ≈ $0.03 per megapixel, depending on the image aspect r"
+   ]
+  },
+  {
+   "family": "qwen2-image",
+   "label": "Qwen2 Image",
+   "brand": "Qwen",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i",
+     "kie_id": "qwen2/text-to-image",
+     "task_type": "Text to Image",
+     "fields": 5,
+     "rules": 0,
+     "unit": "gen"
+    },
+    {
+     "id": "edit",
+     "kie_id": "qwen2/image-edit",
+     "task_type": "Image Editing",
+     "fields": 6,
+     "rules": 0,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": false,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; прайс kie.ai: Price ≈ $0.03 per image, depending on the image",
+    "за генерацию/ролик/картинку; прайс kie.ai: Price ≈ $0.03 per image, depending on the image"
+   ]
+  },
+  {
+   "family": "qwen3-image",
+   "label": "Qwen3 Image",
+   "brand": "Qwen",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i",
+     "kie_id": "qwen3/text-to-image",
+     "task_type": "Text to Image",
+     "fields": 8,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i",
+     "kie_id": "qwen3/image-to-image",
+     "task_type": "Image to Image",
+     "fields": 9,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "t2i-pro",
+     "kie_id": "qwen3/pro-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 8,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i-pro",
+     "kie_id": "qwen3/pro-image-to-image",
+     "task_type": "Image to Image",
+     "fields": 9,
+     "rules": 3,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 4.8; прайс kie.ai: Qwen image 3.0 text-to-Image cost",
+    "за генерацию/ролик/картинку; кредиты: 0.5, 4.8; прайс kie.ai: Qwen image 3.0 Image-to-Imag",
+    "за генерацию/ролик/картинку; кредиты: 6.4, 12; прайс kie.ai: Qwen Image 3.0 Pro text to im",
+    "за генерацию/ролик/картинку; кредиты: 0.5, 6.4, 12; прайс kie.ai: Qwen Image 3.0 Pro image"
+   ]
+  },
+  {
+   "family": "gpt-image-1-5",
+   "label": "GPT Image 1.5",
+   "brand": "OpenAI",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i",
+     "kie_id": "gpt-image/1.5-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 3,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i",
+     "kie_id": "gpt-image/1.5-image-to-image",
+     "task_type": "Image to Image",
+     "fields": 4,
+     "rules": 2,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 4, 22; прайс kie.ai: text-to-image or image-to-image",
+    "за генерацию/ролик/картинку; кредиты: 4, 22; прайс kie.ai: medium quality 4 credits ($0.02"
+   ]
+  },
+  {
+   "family": "gpt-image-2",
+   "label": "GPT Image 2",
+   "brand": "OpenAI",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i",
+     "kie_id": "gpt-image-2-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 4,
+     "rules": 3,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i",
+     "kie_id": "gpt-image-2-image-to-image",
+     "task_type": "Image to Image",
+     "fields": 5,
+     "rules": 3,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 6, 10, 16; прайс kie.ai: GPT Image 2 — now just 6 cr",
+    "за генерацию/ролик/картинку; кредиты: 6, 10, 16; прайс kie.ai: GPT Image 2 — now just 6 cr"
+   ]
+  },
+  {
+   "family": "gpt-image-2-6",
+   "label": "GPT Image 2.6",
+   "brand": "OpenAI",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i-economy",
+     "kie_id": "gpt-image-2-6/economy-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 6,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i-economy",
+     "kie_id": "gpt-image-2-6/economy-image-to-image",
+     "task_type": "Image to Image, Image Editing",
+     "fields": 5,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "t2i-flare",
+     "kie_id": "gpt-image-2-6/flare-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 13,
+     "rules": 2,
+     "unit": "tokens"
+    },
+    {
+     "id": "i2i-flare",
+     "kie_id": "gpt-image-2-6/flare-image-to-image",
+     "task_type": "Image to Image, Image Editing",
+     "fields": 16,
+     "rules": 2,
+     "unit": "tokens"
+    },
+    {
+     "id": "t2i-sunburst",
+     "kie_id": "gpt-image-2-6/sunburst-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 13,
+     "rules": 2,
+     "unit": "tokens"
+    },
+    {
+     "id": "i2i-sunburst",
+     "kie_id": "gpt-image-2-6/sunburst-image-to-image",
+     "task_type": "Image to Image, Image Editing",
+     "fields": 16,
+     "rules": 2,
+     "unit": "tokens"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 5; прайс kie.ai: GPT Image 2.6 (Economy) — just 5 cr",
+    "за генерацию/ролик/картинку; кредиты: 5; прайс kie.ai: GPT Image 2.6 (Economy) — just 5 cr",
+    "по токенам; кредиты: 36, 900; прайс kie.ai: Text input 900 credits / 1M tokens ($4.50), ca",
+    "по токенам; кредиты: 36, 900; прайс kie.ai: Text input 900 credits / 1M tokens ($4.50), ca",
+    "по токенам; кредиты: 36, 900; прайс kie.ai: Text input 900 credits / 1M tokens ($4.50), ca",
+    "по токенам; кредиты: 36, 900; прайс kie.ai: Text input 900 credits / 1M tokens ($4.50), ca"
+   ]
+  },
+  {
+   "family": "seedream-3",
+   "label": "Seedream 3",
+   "brand": "ByteDance",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i",
+     "kie_id": "bytedance/seedream",
+     "task_type": "Text to Image",
+     "fields": 4,
+     "rules": 1,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 3.5; прайс kie.ai: Seedream V3 costs 3.5 credits per"
+   ]
+  },
+  {
+   "family": "seedream-4-0",
+   "label": "Seedream 4.0",
+   "brand": "ByteDance",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i",
+     "kie_id": "bytedance/seedream-v4-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 6,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "edit",
+     "kie_id": "bytedance/seedream-v4-edit",
+     "task_type": "Image to Image",
+     "fields": 7,
+     "rules": 1,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 5; прайс kie.ai: Seedream V4: 5 credits per image (~",
+    "за генерацию/ролик/картинку; кредиты: 5; прайс kie.ai: Seedream V4: 5 credits per image (~"
+   ]
+  },
+  {
+   "family": "seedream-5",
+   "label": "Seedream 5",
+   "brand": "ByteDance",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i-pro",
+     "kie_id": "seedream/5-pro-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 5,
+     "rules": 3,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i-pro",
+     "kie_id": "seedream/5-pro-image-to-image",
+     "task_type": "Image to Image",
+     "fields": 6,
+     "rules": 3,
+     "unit": "gen"
+    },
+    {
+     "id": "layer-pro",
+     "kie_id": "seedream/5-pro-layer-decomposition",
+     "task_type": "Image to Image",
+     "fields": 4,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "t2i-flash",
+     "kie_id": "seedream/5-flash-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 5,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i-flash",
+     "kie_id": "seedream/5-flash-image-to-image",
+     "task_type": "Image to Image",
+     "fields": 6,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "layer-flash",
+     "kie_id": "seedream/5-flash-layer-decomposition",
+     "task_type": "Image to Image",
+     "fields": 4,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "t2i-lite",
+     "kie_id": "seedream/5-lite-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 5,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i-lite",
+     "kie_id": "seedream/5-lite-image-to-image",
+     "task_type": "Image to Image",
+     "fields": 6,
+     "rules": 1,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 0.5, 7, 14; прайс kie.ai: 1K: 7 credits per image ($",
+    "за генерацию/ролик/картинку; кредиты: 0.5, 7, 14; прайс kie.ai: 1K: 7 credits per image ($",
+    "за генерацию/ролик/картинку; кредиты: 7, 14; прайс kie.ai: 💰 Pricing: Layer decomposition ",
+    "за генерацию/ролик/картинку; кредиты: 3.24; прайс kie.ai: 1K and 2K images are priced the ",
+    "за генерацию/ролик/картинку; кредиты: 3.24; прайс kie.ai: 1K and 2K images are priced the ",
+    "за генерацию/ролик/картинку; кредиты: 3.24; прайс kie.ai: Layer decomposition is billed pe",
+    "за генерацию/ролик/картинку; кредиты: 5.5; прайс kie.ai: 5.5 credits per image (≈ US $0.02",
+    "за генерацию/ролик/картинку; кредиты: 5.5; прайс kie.ai: 5.5 credits per image (≈ US $0.02"
+   ]
+  },
+  {
+   "family": "nano-banana",
+   "label": "Nano Banana",
+   "brand": "Google",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i",
+     "kie_id": "google/nano-banana",
+     "task_type": "Text to Image",
+     "fields": 5,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "edit",
+     "kie_id": "google/nano-banana-edit",
+     "task_type": "Image to Image",
+     "fields": 5,
+     "rules": 1,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 4; прайс kie.ai: Nano Banana API costs 4 credits per",
+    "за генерацию/ролик/картинку; кредиты: 4; прайс kie.ai: Nano Banana API costs 4 credits per"
+   ]
+  },
+  {
+   "family": "nano-banana-2",
+   "label": "Nano Banana 2",
+   "brand": "Google",
+   "media": "image",
+   "modes": [
+    {
+     "id": "generate",
+     "kie_id": "nano-banana-2",
+     "task_type": "Text to Image, Image to Image",
+     "fields": 5,
+     "rules": 3,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 8, 12, 18; прайс kie.ai: Nano Banana 2 — now just 8 "
+   ]
+  },
+  {
+   "family": "nano-banana-2-lite",
+   "label": "Nano Banana 2 Lite",
+   "brand": "Google",
+   "media": "image",
+   "modes": [
+    {
+     "id": "generate",
+     "kie_id": "nano-banana-2-lite",
+     "task_type": "Text to Image, Image to Image",
+     "fields": 3,
+     "rules": 1,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 4; прайс kie.ai: Nano Banana 2 Lite — now just 4 cre"
+   ]
+  },
+  {
+   "family": "ideogram-v3",
+   "label": "Ideogram V3",
+   "brand": "Ideogram",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i",
+     "kie_id": "ideogram/v3-text-to-image",
+     "task_type": "Text to Video (ошибка kie.ai: модель картинная)",
+     "fields": 7,
+     "rules": 3,
+     "unit": "gen"
+    },
+    {
+     "id": "edit",
+     "kie_id": "ideogram/v3-edit",
+     "task_type": "Image Editing",
+     "fields": 6,
+     "rules": 3,
+     "unit": "gen"
+    },
+    {
+     "id": "remix",
+     "kie_id": "ideogram/v3-remix",
+     "task_type": "Image Editing",
+     "fields": 10,
+     "rules": 0,
+     "unit": "unknown"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": false,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 3.5, 7, 10; прайс kie.ai: Ideogram V3 costs 3.5 cred",
+    "за генерацию/ролик/картинку; кредиты: 3.5, 7, 10; прайс kie.ai: Ideogram V3 costs 3.5 cred",
+    "цена в прайсе не указана"
+   ]
+  },
+  {
+   "family": "flux-2",
+   "label": "Flux 2",
+   "brand": "Black Forest Labs",
+   "media": "image",
+   "modes": [
+    {
+     "id": "t2i-pro",
+     "kie_id": "flux-2/pro-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 4,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i-pro",
+     "kie_id": "flux-2/pro-image-to-image",
+     "task_type": "Image to Image",
+     "fields": 5,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "t2i-flex",
+     "kie_id": "flux-2/flex-text-to-image",
+     "task_type": "Text to Image",
+     "fields": 4,
+     "rules": 2,
+     "unit": "gen"
+    },
+    {
+     "id": "i2i-flex",
+     "kie_id": "flux-2/flex-image-to-image",
+     "task_type": "Image to Image",
+     "fields": 5,
+     "rules": 2,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 5, 7; прайс kie.ai: 5 credits (~$0.025) for 1K or 7 ",
+    "за генерацию/ролик/картинку; кредиты: 5, 7; прайс kie.ai: 5 credits (~$0.025) for 1K or 7 ",
+    "за генерацию/ролик/картинку; кредиты: 14, 24; прайс kie.ai: 14 credits (~$0.07) for 1K or ",
+    "за генерацию/ролик/картинку; кредиты: 14, 24; прайс kie.ai: 14 credits (~$0.07) for 1K or "
+   ]
+  },
+  {
+   "family": "pixverse-v6",
+   "label": "PixVerse V6",
+   "brand": "Pixverse",
+   "media": "video",
+   "modes": [
+    {
+     "id": "t2v",
+     "kie_id": "pixverse-v6/text-to-video",
+     "task_type": "Text to Video",
+     "fields": 0,
+     "rules": 8,
+     "unit": "sec"
+    },
+    {
+     "id": "i2v",
+     "kie_id": "pixverse-v6/image-to-video",
+     "task_type": "Image to Video",
+     "fields": 8,
+     "rules": 8,
+     "unit": "sec"
+    },
+    {
+     "id": "t2v-max",
+     "kie_id": "pixverse-v6-max/text-to-video",
+     "task_type": "Text to Video",
+     "fields": 6,
+     "rules": 8,
+     "unit": "sec"
+    },
+    {
+     "id": "i2v-max",
+     "kie_id": "pixverse-v6-max/image-to-video",
+     "task_type": "Image to Video",
+     "fields": 6,
+     "rules": 8,
+     "unit": "sec"
+    },
+    {
+     "id": "transition",
+     "kie_id": "pixverse-v6/transition",
+     "task_type": "Text to Video, Image to Video",
+     "fields": 7,
+     "rules": 8,
+     "unit": "sec"
+    },
+    {
+     "id": "extend",
+     "kie_id": "pixverse-v6/extend",
+     "task_type": "Video to Video",
+     "fields": 0,
+     "rules": 8,
+     "unit": "sec"
+    },
+    {
+     "id": "r2v",
+     "kie_id": "pixverse-v6/reference-to-video",
+     "task_type": "Video to Video",
+     "fields": 0,
+     "rules": 8,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 4, 5.6, 7.2, 9.6, 14.4, 18.4; прайс kie.ai: 360P: 4.0 credits/s ($0.0",
+    "за секунду; кредиты: 4, 5.6, 7.2, 9.6, 14.4, 18.4; прайс kie.ai: 360P: 4.0 credits/s ($0.0",
+    "за секунду; кредиты: 4.8, 7.2, 8.8, 12, 17.6, 22.4; прайс kie.ai: 360P: 4.8 credits/s ($0.",
+    "за секунду; кредиты: 4.8, 7.2, 8.8, 12, 17.6, 22.4; прайс kie.ai: 360P: 4.8 credits/s ($0.",
+    "за секунду; кредиты: 4, 5.6, 7.2, 9.6, 14.4, 18.4; прайс kie.ai: 360P: 4.0 credits/s ($0.0",
+    "за секунду; кредиты: 4, 5.6, 7.2, 9.6, 14.4, 18.4; прайс kie.ai: 360P: 4.0 credits/s ($0.0",
+    "за секунду; кредиты: 4, 5.6, 7.2, 9.6, 14.4, 18.4; прайс kie.ai: 360P: 4.0 credits/s ($0.0"
+   ]
+  },
+  {
+   "family": "vidu-q4",
+   "label": "Vidu Q4",
+   "brand": "Vidu",
+   "media": "video",
+   "modes": [
+    {
+     "id": "i2v",
+     "kie_id": "vidu-q4/image-to-video",
+     "task_type": "Image to Video",
+     "fields": 5,
+     "rules": 5,
+     "unit": "sec"
+    },
+    {
+     "id": "r2v",
+     "kie_id": "vidu-q4/reference-to-video",
+     "task_type": "Image to Video",
+     "fields": 7,
+     "rules": 5,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 7.2, 15.2, 19.2, 30.4, 62.4; прайс kie.ai: 540p: 7.2 credits/s ($0.03",
+    "за секунду; кредиты: 7.2, 15.2, 19.2, 30.4, 62.4; прайс kie.ai: 540p: 7.2 credits/s ($0.03"
+   ]
+  },
+  {
+   "family": "grok-imagine-video",
+   "label": "Grok Imagine Video",
+   "brand": "Grok",
+   "media": "video",
+   "modes": [
+    {
+     "id": "t2v",
+     "kie_id": "grok-imagine/text-to-video",
+     "task_type": "Text to Video",
+     "fields": 6,
+     "rules": 3,
+     "unit": "gen"
+    },
+    {
+     "id": "i2v",
+     "kie_id": "grok-imagine/image-to-video",
+     "task_type": "Image to Video",
+     "fields": 9,
+     "rules": 3,
+     "unit": "gen"
+    },
+    {
+     "id": "extend",
+     "kie_id": "grok-imagine/extend",
+     "task_type": "Video to Video",
+     "fields": 4,
+     "rules": 4,
+     "unit": "gen"
+    },
+    {
+     "id": "upscale",
+     "kie_id": "grok-imagine/upscale",
+     "task_type": "Video to Video",
+     "fields": 2,
+     "rules": 3,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 2.4, 4.5, 8; прайс kie.ai: • 480p Output: 2.4 credit",
+    "за генерацию/ролик/картинку; кредиты: 2.4, 4.5, 8; прайс kie.ai: • 480p Output: 2.4 credit",
+    "за генерацию/ролик/картинку; кредиты: 14.4, 24, 27, 45; прайс kie.ai: 6s — 480p: 14.4 cred",
+    "за генерацию/ролик/картинку; кредиты: 10, 20, 30; прайс kie.ai: • 480P → 720P: 10 credits "
+   ]
+  },
+  {
+   "family": "topaz-video-upscale",
+   "label": "Topaz Video Upscale",
+   "brand": "Topaz",
+   "media": "video",
+   "modes": [
+    {
+     "id": "upscale",
+     "kie_id": "topaz/video-upscale",
+     "task_type": "Video to Video",
+     "fields": 2,
+     "rules": 2,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 8, 14; прайс kie.ai: Upscaling video with Topaz costs 8 credits ($0.0"
+   ]
+  },
+  {
+   "family": "recraft",
+   "label": "Recraft",
+   "brand": "Recraft",
+   "media": "image",
+   "modes": [
+    {
+     "id": "crisp-upscale",
+     "kie_id": "recraft/crisp-upscale",
+     "task_type": "Text to Image",
+     "fields": 1,
+     "rules": 1,
+     "unit": "gen"
+    },
+    {
+     "id": "remove-background",
+     "kie_id": "recraft/remove-background",
+     "task_type": "Image to Image",
+     "fields": 1,
+     "rules": 1,
+     "unit": "gen"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 0.5; прайс kie.ai: Recraft Crisp Upscale: 0.5 credit",
+    "за генерацию/ролик/картинку; кредиты: 1; прайс kie.ai: Kie.ai Recraft Remove-Background: 1"
+   ]
+  },
+  {
+   "family": "gemini-omni",
+   "label": "Gemini Omni",
+   "brand": "Google",
+   "media": "video",
+   "modes": [
+    {
+     "id": "video",
+     "kie_id": "gemini-omni-video",
+     "task_type": "Image to Video, Text to Video",
+     "fields": 9,
+     "rules": 10,
+     "unit": "gen"
+    },
+    {
+     "id": "character",
+     "kie_id": "gemini-omni-character",
+     "task_type": "Image to Video",
+     "fields": 0,
+     "rules": 0,
+     "unit": "unknown"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": false,
+   "pricing_notes": [
+    "за генерацию/ролик/картинку; кредиты: 63, 84, 105, 126, 147, 168, 189, 210, 252; прайс kie",
+    "цена в прайсе не указана"
+   ]
+  },
+  {
+   "family": "omnihuman-1-5",
+   "label": "OmniHuman 1.5",
+   "brand": "OmniHuman",
+   "media": "video",
+   "modes": [
+    {
+     "id": "avatar",
+     "kie_id": "omnihuman-1-5",
+     "task_type": "Image to Video",
+     "fields": 7,
+     "rules": 1,
+     "unit": "sec"
+    }
+   ],
+   "all_ids_live": true,
+   "versions_ok": true,
+   "has_prices": true,
+   "pricing_notes": [
+    "за секунду; кредиты: 27; прайс kie.ai: 27 credits per second (~$0.135)."
+   ]
+  }
+ ]
+}
