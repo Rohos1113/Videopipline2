@@ -71,6 +71,39 @@ export interface KiePricingRule {
   credits: number;
 }
 
+/** Ценовое правило в долларах (шаг 8 backend): наценка студии 25% уже учтена. */
+export interface KieUsdRule {
+  when: Record<string, unknown>;
+  usd_kie: number;
+  usd_client?: number;
+  markup?: number;
+}
+
+export interface KiePricing {
+  unit: "gen" | "sec" | "1k_chars" | "image" | "tokens" | "megapixel";
+  rules: KiePricingRule[];
+  default: number;
+  note?: string;
+  /** Цены в $: правила, дефолт по генерации и цена kie.ai без наценки. */
+  usd_rules?: KieUsdRule[];
+  usd_default_client?: number;
+  usd_default_kie?: number;
+}
+
+/** Режим семейства kie.ai: один эндпоинт/тип задачи со своими полями и ценой. */
+export interface KieModeSpec {
+  id: string;
+  label: string;
+  /** id модели в API kie.ai (может отличаться от id семейства). */
+  kie_id?: string;
+  task_type?: string;
+  api?: string;
+  desc?: string;
+  fields: KieField[];
+  pricing: KiePricing;
+  constraints?: string[];
+}
+
 export interface KieModelSpec {
   id: string;
   label: string;
@@ -83,14 +116,15 @@ export interface KieModelSpec {
   is_top?: boolean;
   isTop?: boolean;
   badge?: string;
+  brand?: string;
   result: "video" | "image" | "audio" | "text";
   fields: KieField[];
-  pricing: {
-    unit: "gen" | "sec" | "1k_chars";
-    rules: KiePricingRule[];
-    default: number;
-    note?: string;
-  };
+  pricing: KiePricing;
+  /** Семейство: несколько режимов в одной карточке (нет у старых записей). */
+  modes?: KieModeSpec[];
+  /** «от $X» для строки семейства в пикере. */
+  price_from_usd?: number;
+  modes_count?: number;
 }
 
 export interface KieCatalog {
@@ -2881,7 +2915,12 @@ export const api = {
     http<{ configured: boolean; credits: number | null; usd: number | null }>(
       `/api/kie-create/credits`,
     ),
-  kieGenerate: (body: { model_id: string; values: Record<string, unknown> }) =>
+  kieGenerate: (body: {
+    model_id: string;
+    /** Режим семейства (шаг 8): {model_id: family_id, mode: mode_id}. */
+    mode?: string;
+    values: Record<string, unknown>;
+  }) =>
     http<{
       job: {
         job_id: string;
@@ -2893,6 +2932,25 @@ export const api = {
       };
       estimate: { credits: number; usd: number; note?: string };
     }>(`/api/kie-create/generate`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  /** Точная цена по режиму и настройкам (доллары с наценкой студии). */
+  kieEstimate: (body: {
+    model_id: string;
+    mode?: string;
+    values: Record<string, unknown>;
+  }) =>
+    http<{
+      /** Контракт шага 8: usd_client главный, usd — допустимый синоним. */
+      usd_client?: number;
+      usd?: number;
+      usd_kie?: number;
+      credits?: number | null;
+      unit?: string;
+      note?: string;
+      breakdown?: { when?: Record<string, unknown>; credits?: number; usd_kie?: number }[];
+    }>(`/api/kie-create/estimate`, {
       method: "POST",
       body: JSON.stringify(body),
     }),
