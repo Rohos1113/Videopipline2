@@ -70,7 +70,7 @@
 - **Видео:** в пикере все 37 подписей семейств, но строка «Veo 3.1» — это пресет outsee «Veo 3.1 Lite» ($0.50, 720p), а не семейство Veo 3.1 с 4 режимами ($0.03). Остальные 36 семейств — настоящие KIE-строки, число режимов в подписи совпадает с API.
 - **Картинки:** 6 семейств не находятся вовсе (Nano Banana 2.1, Nano Banana 2 Lite, Nano Banana Pro, GPT Image 1.5, GPT Image 2.5, GPT Image 2.6), ещё 3 (Nano Banana, Nano Banana 2, GPT Image 2) находятся только как пресеты outsee с чужими ценами. Итого **10 семейств каталога недоступны в UI** — ровно то, что чинит task-15. Дубль имени «Nano Banana 2» в дампе подтверждён.
 - Счётчики брендов в пикере не сходятся: видео 40 строк при 37 семьях (3 строки — пресеты), картинки 28 при 35 семьях.
-- Панель «Параметры»: у обычных режимов набор полей совпадает с API. Проблемы: у `ideogram-v3/edit` не отображается `mask_url`; у 6 режимов без полей UI показывает настройки, которых у режима нет (WAN 2.6 t2v/v2v/flash-i2v/flash-v2v, PixVerse t2v/extend/r2v, Kling 2.6 motion-control) — значения уйдут в никуда, payload их не содержит.
+- Панель «Параметры»: у обычных режимов набор полей совпадает с API. Проблемы: у `ideogram-v3/edit` не отображается `mask_url`; у 6 режимов без полей UI показывает настройки, которых у режима нет — значения уйдут в никуда, payload их не содержит. Механизм: у этих режимов `mode.fields = []`, а UI подставляет поля карточки семейства — `outsee-create-workspace.tsx:2440` (`mode.fields?.length ? mode.fields : (base?.fields ?? [])`) и `web/src/lib/model-settings.ts:467`. Примеры: WAN 2.6 `t2v`/`v2v`/`flash-i2v`/`flash-v2v` — UI рисует `duration, resolution, multi_shots, nsfw_checker` при пустых `mode.fields`; PixVerse V6 `t2v`/`extend`/`r2v` — `quality, duration, generate_audio_switch, generate_multi_clip_switch, seed, template_id`; Kling 2.6 `motion-control` — `aspect_ratio, duration, sound`. Это следствие дыр в данных шага 7, а не UI-баг, но UI-фолбэк маскирует дыру.
 - Сценарии в живом UI подтвердили ошибки цены: Kling 3.0 Omni 1080p и «звук» — $0.47 без изменения; Kling 2.6 i2v 10 с — $0.39 без изменения; Seedance 1.5 звук — $0.11 без изменения; GPT Image 1.5 в пикере нет, проверить панель нечем.
 
 ## Этап 3. Отчёты проверяющих
@@ -93,7 +93,7 @@
 | 2 | **P0** | 10 семейств недоступны в пикере, вместо них пресеты с другими ценами и урезанными настройками | UI task-15 (в работе у ui-dock-keys) |
 | 3 | P1 | 24 режима без полей: цена — заглушка, настроек нет (Kling 2.1/2.5 Turbo, PixVerse, Runway, WAN 2.5/2.6, HappyHorse) | аналитик шаг 7 (дозаполнить схемы) + backend |
 | 4 | P1 | 13 режимов без поля разрешения/длительности при разных ценах в прайсе (Hailuo 02, AVATAR, OmniHuman 2.0, Seedream 5 Pro, Nano Banana 2 Lite, GPT Image 2.6 economy) | аналитик шаг 7 |
-| 5 | P1 | UI показывает настройки, которых нет у режима (WAN 2.6, PixVerse, Kling 2.6 motion-control) — значения теряются молча | UI + backend (contract) |
+| 5 | P1 | UI показывает настройки, которых нет у режима (WAN 2.6, PixVerse, Kling 2.6 motion-control) — значения теряются молча. Механизм: `mode.fields=[]` → фолбэк UI на поля карточки (`outsee-create-workspace.tsx:2440`, `model-settings.ts:467`) | аналитик шаг 7 (дозаполнить схемы); UI — убрать/пометить фолбэк |
 | 6 | P1 | `ideogram-v3/edit`: не отображается поле `mask_url` | UI |
 | 7 | P1 | qwen-image: цена за мегапиксель считается, но UI помечает её как «уточняется» (`PENDING_UNITS`) | UI (`model-settings.ts`) |
 | 8 | P2 | 4 режима Seedance 1.0: единица `gen` вместо `sec` в `kie-model-families.json` | аналитик шаг 7 |

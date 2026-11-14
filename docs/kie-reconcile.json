@@ -10342,7 +10342,62 @@
      "expect": 0.1375,
      "error": "нет в пикере"
     }
-   ]
+   ],
+   "ui_fallback_mechanism": {
+    "what": "при mode.fields=[] UI подставляет поля карточки семейства (legacy fields), backend их не использует",
+    "code": [
+     "web/src/components/outsee/outsee-create-workspace.tsx:2440",
+     "web/src/lib/model-settings.ts:467"
+    ],
+    "examples": [
+     {
+      "family": "wan-2-6",
+      "modes": [
+       "t2v",
+       "v2v",
+       "flash-i2v",
+       "flash-v2v"
+      ],
+      "ui_shows": [
+       "duration",
+       "resolution",
+       "multi_shots",
+       "nsfw_checker"
+      ],
+      "mode_fields": []
+     },
+     {
+      "family": "pixverse-v6",
+      "modes": [
+       "t2v",
+       "extend",
+       "r2v"
+      ],
+      "ui_shows": [
+       "quality",
+       "duration",
+       "generate_audio_switch",
+       "generate_multi_clip_switch",
+       "seed",
+       "template_id"
+      ],
+      "mode_fields": []
+     },
+     {
+      "family": "kling-2-6",
+      "modes": [
+       "motion-control"
+      ],
+      "ui_shows": [
+       "aspect_ratio",
+       "duration",
+       "sound"
+      ],
+      "mode_fields": []
+     }
+    ],
+    "root_cause": "дыры в данных шага 7: 24 режима без схемы fields"
+   }
   },
   "verdict": "FAIL по цене в UI: правила с ключами mode/sound не применяются (9 режимов показывают неверную цену в 16 конфигурациях, ещё 6 режимов не меняют цену при смене дорогой настройки), 62 режима показывают всегда одну и ту же цену-заглушку. Состав каталога и режимы на месте; в DOM скрыты 10 семейств (9 картинки + Veo 3.1), у 6 режимов UI показывает настройки, которых нет у режима."
  },
