@@ -1,0 +1,295 @@
+{
+ "coverage": {
+  "api_total_models": 251,
+  "api_media_ids": 181,
+  "api_video_ids": 100,
+  "api_image_ids": 81,
+  "placed_ids_unique": 182,
+  "placed_api_ids": 181,
+  "families": 72,
+  "modes": 182,
+  "family_media": {
+   "video": 37,
+   "image": 35
+  },
+  "mode_media": {
+   "video": 100,
+   "image": 82
+  },
+  "lost_api_ids": [],
+  "duplicate_ids": {},
+  "extra_ids_not_in_media": [
+   "bytedance/seedance-1.5-pro"
+  ],
+  "media_conflicts_excluding_known": [],
+  "reclassified": [
+   "ideogram/v3-text-to-image"
+  ],
+  "catalog_media_ids": 28,
+  "catalog_media_ids_missing": [],
+  "catalog_only_ids": [
+   "bytedance/seedance-1.5-pro"
+  ],
+  "studio_all_entries": 33,
+  "studio_non_media_entries": [
+   "suno-music",
+   "suno-extend",
+   "suno-upload-cover",
+   "suno-add-vocals",
+   "suno-separate-vocals",
+   "suno-lyrics",
+   "elevenlabs-sfx",
+   "suno-sounds",
+   "elevenlabs-v4"
+  ],
+  "ok": true
+ },
+ "fields": {
+  "modes_total": 182,
+  "modes_with_docs_schema": 145,
+  "modes_fields_complete": 145,
+  "modes_fields_mismatch": [],
+  "modes_fields_from_catalog": 7,
+  "modes_without_fields": 30,
+  "modes_without_fields_list": [
+   "happyhorse/video-edit",
+   "veo/get-1080p-video",
+   "gemini-omni-character",
+   "minimax-h3/reference-to-video",
+   "kling/v2-1-master-text-to-video",
+   "kling/v2-1-master-image-to-video",
+   "kling/v2-1-pro",
+   "kling/v2-5-turbo-text-to-video-pro",
+   "kling/v2-5-turbo-image-to-video-pro",
+   "kling-2.6/motion-control",
+   "pixverse-v6/text-to-video",
+   "pixverse-v6/extend",
+   "pixverse-v6/reference-to-video",
+   "runway",
+   "runway/extend-ai-video",
+   "ai-music-api/create-music-video",
+   "wan/2-2-a14b-text-to-video-turbo",
+   "wan/2-2-a14b-speech-to-video-turbo",
+   "wan/2-2-animate-move",
+   "wan/2-5-text-to-video",
+   "wan/2-5-image-to-video",
+   "wan/2-6-text-to-video",
+   "wan/2-6-video-to-video",
+   "wan/2-6-flash-image-to-video",
+   "wan/2-6-flash-video-to-video",
+   "wan/2-7-r2v",
+   "wan/2-7-videoedit",
+   "omnihuman-1-5/human-identification",
+   "omnihuman-1-5/subject-detection",
+   "ai-music-api/cover-generate"
+  ],
+  "required_checked_against_csv": 142,
+  "required_match": 127,
+  "required_mismatch": [
+   {
+    "kie_id": "bytedance/seedance-2",
+    "csv": [
+     "prompt"
+    ],
+    "mine": []
+   },
+   {
+    "kie_id": "bytedance/seedance-2-fast",
+    "csv": [
+     "prompt"
+    ],
+    "mine": []
+   },
+   {
+    "kie_id": "bytedance/seedance-2-mini",
+    "csv": [
+     "prompt"
+    ],
+    "mine": []
+   },
+   {
+    "kie_id": "bytedance/seedance-2-5",
+    "csv": [
+     "prompt"
+    ],
+    "mine": []
+   },
+   {
+    "kie_id": "hailuo/2-3-image-to-video-pro",
+    "csv": [
+     "image_url",
+     "prompt"
+    ],
+    "mine": [
+     "duration",
+     "image_url",
+     "prompt",
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "minimax-h3/text-to-video",
+    "csv": [
+     "prompt"
+    ],
+    "mine": [
+     "aspect_ratio",
+     "duration",
+     "prompt"
+    ]
+   },
+   {
+    "kie_id": "kling-2.6/image-to-video",
+    "csv": [
+     "prompt"
+    ],
+    "mine": [
+     "duration",
+     "image_urls",
+     "prompt",
+     "sound"
+    ]
+   },
+   {
+    "kie_id": "kling-3.0/video",
+    "csv": [
+     "prompt"
+    ],
+    "mine": [
+     "duration",
+     "mode",
+     "multi_shots",
+     "sound"
+    ]
+   },
+   {
+    "kie_id": "kling-3.0/motion-control",
+    "csv": [
+     "video_urls"
+    ],
+    "mine": [
+     "input_urls",
+     "video_urls"
+    ]
+   },
+   {
+    "kie_id": "flux-2/pro-text-to-image",
+    "csv": [
+     "prompt"
+    ],
+    "mine": [
+     "aspect_ratio",
+     "prompt",
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "flux-2/pro-image-to-image",
+    "csv": [
+     "prompt"
+    ],
+    "mine": [
+     "aspect_ratio",
+     "input_urls",
+     "prompt",
+     "resolution"
+    ]
+   },
+   {
+    "kie_id": "seedream/5-pro-text-to-image",
+    "csv": [
+     "prompt"
+    ],
+    "mine": [
+     "aspect_ratio",
+     "prompt",
+     "quality"
+    ]
+   },
+   {
+    "kie_id": "seedream/5-pro-image-to-image",
+    "csv": [
+     "prompt"
+    ],
+    "mine": [
+     "aspect_ratio",
+     "image_urls",
+     "prompt",
+     "quality"
+    ]
+   },
+   {
+    "kie_id": "nano-banana-2-lite",
+    "csv": [
+     "prompt"
+    ],
+    "mine": [
+     "aspect_ratio",
+     "prompt"
+    ]
+   },
+   {
+    "kie_id": "qwen3/image-to-image",
+    "csv": [
+     "prompt"
+    ],
+    "mine": [
+     "image_urls",
+     "prompt"
+    ]
+   }
+  ],
+  "ok": true
+ },
+ "pricing": {
+  "modes_with_price": 171,
+  "modes_without_price": 11,
+  "units": {
+   "sec": 63,
+   "gen": 108,
+   "unknown": 5,
+   "tokens": 4,
+   "megapixel": 2
+  },
+  "checked_against_csv": 171,
+  "numbers_match": 171,
+  "mismatches": [],
+  "csv_without_numbers": [
+   "bytedance/seedance-2-5-draft",
+   "bytedance/seedance-1.5-pro",
+   "gemini-omni-character",
+   "grok-imagine-image-2-0/segment-map",
+   "ideogram/v3-remix",
+   "omnihuman-1-5/human-identification",
+   "omnihuman-1-5/subject-detection",
+   "qwen/image-edit",
+   "qwen2/text-to-image",
+   "qwen2/image-edit",
+   "ai-music-api/cover-generate"
+  ],
+  "unit_checked": 132,
+  "unit_match": 132,
+  "unit_mismatch": [],
+  "ok": true
+ },
+ "catalog_snapshot": {
+  "git_blob_sha": "b9702e01f0874da228b9a7651646fce887feb79b",
+  "entries": 33
+ },
+ "live_check": {
+  "checked_at": "2026-11-14 12:42 MSK",
+  "api_total_models": 253,
+  "api_media_models": 181,
+  "api_video": 100,
+  "api_image": 81,
+  "new_since_snapshot": [
+   "gemini-4-hydrogen",
+   "gemini-4-hydrogen-openai"
+  ],
+  "new_task_types": [
+   "Chat",
+   "Chat"
+  ],
+  "credit_http": 200
+ }
+}
