@@ -88,6 +88,20 @@ test("kieSettingDescriptors: kind поля превращается в kind ко
   assert.equal(byName(descriptors, "stability")?.kind, "range");
 });
 
+test("kieSettingDescriptors: подсказка опции только из данных, без карты разрешений", () => {
+  // Раньше UI дописывал "1080p"/"4k" подпись «только Quality» из захардкоженной
+  // карты — у Kling 3.0 Omni это враньё. Подсказок у разрешений быть не должно.
+  const descriptors = kieSettingDescriptors([
+    field("resolution", "select", { options: ["480p", "720p", "1080p", "4k"], default: "720p" }),
+  ]);
+  const options = byName(descriptors, "resolution")?.options ?? [];
+  assert.deepEqual(
+    options.map((o) => o.id),
+    ["480p", "720p", "1080p", "4k"],
+  );
+  assert.ok(options.every((o) => o.hint === undefined), "у опций нет подсказок из воздуха");
+});
+
 test("kieSettingDescriptors: data-chip у Seedance-полей прежний (aspect/sound)", () => {
   const descriptors = kieSettingDescriptors([
     field("aspect_ratio", "select", { options: ["16:9"], default: "16:9" }),

@@ -589,14 +589,6 @@ function ToggleSwitch({
   );
 }
 
-/** Подсказки под разрешением — как в эталоне: у части значений свой пресет. */
-const RESOLUTION_HINT: Record<string, string> = {
-  "480p": "только Fast",
-  "1080p": "только Quality",
-  "4k": "только Quality",
-  "4K": "только Quality",
-};
-
 /** Иконка чипа по смыслу настройки. */
 function settingIcon(icon: ModelSettingIcon, value: unknown) {
   switch (icon) {
@@ -658,7 +650,9 @@ function SettingControl({
       <div className={cn("grid gap-1.5", cols)}>
         {options.map((o) => {
           const active = o.id === current;
-          const hint = o.hint ?? (d.name === "resolution" ? RESOLUTION_HINT[o.id] : undefined);
+          // Подсказка — только из данных опции. Никаких карт «1080p = только
+          // Quality»: у разных моделей разрешения доступны на разных тирах.
+          const hint = o.hint;
           return (
             <button
               key={o.id}
