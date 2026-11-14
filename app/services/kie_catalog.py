@@ -1852,6 +1852,7 @@ def estimate_usd(
         "multiplier_on": "",
         "known": False,
         "note": "неизвестно",
+        "approx": False,
         "formula": "",
         "breakdown": {},
     }
@@ -1885,7 +1886,8 @@ def estimate_usd(
         token_multiplier = tokens / 1_000_000
     matched: dict[str, Any] | None = None
     best_score = -1
-    for rule in pricing.get("usd_rules") or []:
+    rules = pricing.get("usd_rules") or []
+    for rule in rules:
         when = rule.get("when") or {}
         if not _match_usd_rule(when, merged, spec):
             continue
@@ -1895,6 +1897,12 @@ def estimate_usd(
         if score > best_score:
             matched = rule
             best_score = score
+    approx = False
+    if matched is None and rules:
+        # точной комбинации нет в прайсе — берём ближайший тариф, а не глобальный
+        # минимум: иначе выбор более дорогой настройки снижает цену
+        matched = _nearest_usd_rule(rules, merged, spec)
+        approx = True
     if matched is not None:
         base_kie = _num(matched.get("usd_kie"))
         base_client = _num(matched.get("usd_client"))
@@ -1923,12 +1931,14 @@ def estimate_usd(
     usd_client += extra_client
     credits = usd_client / CREDIT_USD
     note = pricing.get("note") or ""
-    if matched is None and pricing.get("usd_rules"):
-        note = f"{note} (ориентировочно: правило не разрешилось)".strip()
+    if approx:
+        tail = "ближайший тариф" if matched is not None else "правило не разрешилось"
+        note = f"{note} (ориентировочно: {tail})".strip()
     breakdown = {
         "kie_id": str(md.get("kie_id") or ""),
         "unit": unit,
         "matched_rule": (matched or {}).get("when") or None,
+        "approx": approx,
         "base_usd_kie": round(float(base_kie), 6),
         "base_usd_client": round(float(base_client), 4),
         "multiplier": multiplier,
@@ -1958,6 +1968,7 @@ def estimate_usd(
         "multiplier_on": multiplier_on,
         "known": True,
         "note": note,
+        "approx": approx,
         "formula": pricing.get("formula") or "",
         "breakdown": breakdown,
     }
@@ -2428,6 +2439,38 @@ def _match_usd_rule(
         if _condition_status(spec, merged, str(key), want) != "match":
             return False
     return True
+
+
+def _nearest_usd_rule(
+    rules: list[dict[str, Any]],
+    merged: dict[str, Any],
+    spec: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Ближайший тариф, когда точной комбинации нет в прайсе.
+
+    Максимум совпавших условий (вес видео/картинки — как при точном матче);
+    при равенстве берём правило дороже, чтобы не занижать цену.
+    None — если не совпало ни одно условие (тогда остаётся default).
+    """
+    best: dict[str, Any] | None = None
+    best_key: tuple[int, float] | None = None
+    for rule in rules:
+        when = rule.get("when") or {}
+        if not when:
+            continue
+        score = 0
+        for key, want in when.items():
+            if _condition_status(spec, merged, str(key), want) != "match":
+                continue
+            k = str(key).strip().lower()
+            score += 2 if k in _INPUT_FLAG_KEYS else 1
+        if score <= 0:
+            continue
+        price = _num(rule.get("usd_client"))
+        rank = (score, float(price) if price is not None else 0.0)
+        if best_key is None or rank > best_key:
+            best, best_key = rule, rank
+    return best
 
 
 def _mode_usd_pricing(mode: dict[str, Any]) -> dict[str, Any]:

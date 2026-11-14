@@ -953,6 +953,10 @@ def test_every_price_rule_resolves_to_its_price() -> None:
                 problems.append(
                     (kie_id, rule.get("when"), float(unit_price), float(exp_price), expected.get("when"))
                 )
+                continue
+            # точное совпадение не должно проваливаться в approx-фолбэк
+            if est.get("approx"):
+                problems.append((kie_id, rule.get("when"), "approx вместо точного матча"))
     assert not problems, problems[:5]
     assert tested >= 480, f"прогон выродился: проверено {tested} правил"
     assert skipped <= 60, f"слишком много невыразимых правил: {skipped}"
@@ -1223,3 +1227,55 @@ def test_generate_endpoint_returns_catalog_family_id(
     data = r.json()
     assert data["estimate"]["family_id"] == "hailuo-2-3-i2v"
     assert data["estimate"]["usd_client"] == pytest.approx(0.5625, abs=0.0002)
+
+
+@needs_data
+def test_nearest_tariff_when_combo_missing_from_price() -> None:
+    """Нет точного правила — берём ближайший тариф, цена не падает к глобальному минимуму."""
+    family = kc.get_family("hailuo-2-3-i2v")
+    assert family is not None
+    priced = {
+        (6, "768P"): 0.2812,
+        (10, "768P"): 0.5625,
+        (6, "1080P"): 0.5,
+    }
+    for (duration, resolution), want in priced.items():
+        est = kc.estimate_usd(family, "i2v-pro", {"duration": duration, "resolution": resolution})
+        assert est["usd_client"] == pytest.approx(want, abs=0.0002), (duration, resolution)
+        assert est["approx"] is False
+    # 10с + 1080P нет в прайсе: ближайшие тарифы 0.5625 (10с+768P) и 0.5 (6с+1080P)
+    missing = kc.estimate_usd(family, "i2v-pro", {"duration": 10, "resolution": "1080P"})
+    assert missing["usd_client"] == pytest.approx(0.5625, abs=0.0002)
+    assert missing["approx"] is True
+    assert missing["breakdown"]["approx"] is True
+    assert missing["breakdown"]["matched_rule"] == {"duration": "10", "resolution": "768p"}
+    assert "ориентировочно: ближайший тариф" in missing["note"]
+    # цена не должна падать от выбора более дорогой настройки
+    assert missing["usd_client"] >= priced[(10, "768P")]
+    assert missing["usd_client"] >= priced[(6, "1080P")]
+
+
+@needs_data
+def test_nearest_tariff_hailuo_standard_mode() -> None:
+    """i2v-standard: 10с+1080P было 0.19 (default), должно быть ≥ тарифа 6с+1080P."""
+    family = kc.get_family("hailuo-2-3-i2v")
+    assert family is not None
+    six_1080 = kc.estimate_usd(family, "i2v-standard", {"duration": 6, "resolution": "1080P"})
+    ten_1080 = kc.estimate_usd(family, "i2v-standard", {"duration": 10, "resolution": "1080P"})
+    assert ten_1080["usd_client"] == pytest.approx(0.3125, abs=0.0002)
+    assert ten_1080["approx"] is True
+    assert ten_1080["usd_client"] >= six_1080["usd_client"]
+
+
+@needs_data
+def test_nearest_tariff_runway_two_axis_price() -> None:
+    """runway/generate: 10с+1080p не должен стоить дешевле 5с+720p."""
+    family = kc.get_family("runway")
+    assert family is not None
+    cheap = kc.estimate_usd(family, "generate", {"duration": 5, "resolution": "720p"})
+    ten_1080 = kc.estimate_usd(family, "generate", {"duration": 10, "resolution": "1080p"})
+    assert cheap["usd_client"] == pytest.approx(0.075, abs=0.0002)
+    assert ten_1080["usd_client"] == pytest.approx(0.1875, abs=0.0002)
+    assert ten_1080["approx"] is True
+    assert ten_1080["breakdown"]["matched_rule"] == {"duration": "10", "resolution": "720p"}
+    assert ten_1080["usd_client"] >= cheap["usd_client"]
