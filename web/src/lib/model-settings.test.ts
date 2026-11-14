@@ -11,6 +11,7 @@ import {
   familyModesLabel,
   familyPriceFromUsd,
   formatEstimateUsd,
+  formatMoneyUsd,
   formatSettingChip,
   formatUsd,
   isKieFieldVisible,
@@ -418,12 +419,17 @@ test("usdFromCredits: кредиты kie × курс × наценка", () => {
   assert.equal(usdFromCredits(10, 0.005, 1), 0.05);
 });
 
-test("formatUsd: два знака, мелкое — $0.01, пустое — тире", () => {
+test("formatUsd: 0 — «бесплатно», мелкое — $0.01, пустое — тире", () => {
+  assert.equal(formatUsd(0), "бесплатно");
   assert.equal(formatUsd(0.0625), "$0.06");
   assert.equal(formatUsd(1.25), "$1.25");
   assert.equal(formatUsd(0.004), "$0.01");
   assert.equal(formatUsd(12), "$12.00");
   assert.equal(formatUsd(null), "—");
+  // Балансы и суммы остаются деньгами: там $0.00 — честный ноль.
+  assert.equal(formatMoneyUsd(0), "$0.00");
+  assert.equal(formatMoneyUsd(0.004), "$0.01");
+  assert.equal(formatMoneyUsd(null), "—");
 });
 
 test("estimateSettingsUsd: старый каталог с кредитами — фолбэк с наценкой", () => {
@@ -626,7 +632,7 @@ test("outseePresetFamilyIds: соответствие пресетов семе�
   assert.deepEqual(outseePresetFamilyIds("не-существует"), []);
 });
 
-test("нулевая/неизвестная цена — «цена уточняется», а не $0.00", () => {
+test("нулевая цена — «бесплатно», неизвестная — «цена уточняется»", () => {
   // ideogram-v3/remix и gemini-omni/character: unit unknown, правил и дефолтов нет.
   const unknown = model({
     modes: [
@@ -647,9 +653,25 @@ test("нулевая/неизвестная цена — «цена уточня
   assert.equal(est.source, "pending");
   assert.equal(formatEstimateUsd(est), "цена уточняется");
 
-  // Явный ноль в готовом UsdEstimate тоже не должен рисоваться как $0.00.
-  assert.equal(
-    formatEstimateUsd({ usd_client: 0, usd_kie: 0, credits: null, source: "usd" }),
-    "цена уточняется",
-  );
+  // Явный ноль (suno-cover/cover, grok segment-map) — бесплатно, не «$0.00».
+  const free = model({
+    modes: [
+      mode("cover", {
+        pricing: {
+          unit: "image",
+          rules: [],
+          default: 0,
+          usd_rules: [{ when: {}, usd_kie: 0, usd_client: 0 }],
+          usd_default_client: 0,
+          usd_default_kie: 0,
+        },
+      }),
+    ],
+  });
+  const freeEst = estimateSettingsUsd({ model: free, modeId: "cover", creditUsd: 0.005 });
+  assert.equal(freeEst.usd_client, 0);
+  assert.equal(freeEst.source, "usd");
+  assert.equal(formatEstimateUsd(freeEst), "бесплатно");
+  // Пикер: семья с бесплатным режимом/ценой — «бесплатно», не null.
+  assert.equal(familyPriceFromUsd({ model: free }), 0);
 });

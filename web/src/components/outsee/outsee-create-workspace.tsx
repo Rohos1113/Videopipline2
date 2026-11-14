@@ -101,6 +101,7 @@ import {
   estimateSettingsUsd,
   familyModeSummary,
   familyPriceFromUsd,
+  formatMoneyUsd,
   formatUsd,
   dropDuplicatePresets,
   outseePresetFamilyIds,
@@ -1897,11 +1898,11 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     if (estFresh && explicitlyUnknown) {
       return { usd: null, usdKie: est?.usd_kie ?? local.usd_kie, pending: true };
     }
-    if (estFresh && serverUsd != null && serverUsd > 0) {
+    if (estFresh && serverUsd != null) {
+      // 0 — честная бесплатная цена, не «уточняется».
       return { usd: serverUsd, usdKie: est?.usd_kie ?? local.usd_kie, pending: false };
     }
-    const localUsd =
-      local.usd_client != null && local.usd_client > 0 ? local.usd_client : null;
+    const localUsd = local.source === "pending" ? null : local.usd_client;
     return {
       usd: localUsd,
       usdKie: local.usd_kie,
@@ -2024,10 +2025,14 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
     if ((mediaType === "image" || mediaType === "video") && batchCount > 1) {
       if (kieActive && kiePrice) {
         if (kiePrice.pending || kiePrice.usd == null) return "цена уточняется";
+        if (kiePrice.usd === 0) return "бесплатно";
         return `${formatUsd(kiePrice.usd * batchCount)} (x${batchCount})`;
       }
-      if (outseePrice && outseePrice.usdClient > 0) {
-        return `${formatUsd(outseePrice.usdClient * batchCount)} (x${batchCount})`;
+      if (outseePrice) {
+        if (outseePrice.usdClient === 0) return "бесплатно";
+        if (outseePrice.usdClient > 0) {
+          return `${formatUsd(outseePrice.usdClient * batchCount)} (x${batchCount})`;
+        }
       }
       return `${basePriceLabel} (x${batchCount})`;
     }
@@ -4636,11 +4641,11 @@ export function OutseeCreateWorkspace({ open, onOpenChange, projectId }: Props) 
                     {kieActive && kieCreditsQ.data?.credits != null && (
                       <div
                         className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-[#16161b] px-2.5 font-mono text-[11px] text-white/60"
-                        title={`Баланс kie.ai: ${formatUsd(
+                        title={`Баланс kie.ai: ${formatMoneyUsd(
                           kieCreditsQ.data.credits * (kieCatalogQ.data?.credit_usd ?? 0.005),
                         )}`}
                       >
-                        {formatUsd(
+                        {formatMoneyUsd(
                           kieCreditsQ.data.credits * (kieCatalogQ.data?.credit_usd ?? 0.005),
                         )}
                       </div>
@@ -5737,7 +5742,8 @@ function ModelPickerPopover({
         isKie: true,
         isTop: Boolean(m.is_top || m.isTop),
         priceLabel: null as string | null,
-        priceUsd: familyUsd && familyUsd > 0 ? familyUsd : null,
+        /** 0 — бесплатная семья/режим, форматтер покажет «бесплатно». */
+        priceUsd: familyUsd != null ? familyUsd : null,
         /** Семейство с единицами tokens/megapixel: цену даст серверный estimate. */
         pricePending: familyUsd == null && (m.modes?.length ?? 0) > 0,
       };
@@ -5771,7 +5777,7 @@ function ModelPickerPopover({
             resolution: "1K",
             duration: 5,
             catalogPrice: m.price,
-          }).usdClient || null,
+          }).usdClient ?? null,
         pricePending: false,
       }));
 
@@ -5823,9 +5829,13 @@ function ModelPickerPopover({
 
   const renderModelRow = (item: (typeof unifiedItems)[number]) => {
     const active = item.slug === selectedSlug;
+    // Единое правило: 0 → «бесплатно», null/unknown → «цена уточняется»,
+    // >0 → «от $X» (мельче цента — $0.01, без $0.00).
     const priceText =
       item.priceUsd !== null && item.priceUsd !== undefined
-        ? `от $${item.priceUsd.toFixed(2)}`
+        ? item.priceUsd === 0
+          ? "бесплатно"
+          : `от ${formatUsd(item.priceUsd)}`
         : item.pricePending
           ? "цена уточняется"
           : item.priceLabel
@@ -5928,7 +5938,7 @@ function ModelPickerPopover({
                 <Coins className="h-2.5 w-2.5 text-[#5eead4]" />
                 {priceNote}
               </span>
-            ) : est && est.source !== "pending" && est.usd_client != null && est.usd_client > 0 ? (
+            ) : est && est.source !== "pending" && est.usd_client != null && est.usd_client >= 0 ? (
               <span className="inline-flex items-center gap-1 font-mono text-[10px] text-white/55">
                 <Coins className="h-2.5 w-2.5 text-[#5eead4]" />
                 {formatUsd(est.usd_client)}

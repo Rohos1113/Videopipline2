@@ -630,19 +630,36 @@ export function usdFromCredits(
   return round4(usdKie * markup);
 }
 
-/** Формат цены в UI: два знака, без «кр.». Мельче цента — показываем $0.01. */
-export function formatUsd(usd: number | null | undefined): string {
+/**
+ * Денежная сумма без «бесплатно»: балансы, лимиты, суммы. Мельче цента — $0.01.
+ */
+export function formatMoneyUsd(usd: number | null | undefined): string {
   if (usd == null || !Number.isFinite(usd)) return "—";
   if (usd > 0 && usd < 0.01) return "$0.01";
   return `$${usd.toFixed(2)}`;
 }
 
-/** Подпись цены для дока: либо «$X», либо «цена уточняется» (tokens/megapixel/unknown). */
+/**
+ * Формат ЦЕНЫ модели в UI: два знака, без «кр.».
+ * 0 — «бесплатно» (а не $0.00); мельче цента — $0.01 (реальная цена, не ноль).
+ * Неизвестную цену сюда не передаём — для неё formatEstimateUsd.
+ */
+export function formatUsd(usd: number | null | undefined): string {
+  if (usd == null || !Number.isFinite(usd)) return "—";
+  if (usd === 0) return "бесплатно";
+  return formatMoneyUsd(usd);
+}
+
+/**
+ * Подпись цены для дока: «$X», «бесплатно» при 0, «цена уточняется» при
+ * неизвестной цене (tokens/megapixel/unknown/null).
+ */
 export function formatEstimateUsd(estimate: UsdEstimate | null | undefined): string {
   if (!estimate) return "—";
-  if (estimate.source === "pending" || estimate.usd_client == null || estimate.usd_client <= 0) {
+  if (estimate.source === "pending" || estimate.usd_client == null) {
     return "цена уточняется";
   }
+  if (estimate.usd_client === 0) return "бесплатно";
   return formatUsd(estimate.usd_client);
 }
 
@@ -799,8 +816,8 @@ export function estimateSettingsUsd(args: {
   const usdKie = round4(totalCredits * creditUsd);
   const usdClient = round4(usdKie * markup);
   if (!(usdClient > 0)) {
-    // Нулевая цена = каталог не знает цену (unit unknown / пустые правила и дефолты).
-    // Показывать $0.00 нельзя — клиент решит, что бесплатно.
+    // Кредитный фолбэк с нулём НЕ доказывает бесплатность (0 = каталог молчит):
+    // «цена уточняется». Бесплатность приходит только явным usd-правилом с 0.
     return {
       usd_client: null,
       usd_kie: usdKie > 0 ? usdKie : null,
@@ -817,8 +834,12 @@ export function estimateSettingsUsd(args: {
 }
 
 /**
- * «от $X» для строки семейства в пикере: price_from_usd из каталога,
- * иначе минимум по режимам, иначе цена самой модели.
+ * Цена для строки семейства в пикере: price_from_usd из каталога, иначе
+ * минимум по режимам, иначе цена самой модели.
+ *
+ * 0 — семья (или её самый дешёвый режим) бесплатная; null — цену не знаем
+ * («цена уточняется»). Отрицательных и «почти нулевых» сантимов не отдаём:
+ * форматтер сам покажет $0.01 для реальной цены мельче цента.
  */
 export function familyPriceFromUsd(args: {
   model: KieModelSpec | null | undefined;
@@ -828,16 +849,18 @@ export function familyPriceFromUsd(args: {
   const { model, creditUsd = 0.005 } = args;
   const markup = args.markup ?? STUDIO_MARKUP;
   if (!model) return null;
-  if (typeof model.price_from_usd === "number" && model.price_from_usd > 0) {
-    return model.price_from_usd;
+  const from = model.price_from_usd;
+  if (typeof from === "number" && Number.isFinite(from) && from >= 0) {
+    return from;
   }
   const modes = kieFamilyModes(model);
   if (modes.length) {
     const prices = modes
       .map((m) => estimateSettingsUsd({ model, modeId: m.id, creditUsd, markup }).usd_client)
-      .filter((p): p is number => typeof p === "number" && Number.isFinite(p) && p > 0);
+      .filter((p): p is number => typeof p === "number" && Number.isFinite(p) && p >= 0);
     return prices.length ? Math.min(...prices) : null;
   }
   const est = estimateSettingsUsd({ model, creditUsd, markup });
-  return est.usd_client != null && est.usd_client > 0 ? est.usd_client : null;
+  if (est.source === "pending" || est.usd_client == null) return null;
+  return est.usd_client;
 }
