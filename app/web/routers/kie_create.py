@@ -28,6 +28,18 @@ _EXT_BY_RESULT = {"video": ".mp4", "image": ".png", "audio": ".mp3", "text": ".t
 _MEDIA_BY_RESULT = {"video": "video", "image": "image", "audio": "audio", "text": "audio"}
 
 
+def _echo_catalog_family_id(quote: dict[str, Any], model_id: str) -> dict[str, Any]:
+    """family_id в ответе = id каталога, который прислал клиент.
+
+    У части семейств id карточки /catalog отличается от docs-id (старое имя
+    студии с суффиксом режима: hailuo-2-3-i2v, seedance-1-5-pro, ...). UI сверяет
+    ответ с kieModel.id, поэтому эхом отдаём то, что пришло в model_id.
+    """
+    if quote.get("family_id") is not None and model_id:
+        quote["family_id"] = model_id
+    return quote
+
+
 @router.get("/catalog")
 async def get_catalog() -> dict[str, Any]:
     """Каталог + формы + значения по умолчанию — всё для picker-модели."""
@@ -75,7 +87,7 @@ async def post_estimate(body: dict[str, Any]) -> dict[str, Any]:
             raise HTTPException(status_code=404, detail=f"unknown model_id/mode {model_id!r}/{mode_id!r}")
         quote = kie_catalog.estimate_usd(family, mode, values)
         quote["errors"] = kie_catalog.validate_mode_values(family, mode, values)
-        return quote
+        return _echo_catalog_family_id(quote, model_id)
     spec = kie_catalog.get_model(model_id)
     if spec is not None:
         return kie_catalog.estimate_credits(spec, values)
@@ -87,7 +99,7 @@ async def post_estimate(body: dict[str, Any]) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"model {model_id!r} без режимов")
     quote = kie_catalog.estimate_usd(family, mode, values)
     quote["errors"] = kie_catalog.validate_mode_values(family, mode, values)
-    return quote
+    return _echo_catalog_family_id(quote, model_id)
 
 
 @router.post("/upload")
@@ -443,7 +455,7 @@ async def post_generate(request: Request, body: dict[str, Any]) -> dict[str, Any
         quote.get("credits"),
         quote.get("usd"),
     )
-    return {"job": job.to_dict(), "estimate": quote}
+    return {"job": job.to_dict(), "estimate": _echo_catalog_family_id(quote, model_id)}
 
 
 @router.get("/jobs/{job_id}")

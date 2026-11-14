@@ -313,9 +313,9 @@ def test_extra_charges_for_input_images() -> None:
 @needs_data
 def test_note_orientirovochno_when_rule_not_matched() -> None:
     """Если правило не разрешилось и взята цена по умолчанию — note помечает это."""
-    family = kc.get_family("seedream-5-pro")
+    family = kc.get_family("nano-banana-2-lite")
     assert family is not None
-    est = kc.estimate_usd(family, "i2i-pro", {"prompt": "x"})
+    est = kc.estimate_usd(family, "generate", kc.defaults_for_mode(family, "generate"))
     assert est["known"] is True
     assert est["breakdown"]["matched_rule"] is None
     assert "ориентировочно" in est["note"]
@@ -1062,18 +1062,31 @@ def test_expensive_setting_changes_price() -> None:
 
 @needs_data
 def test_unresolvable_rule_falls_back_to_default_with_note() -> None:
-    """from_resolution — свойство исходника, а не настройка: default + «ориентировочно»."""
-    family = kc.get_family("grok-imagine/upscale")
+    """Правило не включить настройками формы — берём default и помечаем «ориентировочно»."""
+    family = kc.get_family("nano-banana-2-lite")
     assert family is not None
-    mode = kc.get_mode(family, "upscale")
+    mode = kc.get_mode(family, "generate")
     assert mode is not None
-    est = kc.estimate_usd(family, "upscale", {"resolution": "1080p"})
+    assert (mode["pricing"].get("usd_rules") or []), "у режима должны быть правила"
+    est = kc.estimate_usd(family, "generate", kc.defaults_for_mode(family, "generate"))
     assert est["known"] is True
     assert est["breakdown"]["matched_rule"] is None
     assert "ориентировочно" in est["note"]
     default = kc._num(mode["pricing"]["usd_default_client"])
     assert default is not None
     assert est["unit_usd_client"] == pytest.approx(default, abs=0.0002)
+
+
+@needs_data
+def test_from_resolution_field_drives_price() -> None:
+    """from_resolution — такое же условие, как resolution, когда для него есть поле."""
+    family = kc.get_family("grok-imagine/upscale")
+    assert family is not None
+    from_480 = kc.estimate_usd(family, "upscale", {"resolution": "1080p", "from_resolution": "480P"})
+    from_720 = kc.estimate_usd(family, "upscale", {"resolution": "1080p", "from_resolution": "720P"})
+    assert from_480["breakdown"]["matched_rule"] == {"from_resolution": "480P", "resolution": "1080p"}
+    assert from_720["breakdown"]["matched_rule"] == {"from_resolution": "720P", "resolution": "1080p"}
+    assert from_480["usd_client"] > from_720["usd_client"]
 
 
 @needs_data
@@ -1140,3 +1153,73 @@ def test_estimate_endpoint_null_value_keeps_mode_default() -> None:
     data = r.json()
     assert data["errors"] == []
     assert data["usd_client"] == pytest.approx(0.6315, abs=0.0002)
+
+
+@needs_data
+def test_estimate_endpoint_returns_catalog_family_id() -> None:
+    """family_id в ответе = id каталога из model_id (у части семейств он с суффиксом)."""
+    client = TestClient(_app())
+    r = client.post(
+        "/api/kie-create/estimate",
+        json={"model_id": "hailuo-2-3-i2v", "mode": "i2v-pro", "values": {"duration": 10, "resolution": "768P"}},
+    )
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["family_id"] == "hailuo-2-3-i2v"
+    assert data["mode_id"] == "i2v-pro"
+    assert data["usd_client"] == pytest.approx(0.5625, abs=0.0002)
+    # у обычных семейств ничего не меняется
+    plain = client.post(
+        "/api/kie-create/estimate",
+        json={"model_id": "kling-3-0", "mode": "omni-i2v", "values": {"resolution": "1080p"}},
+    )
+    assert plain.status_code == 200, plain.text
+    assert plain.json()["family_id"] == "kling-3-0"
+
+
+@needs_data
+def test_generate_endpoint_returns_catalog_family_id(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """В ответе generate estimate тоже с id каталога, иначе UI бракует цену."""
+    from app.services import create_jobs as cj
+    from app.services import generation_storage as gs
+    from app.web.routers import kie_create
+
+    captured: dict[str, Any] = {}
+
+    async def fake_run(spec, payload, out_path):
+        captured["spec"] = spec
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(b"\x00" * 16)
+        from app.bots.outsee import GenerationResult
+
+        return GenerationResult(file_path=out_path, gen_id="task-fam-echo", raw_url=None)
+
+    monkeypatch.setattr(gs.settings, "data_dir", tmp_path)
+    cj._JOBS.clear()
+    cj._SEMS.clear()
+    cj._SEM_SIZES.clear()
+    cj._RECENT_FP.clear()
+    monkeypatch.setattr(kie_create.kie_http, "kie_configured", lambda: True)
+    monkeypatch.setattr(kie_create.kie_http, "run_generation", fake_run)
+    monkeypatch.setattr(kie_create.pay52_video, "pay52_video_configured", lambda spec=None: False)
+
+    client = TestClient(_app())
+    r = client.post(
+        "/api/kie-create/generate",
+        json={
+            "model_id": "hailuo-2-3-i2v",
+            "mode": "i2v-pro",
+            "values": {
+                "prompt": "x",
+                "image_url": ["https://example.com/a.png"],
+                "duration": 10,
+                "resolution": "768P",
+            },
+        },
+    )
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["estimate"]["family_id"] == "hailuo-2-3-i2v"
+    assert data["estimate"]["usd_client"] == pytest.approx(0.5625, abs=0.0002)
