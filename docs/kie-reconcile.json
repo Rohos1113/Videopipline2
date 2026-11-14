@@ -10402,17 +10402,133 @@
   "verdict": "FAIL по цене в UI: правила с ключами mode/sound не применяются (9 режимов показывают неверную цену в 16 конфигурациях, ещё 6 режимов не меняют цену при смене дорогой настройки), 62 режима показывают всегда одну и ту же цену-заглушку. Состав каталога и режимы на месте; в DOM скрыты 10 семейств (9 картинки + Veo 3.1), у 6 режимов UI показывает настройки, которых нет у режима."
  },
  "stage3_verifiers": {
-  "status": "нет данных на момент сборки",
-  "waiting_for": [
-   "docs/kie-ui-verify.* (task-10, porter)",
-   "docs/kie-pricing-verify.* (task-13, kie-analyst)"
-  ],
-  "independently_rechecked": [
-   "10 скрытых семейств из task-15: подтверждаю 9 картинок + Veo 3.1 (в пикере нет; вместо них строки-пресеты outsee с теми же именами)",
-   "дубли-пресеты: в пикере картинок строки Nano Banana / Nano Banana 2 / GPT Image 2 — это outsee-пресеты, а не семейства; дубль имени 'Nano Banana 2' виден в дампе",
-   "счётчики брендов в пикере не сходятся с каталогом: видео 40 строк при 37 семьях (3 строки — пресеты), картинки 28 при 35 семьях",
-   "кнопка/панель «Параметры» у режимов без полей работает (WAN 2.6, PixVerse) — но показывает настройки, которых у режима нет"
-  ],
-  "verdict": "НЕ ПРОВЕРЕНО до появления отчётов проверяющих"
+  "verdict": "PASS с уточнением: оба отчёта полные, мои ключевые выводы подтверждены; одно уточнение по подписи маски ideogram-v3/edit и один счётчик строк видео",
+  "reports": {
+   "pricing": {
+    "file": "docs/kie-pricing-verify.md/json",
+    "commit": "babc4326",
+    "owner": "kie-analyst",
+    "coverage": {
+     "modes_in_report": 174,
+     "modes_contract": 182,
+     "modes_checked_with_price": 174,
+     "families_in_report": 71,
+     "modes_missing_from_report": [
+      "gemini-omni-character",
+      "gpt-image-2-6/flare-image-to-image",
+      "gpt-image-2-6/flare-text-to-image",
+      "gpt-image-2-6/sunburst-image-to-image",
+      "gpt-image-2-6/sunburst-text-to-image",
+      "ideogram/v3-remix",
+      "omnihuman-1-5/human-identification",
+      "omnihuman-1-5/subject-detection"
+     ],
+     "brands_catalog": [
+      "Alibaba",
+      "Black Forest Labs",
+      "ByteDance",
+      "Google",
+      "Grok",
+      "Hailuo",
+      "Ideogram",
+      "Infinitalk",
+      "Kie",
+      "Kling",
+      "OmniHuman",
+      "OpenAI",
+      "Pixverse",
+      "Qwen",
+      "Recraft",
+      "Runway",
+      "Suno",
+      "Tongyi (Z-Image)",
+      "Topaz",
+      "Vidu",
+      "Volcengine",
+      "Wan"
+     ]
+    },
+    "cases": {
+     "total": 669,
+     "pass": 585,
+     "fail": 63,
+     "ambiguous": 19,
+     "uncomputable": 2
+    },
+    "failure_classes": {
+     "sound": 40,
+     "mode": 19,
+     "video": 2,
+     "max_mp": 2
+    }
+   },
+   "ui": {
+    "file": "docs/kie-ui-verify.md/json",
+    "owner": "porter",
+    "coverage": {
+     "families_contract": 72,
+     "modes_dom_checked": 135,
+     "settings_dom_checked": 591,
+     "families_verified": 51,
+     "families_unverified": 21,
+     "panel_not_open": 8
+    }
+   }
+  },
+  "independent_recheck": {
+   "pricing": {
+    "sample": 8,
+    "agreed": 7,
+    "disagreements": [
+     {
+      "family": "seedream-4-0",
+      "mode": "edit",
+      "kie_id": "bytedance/seedream-v4-edit",
+      "config": "картинок: 2",
+      "settings": {
+       "image_size": "square_hd",
+       "image_resolution": "1K",
+       "max_images": [
+        "https://example.com/img0.png",
+        "https://example.com/img1.png"
+       ]
+      },
+      "status_report": "ambiguous",
+      "expected_report": 0.0624,
+      "actual_report": 0.0312,
+      "my_expected": 0.0312,
+      "api_now": 0.0312,
+      "why": null,
+      "verdict": "РАСХОЖДЕНИЕ: моё ожидание != ожидание отчёта"
+     }
+    ],
+    "note": "единственное расхождение — их же кейс ambiguous (seedream-4.0/edit, 2 картинки): API 0.0312, ожидание отчёта 0.0624, доплата за вторую картинку нигде не сходится"
+   },
+   "ui": {
+    "sample_families": [
+     "Kling 2.5 Turbo",
+     "Kling AI Avatar",
+     "WAN 2.5",
+     "Ideogram V3",
+     "Seedance 2.5",
+     "Seedream 5.5"
+    ],
+    "confirmed": [
+     "10 скрытых семей (9 картинок + veo-3-1) — фильтр outsee-create-workspace.tsx:1300,5543",
+     "panel_not_open: Kling 2.5 Turbo, Kling AI Avatar, WAN 2.5 — панель не открывается",
+     "поля Seedance 2.5 и Seedream 5.5 — 0 расхождений с контрактом",
+     "дублей строк в пикере нет: «Nano Banana 2» — одна пресет-строка (мой ранний вывод о дубле был артефактом матчинга)"
+    ],
+    "disagreements": [
+     {
+      "what": "ideogram-v3/edit: два слота data-ref-add=image подписаны «Добавить: Фото 0/1», подписи «Маска» нет",
+      "their": "PASS, 0 missing/0 extra",
+      "mine": "P2 UX: контролы есть, но маску не отличить от картинки",
+      "resolution": "уточнение, не меняет вердикт"
+     }
+    ],
+    "counters_difference": "видео: у отчёта 34/34 совпало, у меня 36/37 KIE-строк; различие методики подсчёта строк-пресетов, состав семей совпадает"
+   }
+  }
  }
 }
