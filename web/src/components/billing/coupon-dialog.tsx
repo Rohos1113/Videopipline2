@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { useBalance } from "@/hooks/use-identity";
 import { errorMessageFromUnknown } from "@/lib/error-message";
+import { CryptoTopupModal } from "@/components/billing/crypto-topup-modal";
 
 interface CouponDialogProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function CouponDialog({ open, onOpenChange }: CouponDialogProps) {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cryptoOpen, setCryptoOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +59,7 @@ export function CouponDialog({ open, onOpenChange }: CouponDialogProps) {
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md border-white/10 bg-zinc-950/95 text-white backdrop-blur-2xl">
         <DialogHeader className="gap-1">
@@ -131,7 +134,41 @@ export function CouponDialog({ open, onOpenChange }: CouponDialogProps) {
             </Button>
           </div>
         </form>
+
+        {/* Крипта: второй способ пополнения, рядом с купоном. Кнопка ведёт в
+            отдельную модалку — счёт Bitcart живёт своей жизнью, у него таймер
+            и поллинг статуса, и мешать его с формой купона незачем. */}
+        <div className="space-y-3 border-t border-white/10 pt-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+            Или оплатить криптой
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setCryptoOpen(true)}
+            className="w-full gap-2 border-cyan-400/25 bg-cyan-400/[0.06] text-xs font-semibold text-cyan-300 hover:bg-cyan-400/[0.12] hover:text-cyan-200"
+          >
+            <Coins className="h-3.5 w-3.5" />
+            Пополнить криптой
+          </Button>
+          <p className="text-[11px] leading-snug text-zinc-500">
+            USDT (TRON, BNB, Ethereum), BTC или ETH. Кредиты придут после
+            подтверждения сети.
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
+    {cryptoOpen ? (
+      <CryptoTopupModal
+        onClose={() => setCryptoOpen(false)}
+        onCredited={() => {
+          qc.invalidateQueries({ queryKey: ["billing-balance"] });
+          qc.invalidateQueries({ queryKey: ["balance"] });
+          toast.success("Кредиты зачислены");
+        }}
+      />
+    ) : null}
+    </>
   );
 }
