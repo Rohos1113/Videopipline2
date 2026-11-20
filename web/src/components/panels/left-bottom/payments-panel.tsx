@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PLANS, PLAN_GROUPS, fmtRub, limitRows } from "@/lib/pricing";
 import { FactoryMini, FactoryStyles } from "@/components/home/factory-cards";
-import { PanelShell, Section, Btn, Chips, StatusPill, Empty, card, ACCENT } from "./ui";
+import { PanelShell, Section, Chips, StatusPill, Empty, card, ACCENT } from "./ui";
+import { CryptoTopupModal } from "./crypto-topup-modal";
 
 /** Ответ /api/billing/balance — остаток и последние проводки. */
 type Balance = {
@@ -133,12 +134,15 @@ function useMoneyData() {
   const [projectsVisible, setProjectsVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // После успешного пополнения перечитываем баланс: цифры приходят с сервера.
+  const [nonce, setNonce] = useState(0);
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
 
   useEffect(() => {
     let alive = true;
     const get = async <T,>(url: string): Promise<T | null> => {
       try {
-        const r = await fetch(url, { credentials: "same-origin" });
+        const r = await fetch(url, { credentials: "same-origin", cache: "no-store" });
         if (!r.ok) return null;
         return (await r.json()) as T;
       } catch {
@@ -164,14 +168,15 @@ function useMoneyData() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [nonce]);
 
-  return { balance, usage, projects, projectsVisible, error, loading };
+  return { balance, usage, projects, projectsVisible, error, loading, reload };
 }
 
 export function PaymentsPanel({ onClose }: { onClose: () => void }) {
-  const { balance, usage, projects, projectsVisible, error, loading } = useMoneyData();
+  const { balance, usage, projects, projectsVisible, error, loading, reload } = useMoneyData();
   const [f, setF] = useState<"Все" | "Пополнения" | "Списания">("Все");
+  const [topupOpen, setTopupOpen] = useState(false);
 
   const rows = useMemo(() => {
     const list = (usage?.recent ?? []).map((r) => {
@@ -269,13 +274,27 @@ export function PaymentsPanel({ onClose }: { onClose: () => void }) {
             {free.reason ? ` · ${free.reason}` : ""}
           </div>
         ) : null}
-        <div className="mt-3 flex gap-2" title="Оплата в студии не подключена">
-          <Btn primary disabled title="оплата не подключена">Пополнить</Btn>
-          {["500", "2000", "10000"].map((v) => (
-            <Btn key={v} disabled title="оплата не подключена">+{v}</Btn>
-          ))}
-        </div>
-        <div className="mt-1.5 text-[12px] text-zinc-600">Пополнение отключено: студия пока не принимает платежи.</div>
+        {balance?.unlimited ? (
+          <div className="mt-3 rounded-[10px] border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[13px] text-zinc-400">
+            Пополнение доступно участникам студии: у владельца нет кассы.
+          </div>
+        ) : (
+          <>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setTopupOpen(true)}
+                className="h-9 rounded-[10px] px-3 text-[14px] font-medium transition-colors"
+                style={{ background: "rgba(45,212,191,0.16)", color: ACCENT }}
+              >
+                Пополнить
+              </button>
+            </div>
+            <div className="mt-1.5 text-[12px] text-zinc-600">
+              Криптой. Кредиты придут после подтверждения сети.
+            </div>
+          </>
+        )}
       </div>
 
       {usage && Object.keys(usage.summary.by_kind).length > 0 ? (
@@ -379,6 +398,7 @@ export function PaymentsPanel({ onClose }: { onClose: () => void }) {
           )}
         </Section>
       ) : null}
+      {topupOpen ? <CryptoTopupModal onClose={() => setTopupOpen(false)} onCredited={reload} /> : null}
     </PanelShell>
   );
 }

@@ -533,6 +533,38 @@ class Settings(BaseSettings):
     credit_usd_rate: float = Field(1.0, alias="CREDIT_USD_RATE")
     credit_margin: float = Field(3.0, alias="CREDIT_MARGIN")
 
+    # ── Крипто-пополнение через Bitcart (docs/CRYPTO-TOPUP-CONTRACT.md §2) ──
+    # Выключено по умолчанию: пока шлюз не поднят и не настроен, ручки обязаны
+    # отвечать понятным 503, а не 500 на первом же запросе.
+    crypto_topup_enabled: bool = Field(False, alias="CRYPTO_TOPUP_ENABLED")
+    # Свой инстанс Bitcart (docs/CRYPTO-TOPUP-BITCART.md §2): базовый адрес
+    # магазина, API живёт под `/api`. Хвостовой слэш снимает клиент.
+    bitcart_url: str = Field("", alias="BITCART_URL")
+    bitcart_store_id: str = Field("", alias="BITCART_STORE_ID")
+    # Секрет: уходит в заголовок `Authorization` без `Bearer`. В логи и в
+    # `raw` инвойса не попадает (docs/CRYPTO-TOPUP-CONTRACT.md §13).
+    bitcart_token: str = Field("", alias="BITCART_TOKEN")
+    # Секрет в пути вебхука. У Bitcart IPN без подписи и без ретраев
+    # (`docs/CRYPTO-TOPUP-BITCART.md` §10), поэтому единственный признак
+    # «свой» — длинный случайный хвост пути, который Bitcart узнаёт только от
+    # нас. Пусто — вебхук выключен целиком, оплату подхватывает фоновая сверка.
+    crypto_webhook_secret: str = Field("", alias="CRYPTO_WEBHOOK_SECRET")
+    crypto_topup_min_usd: float = Field(5.0, alias="CRYPTO_TOPUP_MIN_USD")
+    crypto_topup_max_usd: float = Field(500.0, alias="CRYPTO_TOPUP_MAX_USD")
+    # Срок жизни счёта в минутах: столько клиент видит таймер. Шлюз срок и сам
+    # присылает (`expiration`), здесь — наш, на случай если не прислал.
+    crypto_topup_expiration_min: int = Field(30, alias="CRYPTO_TOPUP_EXPIRATION_MIN")
+    # Открытых счетов на одного арендатора. Без лимита спам плодит адреса и
+    # держит демоны монет занятыми (`docs/CRYPTO-TOPUP-BITCART.md` §4.3).
+    crypto_topup_max_open: int = Field(10, alias="CRYPTO_TOPUP_MAX_OPEN")
+    crypto_bitcart_timeout_s: float = Field(15.0, alias="CRYPTO_BITCART_TIMEOUT_S")
+    # Внешний адрес студии, каким его видит интернет. Из него строятся
+    # `notification_url` (вебхук Bitcart) и `redirect_url` после оплаты —
+    # локальный `WEB_HOST` для этого не годится, Bitcart стучится снаружи.
+    # Пусто — ссылки не передаём: счёт создаётся, но платёж подхватит только
+    # фоновая сверка (допустимо, дольше).
+    studio_public_url: str = Field("", alias="STUDIO_PUBLIC_URL")
+
     # ── База данных ───────────────────────────────────────────────────────
     # Пусто — SQLite по `sqlite_path` (одна машина, режим владельца). Задано —
     # берётся как есть: `postgresql+asyncpg://user:pass@host/db`. SaaS живёт
@@ -657,6 +689,17 @@ class Settings(BaseSettings):
         if self.fleet_public_url.strip():
             return self.fleet_public_url.strip().rstrip("/")
         return self.fleet_local_web_url
+
+    @property
+    def studio_public_base(self) -> str:
+        """Внешний адрес студии без хвостового слэша.
+
+        Из него строятся ссылки, по которым стучится ЧУЖОЙ сервис (вебхук
+        Bitcart) и возвращается браузер после оплаты. Пустая строка — ссылок
+        наружу не отдаём вовсе: подставить сюда `127.0.0.1:8765` было бы
+        хуже, чем не отдать ничего, — клиент ушёл бы в никуда с деньгами.
+        """
+        return (self.studio_public_url or "").strip().rstrip("/")
 
     @property
     def fleet_heartbeat_hub_url(self) -> str:

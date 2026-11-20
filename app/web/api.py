@@ -49,6 +49,9 @@ from app.web.routers import (
     create_queue as create_queue_router,
 )
 from app.web.routers import (
+    crypto_payments as crypto_payments_router,
+)
+from app.web.routers import (
     db_browser as db_browser_router,
 )
 from app.web.routers import (
@@ -317,6 +320,35 @@ async def _stop_observer(tasks: list[asyncio.Task]) -> None:
         logger.exception("observer heartbeat stop mark failed (non-fatal)")
 
 
+def _start_crypto_sync() -> list[asyncio.Task]:
+    """Фоновая сверка крипто-счетов — только при включённом пополнении.
+
+    Единственный путь, который не теряет оплату, если вебхук Bitcart не дошёл:
+    у его IPN нет ни подписи, ни повторов (`docs/CRYPTO-TOPUP-BITCART.md` §10).
+    Ошибка старта студию не валит: ручки пополнения отдадут понятный отказ, а не
+    уронят весь веб.
+    """
+    from app.settings import settings
+
+    if not settings.crypto_topup_enabled:
+        return []
+    try:
+        from app.services.crypto_payments import crypto_sync_loop
+
+        return [asyncio.create_task(crypto_sync_loop(), name="crypto-topup-sync")]
+    except Exception:  # noqa: BLE001
+        logger.exception("crypto topup sync failed to start (non-fatal)")
+        return []
+
+
+async def _stop_tasks(tasks: list[asyncio.Task]) -> None:
+    """Погасить фоновые задачи и дождаться их. Общий помощник для lifespan."""
+    for task in reversed(tasks or []):
+        task.cancel()
+        with suppress(asyncio.CancelledError, Exception):
+            await task
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     """Идемпотентная инициализация:
@@ -524,11 +556,16 @@ async def _lifespan(app: FastAPI):
     approval_expiry_task = await _start_engine()
     # Цикл наблюдения и сторож пульса (ENGINE_STARTUP), см. `_start_observer`.
     observer_tasks = _start_observer()
+    # Сверка крипто-счетов: единственный путь, который не теряет оплату, если
+    # вебхук Bitcart не дошёл (у него нет ни подписи, ни ретраев). Флаг — тот же,
+    # что у ручек пополнения: выключённое пополнение не должно ходить в шлюз.
+    crypto_tasks = _start_crypto_sync()
 
     try:
         yield
     finally:
         await _stop_observer(observer_tasks)
+        await _stop_tasks(crypto_tasks)
         if approval_expiry_task is not None:
             approval_expiry_task.cancel()
             with suppress(asyncio.CancelledError, Exception):
@@ -621,6 +658,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_router.router, prefix=API_PREFIX)
     app.include_router(me_router.router, prefix=API_PREFIX)
     app.include_router(billing_router.router, prefix=API_PREFIX)
+    # Пополнение криптой: счёт, статус и вебхук Bitcart. Участнику путь
+    # открыт префиксом `/api/billing/`, вебхук — секретом в URL (identity.py).
+    app.include_router(crypto_payments_router.router, prefix=API_PREFIX)
     app.include_router(my_prompts_router.router, prefix=API_PREFIX)
     app.include_router(studio_chat_router.router, prefix=API_PREFIX)
     app.include_router(db_browser_router.router, prefix=API_PREFIX)
