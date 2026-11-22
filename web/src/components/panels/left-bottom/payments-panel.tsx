@@ -1,7 +1,5 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PLANS, PLAN_GROUPS, fmtRub, limitRows } from "@/lib/pricing";
-import { FactoryMini, FactoryStyles } from "@/components/home/factory-cards";
 import { PanelShell, Section, Chips, StatusPill, Empty, card, ACCENT } from "./ui";
 import { CryptoTopupModal } from "./crypto-topup-modal";
 
@@ -83,8 +81,6 @@ const KIND_LABEL: Record<string, string> = {
   promo: "Бонус",
   coupon: "Купон",
 };
-
-const CURRENT_PLAN = "start";
 
 const usd = (v: number | null | undefined) =>
   v == null ? "—" : `$${v.toFixed(v < 0.1 ? 4 : 2)}`;
@@ -238,10 +234,10 @@ export function PaymentsPanel({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <div className="mt-1 text-[28px] font-medium text-white">
-              {balance?.balance_credits ?? "0"} <span className="text-[15px] text-zinc-500">кредитов</span>
+              {balance?.balance_credits ?? "0"} <span className="text-[15px] text-zinc-500">токенов</span>
             </div>
             {balance && balance.held_micro > 0 ? (
-              <div className="mt-1.5 text-sm text-zinc-500">Заморожено под задачи: {(balance.held_micro / 1_000_000).toFixed(2)} кр.</div>
+              <div className="mt-1.5 text-sm text-zinc-500">Заморожено под задачи: {(balance.held_micro / 1_000_000).toFixed(2)} ток.</div>
             ) : null}
           </>
         )}
@@ -265,7 +261,7 @@ export function PaymentsPanel({ onClose }: { onClose: () => void }) {
           </div>
         ) : null}
         <div className="mt-1.5 text-sm text-zinc-500">
-          Израсходовано всего: {spent} кр.
+          Израсходовано всего: {spent} ток.
           {costUsd != null ? ` · себестоимость ${usd(costUsd)}` : ""}
         </div>
         {free?.active ? (
@@ -291,7 +287,7 @@ export function PaymentsPanel({ onClose }: { onClose: () => void }) {
               </button>
             </div>
             <div className="mt-1.5 text-[12px] text-zinc-600">
-              Криптой. Кредиты придут после подтверждения сети.
+              Криптой. Токены придут после подтверждения сети.
             </div>
           </>
         )}
@@ -304,36 +300,13 @@ export function PaymentsPanel({ onClose }: { onClose: () => void }) {
               <div key={kind} className="flex items-center gap-2 rounded-[10px] px-2 py-1.5 text-sm hover:bg-white/[0.04]">
                 <span className="flex-1 text-zinc-300">{KIND_LABEL[kind] ?? kind}</span>
                 <span className="text-zinc-500">{it.calls} выз.</span>
-                <span className="w-20 text-right text-zinc-200">{it.credits} кр.</span>
+                <span className="w-20 text-right text-zinc-200">{it.credits} ток.</span>
                 {showUsd ? <span className="w-20 text-right text-zinc-500">{usd(it.cost_usd)}</span> : null}
               </div>
             ))}
           </div>
         </Section>
       ) : null}
-
-      <Section title="Тариф">
-        <FactoryStyles />
-        {(["trial", "factory"] as const).map((g) => (
-          <div key={g} className="mb-3">
-            <div className="mb-1.5 text-sm text-zinc-400">{PLAN_GROUPS[g].title} <span className="text-zinc-600">· {g === "trial" ? "разово" : "в месяц"}</span></div>
-            <div className="grid grid-cols-2 gap-2">
-              {PLANS.filter((p) => p.group === g).map((p) => {
-                if (g === "factory") return <FactoryMini key={p.id} p={p} current={p.id === CURRENT_PLAN} />;
-                const cur = p.id === CURRENT_PLAN;
-                return (
-                  <a key={p.id} href={`/register?plan=${p.id}`} className={card + " block p-2.5 transition-colors duration-200 hover:bg-white/[0.05]"} style={cur ? { borderColor: "rgba(45,212,191,0.5)" } : undefined}>
-                    <div className="flex items-baseline justify-between"><span className="text-[14px] text-white">{p.name}</span><span className="text-sm" style={{ color: cur ? ACCENT : "#a1a1aa" }}>{fmtRub(p.price)}</span></div>
-                    <ul className="mt-1.5 space-y-0.5 text-[12px] text-zinc-500">{limitRows(p.limits).map(([k, v]) => <li key={k} className="flex justify-between gap-2"><span>{k}</span><span className="text-zinc-300">{v}</span></li>)}</ul>
-                    {p.perks ? <div className="mt-1.5 text-[12px] text-zinc-500">{p.base ? `Всё из ${p.base} + ` : ""}{p.perks.map((x) => x[0].toLowerCase() + x.slice(1)).join(", ")}</div> : null}
-                    {cur ? <div className="mt-1.5 text-sm" style={{ color: ACCENT }}>Текущий</div> : null}
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </Section>
 
       <Section title="История" right={<Chips value={f} options={["Все", "Пополнения", "Списания"]} onChange={setF} />}>
         {loading ? <Empty text="Считаю…" /> : rows.length === 0 ? <Empty text="Списаний пока нет" /> : (
@@ -374,7 +347,7 @@ export function PaymentsPanel({ onClose }: { onClose: () => void }) {
                   <span className="block truncate text-zinc-300">{m.display_name || m.model}</span>
                   <span className="block truncate text-[11px] text-zinc-600">{KIND_LABEL[m.kind] ?? m.kind} · {m.provider} · {m.calls} выз.{m.units ? ` · ${m.units.toFixed(m.units < 10 ? 2 : 0)} ${m.unit_label}` : ""}</span>
                 </span>
-                <span className="w-20 text-right text-zinc-200">{m.credits_spent} кр.</span>
+                <span className="w-20 text-right text-zinc-200">{m.credits_spent} ток.</span>
                 {showUsd ? <span className="w-16 text-right text-zinc-500">{usd(m.cost_usd)}</span> : null}
               </div>
             ))}

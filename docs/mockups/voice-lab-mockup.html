@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Голоса внутри «Генерации» — макет (VIA)</title>
+<style>
+  :root{
+    --rail:#0e0e10;
+    --bg:#0a0a0b;
+    --canvas:#0c0c0e;
+    --panel:#121216;
+    --card:#14151c;
+    --panel-2:#16161b;
+    --line:rgba(255,255,255,.08);
+    --line-soft:rgba(255,255,255,.06);
+    --text:#fff;
+    --muted:rgba(255,255,255,.55);
+    --muted-2:rgba(255,255,255,.35);
+    --teal:#2dd4bf;
+    --teal-2:#5eead4;
+    --cyan:#22d3ee;
+    --rose:#fb7185;
+    --blue:#60a5fa;
+    --ok:#34d399;
+    --warn:#fbbf24;
+    --err:#f87171;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:Rubik,"Segoe UI",system-ui,-apple-system,sans-serif;font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  input,select,textarea{font-family:inherit}
+  svg{display:block}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;background:rgba(255,255,255,.07);padding:1px 5px;border-radius:5px}
+
+  .app{display:flex;height:100vh;overflow:hidden}
+
+  /* ---------- рейл: как в студии, без новых пунктов ---------- */
+  .rail{
+    width:64px;flex:0 0 64px;background:var(--rail);border-right:1px solid var(--line-soft);
+    display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;z-index:40;
+  }
+  .rail-logo{
+    width:46px;height:26px;margin-bottom:12px;border-radius:5px;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:13px;letter-spacing:.14em;color:#111;background:linear-gradient(135deg,#e6e6e6,#9d9d9d);
+  }
+  .rail-btn{
+    width:62px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;
+    font-size:11px;letter-spacing:-.02em;color:rgba(255,255,255,.45);border-radius:8px;transition:.15s;
+  }
+  .rail-btn:hover{background:rgba(255,255,255,.05);color:#fff}
+  .rail-btn.active{color:var(--teal)}
+  .rail-btn .rail-ico{width:18px;height:18px}
+  .rail-gap{min-height:8px}
+  .rail-gap.g1{flex-grow:.45}
+  .rail-gap.g2{flex-grow:1.55}
+  .rail-foot-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:rgba(255,255,255,.45)}
+  .rail-foot-btn:hover{background:rgba(255,255,255,.05);color:#fff}
+
+  /* ---------- сцена ---------- */
+  .stage{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+  .mock-switch{
+    display:flex;align-items:center;gap:8px;padding:9px 18px;border-bottom:1px dashed rgba(255,255,255,.12);
+    background:#08080a;flex:0 0 auto;flex-wrap:wrap;
+  }
+  .mock-switch .mock-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);margin-right:4px}
+  .mock-tab{padding:5px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted);transition:.15s}
+  .mock-tab:hover{color:#fff;border-color:rgba(255,255,255,.25)}
+  .mock-tab.on{background:rgba(45,212,191,.15);border-color:rgba(45,212,191,.45);color:var(--teal)}
+  .screens{flex:1;min-height:0;overflow:auto}
+  .screen{display:none}
+  .screen.active{display:block}
+
+  /* ---------- экран 1: генерация ---------- */
+  .create{position:relative;min-height:calc(100vh - 44px);background:radial-gradient(1200px 500px at 60% -10%,rgba(45,212,191,.05),transparent 60%),var(--canvas);display:flex;flex-direction:column}
+  .feed{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line-soft)}
+  .feed .ftab{font-size:12.5px;color:var(--muted);padding:6px 12px;border-radius:9px;border:1px solid transparent}
+  .feed .ftab:hover{color:#fff}
+  .feed .ftab.on{color:#fff;background:rgba(255,255,255,.06);border-color:var(--line)}
+  .feed .spacer{flex:1}
+  .feed .hint{font-size:11.5px;color:var(--muted-2)}
+
+  .media-area{flex:1;min-height:320px;display:flex;align-items:center;justify-content:center;padding:20px}
+  .empty-card{
+    width:100%;max-width:340px;border:1px solid var(--line);border-radius:16px;background:rgba(18,18,22,.7);
+    padding:34px 24px;text-align:center;backdrop-filter:blur(12px);
+  }
+  .empty-card .ec-ico{width:44px;height:44px;margin:0 auto 12px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);color:rgba(255,255,255,.45)}
+  .empty-card .ec-title{font-size:13.5px;font-weight:500;color:rgba(255,255,255,.8)}
+  .empty-card .ec-sub{font-size:11.5px;color:var(--muted-2);margin-top:7px;line-height:1.5}
+
+  /* док */
+  .dock-wrap{position:relative;padding:0 14px 14px}
+  .dock{position:relative;border:1px solid var(--line);border-radius:18px;background:rgba(18,18,22,.92);backdrop-filter:blur(18px);padding:11px 13px 12px}
+  .dock-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 11px;border-radius:11px;
+    border:1px solid var(--line);background:var(--panel-2);font-size:12px;color:rgba(255,255,255,.8);transition:.15s;
+  }
+  .chip:hover{border-color:rgba(255,255,255,.22);color:#fff}
+  .chip .logo{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:rgba(94,234,212,.2);color:var(--teal-2)}
+  .chip .lbl{color:rgba(255,255,255,.45)}
+  .chip .val{font-weight:600;color:#fff}
+  .chip .mono{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:rgba(255,255,255,.6)}
+  .chip.accent{border-color:rgba(45,212,191,.45);background:rgba(45,212,191,.12);color:var(--teal-2)}
+  .chip.accent .lbl{color:rgba(94,234,212,.6)}
+  .chip.accent .val{color:var(--teal-2)}
+  .chip.pulse{box-shadow:0 0 0 1px rgba(45,212,191,.45),0 0 22px -6px rgba(45,212,191,.8);animation:glow 2.4s ease-in-out infinite}
+  @keyframes glow{0%,100%{box-shadow:0 0 0 1px rgba(45,212,191,.45),0 0 18px -8px rgba(45,212,191,.7)}50%{box-shadow:0 0 0 1px rgba(45,212,191,.7),0 0 26px -4px rgba(45,212,191,.95)}}
+
+  .prompt-row{display:flex;align-items:flex-end;gap:10px;margin-top:10px}
+  .typetoggle{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
+  .ttype{
+    width:64px;height:52px;border-radius:12px;border:1px solid var(--line);background:rgba(22,22,27,.9);
+    display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.45);transition:.18s;
+  }
+  .ttype:hover{color:#fff;border-color:rgba(255,255,255,.2)}
+  .ttype.on{border-color:var(--teal);background:rgba(45,212,191,.15);color:var(--teal);box-shadow:0 0 18px rgba(45,212,191,.25)}
+  .prompt-box{flex:1;min-width:0;border:1px solid var(--line);border-radius:14px;background:rgba(10,10,11,.6);padding:9px 11px}
+  .prompt-box textarea{
+    width:100%;border:0;background:none;color:#fff;font-size:13px;line-height:1.5;resize:none;outline:none;min-height:46px;
+  }
+  .prompt-box textarea::placeholder{color:rgba(255,255,255,.3)}
+  .prompt-tools{display:flex;align-items:center;gap:8px;margin-top:4px}
+  .prompt-tools .spacer{flex:1}
+  .price{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--teal-2)}
+  .gen-btn{
+    height:44px;padding:0 20px;border-radius:13px;background:var(--teal);color:#04201d;font-weight:700;font-size:13px;
+    display:flex;align-items:center;gap:8px;box-shadow:0 8px 22px -10px rgba(45,212,191,.9);
+  }
+  .gen-btn:hover{background:#4ce3d0}
+
+  /* поповер выбора модели */
+  .popover{
+    position:absolute;bottom:calc(100% - 6px);left:0;z-index:25;width:520px;max-height:400px;
+    display:flex;flex-direction:column;border-radius:16px;border:1px solid rgba(255,255,255,.15);
+    background:rgba(18,18,22,.97);backdrop-filter:blur(24px);box-shadow:0 25px 70px rgba(0,0,0,.85);
+    overflow:hidden;
+  }
+  .pop-head{padding:10px 12px;border-bottom:1px solid var(--line);background:#16161b}
+  .pop-title{font-size:13px;font-weight:700;color:rgba(255,255,255,.9);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .pop-search{position:relative}
+  .pop-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:rgba(255,255,255,.4)}
+  .pop-search input{width:100%;height:30px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.4);padding:0 10px 0 29px;font-size:11.5px;color:#fff;outline:none}
+  .pop-search input::placeholder{color:rgba(255,255,255,.3)}
+  .pop-body{display:flex;min-height:0;flex:1}
+  .engines{width:186px;flex:0 0 186px;border-right:1px solid var(--line);padding:8px;overflow:auto}
+  .engines .cap{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.3);padding:0 4px 6px}
+  .eng{width:100%;display:flex;align-items:center;gap:8px;padding:7px;border-radius:11px;border:1px solid transparent;margin-bottom:4px;text-align:left}
+  .eng:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1)}
+  .eng.on{background:rgba(45,212,191,.1);border-color:rgba(45,212,191,.45)}
+  .eng .e-ico{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);flex:0 0 28px;font-size:11px;font-weight:700}
+  .eng.on .e-ico{background:rgba(45,212,191,.2);color:var(--teal)}
+  .eng .e-name{font-size:12px;font-weight:600;color:rgba(255,255,255,.85);display:block}
+  .eng.on .e-name{color:#fff}
+  .eng .e-count{font-size:9px;font-family:ui-monospace,Consolas,monospace;color:rgba(255,255,255,.35)}
+  .actions{flex:1;min-width:0;overflow:auto;padding:10px}
+  .actions .a-head{display:flex;align-items:center;justify-content:space-between;padding:0 2px 8px}
+  .actions .a-head .t{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45);display:flex;align-items:center;gap:6px}
+  .tagline{font-size:8.5px;font-weight:700;letter-spacing:.04em;text-transform:none;padding:2px 5px;border-radius:4px;background:rgba(45,212,191,.15);color:var(--teal-2)}
+  .acard{
+    width:100%;display:flex;gap:9px;align-items:flex-start;text-align:left;padding:9px;border-radius:11px;
+    border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);margin-bottom:6px;position:relative;
+  }
+  .acard:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2)}
+  .acard.on{border-color:var(--teal);background:rgba(45,212,191,.15);box-shadow:0 0 18px rgba(45,212,191,.2)}
+  .acard .a-ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);color:rgba(255,255,255,.75);flex:0 0 30px}
+  .acard.on .a-ico{background:rgba(45,212,191,.2);color:var(--teal)}
+  .acard .a-name{font-size:12px;font-weight:600;color:rgba(255,255,255,.9)}
+  .acard.on .a-name{color:var(--teal)}
+  .acard .a-desc{font-size:10px;color:rgba(255,255,255,.45);margin-top:3px;line-height:1.35}
+  .acard .a-price{font-size:10px;font-family:ui-monospace,Consolas,monospace;color:rgba(255,255,255,.55);margin-top:5px}
+  .acard .a-check{position:absolute;right:8px;bottom:8px;width:16px;height:16px;border-radius:99px;background:rgba(45,212,191,.2);color:var(--teal);display:flex;align-items:center;justify-content:center}
+  .acard .a-check svg{width:11px;height:11px}
+
+  /* подсказки-аннотации на макете */
+  .anno{position:absolute;z-index:30;display:flex;align-items:center;gap:8px;font-size:11.5px;color:rgba(255,255,255,.85);pointer-events:none}
+  .anno .num{width:19px;height:19px;border-radius:99px;background:var(--teal);color:#04201d;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 19px}
+  .anno .txt{background:rgba(10,10,11,.9);border:1px solid rgba(45,212,191,.35);padding:5px 9px;border-radius:9px;line-height:1.4}
+  .anno.top{top:-2px;right:0}
+  .flowline{position:absolute;right:14px;bottom:-6px;color:rgba(255,255,255,.25);font-size:11.5px}
+
+  /* ---------- общие панели ---------- */
+  .wrap{padding:22px 24px 44px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .panel{
+    width:100%;max-width:940px;border:1px solid var(--line);border-radius:18px;background:#0f1015;
+    box-shadow:0 40px 90px -40px rgba(0,0,0,.95);overflow:hidden;position:relative;
+  }
+  .panel-head{display:flex;align-items:center;gap:13px;padding:15px 18px;border-bottom:1px solid var(--line)}
+  .tile{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(34,211,238,.1);color:var(--cyan);box-shadow:inset 0 0 0 1px rgba(34,211,238,.25);flex:0 0 40px}
+  h2{font-size:16px;margin:0;font-weight:600;display:flex;align-items:center;gap:8px}
+  .sub{margin:2px 0 0;font-size:11.5px;color:var(--muted)}
+  .pill{border-radius:999px;padding:2px 8px;font-size:11px;font-weight:500}
+  .pill.cyan{background:rgba(34,211,238,.18);color:var(--cyan)}
+  .pill.gray{background:rgba(255,255,255,.07);color:var(--muted)}
+  .right{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .btn{display:inline-flex;align-items:center;gap:7px;border-radius:10px;padding:9px 13px;font-size:12.5px;font-weight:500;transition:.15s;white-space:nowrap}
+  .btn svg{width:14px;height:14px}
+  .btn.ghost{border:1px solid var(--line);color:rgba(255,255,255,.75);background:rgba(255,255,255,.02)}
+  .btn.ghost:hover{border-color:rgba(255,255,255,.28);color:#fff;background:rgba(255,255,255,.05)}
+  .btn.primary{background:var(--cyan);color:#04171c;font-weight:600;box-shadow:0 6px 18px -8px rgba(34,211,238,.9)}
+  .btn.primary:hover{background:#3ee0f7}
+  .btn.teal{background:var(--teal);color:#04201d;font-weight:700}
+  .btn.sm{padding:6px 10px;font-size:11.5px;border-radius:8px}
+  .icon-btn{width:28px;height:28px;flex:0 0 28px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:.15s}
+  .icon-btn:hover{background:rgba(255,255,255,.09);color:#fff}
+  .icon-btn svg{width:16px;height:16px}
+
+  /* фильтры модалки */
+  .filterbar{display:flex;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02);flex-wrap:wrap}
+  .search{position:relative;flex:1 1 240px;max-width:380px}
+  .search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:rgba(255,255,255,.35)}
+  .search input{width:100%;border-radius:11px;border:1px solid var(--line);background:#161720;padding:8px 11px 8px 31px;font-size:12.5px;color:#fff;outline:none}
+  .search input::placeholder{color:rgba(255,255,255,.35)}
+  .search input:focus{border-color:rgba(34,211,238,.5);box-shadow:0 0 0 2px rgba(34,211,238,.12)}
+  .tabs{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:11px;background:#0f1015}
+  .tab{padding:6px 11px;border-radius:8px;font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+  .tab:hover{color:#fff}
+  .tab.on{background:rgba(34,211,238,.16);color:var(--cyan)}
+  .tab .count{font-size:10px;padding:1px 5px;border-radius:99px;background:rgba(255,255,255,.09);color:rgba(255,255,255,.6)}
+  .tab.on .count{background:rgba(34,211,238,.22);color:var(--cyan)}
+  .chips{display:flex;gap:1px;padding:3px;border:1px solid var(--line);border-radius:11px;background:#0f1015}
+  .chipf{padding:6px 9px;border-radius:8px;font-size:11.5px;color:var(--muted)}
+  .chipf:hover{color:#fff}
+  .chipf.on{background:rgba(255,255,255,.09);color:#fff}
+
+  /* карточки голосов в модалке */
+  .vgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:14px 16px}
+  .vcard{position:relative;border:1px solid rgba(255,255,255,.08);background:#14151c;border-radius:12px;padding:10px;transition:.15s}
+  .vcard:hover{background:#1a1b24;border-color:rgba(255,255,255,.18)}
+  .vcard.busy{border-color:rgba(251,191,36,.28)}
+  .vcard.err{border-color:rgba(248,113,113,.3)}
+  .vc-head{display:flex;align-items:center;gap:9px}
+  .avatar{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+  .avatar.m{background:rgba(96,165,250,.16);color:#93c5fd;box-shadow:inset 0 0 0 1px rgba(96,165,250,.25)}
+  .avatar.f{background:rgba(251,113,133,.16);color:#fda4af;box-shadow:inset 0 0 0 1px rgba(251,113,133,.25)}
+  .vc-title{min-width:0;flex:1}
+  .vc-name{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vc-meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{font-size:9.5px;font-weight:600;letter-spacing:.03em;padding:1.5px 5px;border-radius:4px;text-transform:uppercase}
+  .badge.clone{background:rgba(45,212,191,.16);color:#5eead4}
+  .badge.catalog{background:rgba(255,255,255,.08);color:rgba(255,255,255,.6)}
+  .badge.std{background:rgba(167,139,250,.16);color:#c4b5fd}
+  .badge.m{background:rgba(96,165,250,.18);color:#93c5fd}
+  .badge.f{background:rgba(251,113,133,.18);color:#fda4af}
+  .vc-player{display:flex;align-items:center;gap:8px;margin-top:9px}
+  .play{width:28px;height:28px;flex:0 0 28px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:rgba(34,211,238,.12);color:var(--cyan)}
+  .play:hover{background:rgba(34,211,238,.22)}
+  .play.playing{background:var(--cyan);color:#04171c}
+  .play svg{width:12px;height:12px}
+  .play.dim{opacity:.35;cursor:not-allowed}
+  .wave{display:flex;align-items:center;gap:2px;height:20px;flex:1;overflow:hidden}
+  .wave i{display:block;width:2px;border-radius:2px;background:rgba(255,255,255,.22)}
+  .playing + .wave i{background:rgba(34,211,238,.55)}
+  .dur{font-size:10.5px;color:var(--muted-2);font-variant-numeric:tabular-nums}
+  .vc-foot{display:flex;align-items:center;gap:7px;margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05);font-size:11px}
+  .status{display:inline-flex;align-items:center;gap:5px}
+  .status .dot{width:5px;height:5px;border-radius:99px}
+  .status.ok{color:rgba(52,211,153,.9)} .status.ok .dot{background:var(--ok);box-shadow:0 0 8px rgba(52,211,153,.7)}
+  .status.busy{color:rgba(251,191,36,.9)} .status.busy .dot{background:var(--warn);box-shadow:0 0 8px rgba(251,191,36,.7)}
+  .status.err{color:rgba(248,113,113,.9)} .status.err .dot{background:var(--err);box-shadow:0 0 8px rgba(248,113,113,.7)}
+  .vc-foot .spacer{flex:1}
+  .link-btn{font-size:11px;color:rgba(255,255,255,.55);padding:2px 5px;border-radius:6px}
+  .link-btn:hover{color:#fff;background:rgba(255,255,255,.07)}
+  .link-btn.accent{color:var(--cyan)}
+  .progress{height:3px;border-radius:99px;background:rgba(255,255,255,.09);margin-top:8px;overflow:hidden}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),#fcd34d)}
+
+  .menu{position:absolute;right:8px;top:38px;z-index:20;width:226px;padding:5px;border-radius:12px;background:#161720;border:1px solid rgba(255,255,255,.13);box-shadow:0 22px 50px -18px rgba(0,0,0,.95);display:none}
+  .menu.open{display:block}
+  .menu button{display:flex;align-items:center;gap:8px;width:100%;padding:7px 8px;border-radius:8px;font-size:12px;color:rgba(255,255,255,.82);text-align:left}
+  .menu button:hover{background:rgba(255,255,255,.07);color:#fff}
+  .menu button svg{width:13px;height:13px;color:var(--muted-2)}
+  .menu .sep{height:1px;background:rgba(255,255,255,.08);margin:4px 6px}
+  .menu button.danger{color:#fca5a5}
+  .menu button.danger svg{color:rgba(248,113,113,.8)}
+
+  .panel-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 16px;border-top:1px solid var(--line);background:#0d0e13;font-size:11.5px;color:var(--muted-2)}
+  .empty{display:none;padding:40px 0;text-align:center;color:var(--muted);font-size:12.5px}
+
+  /* мастер */
+  .steps{display:flex;align-items:center;gap:8px;padding:0 18px 14px}
+  .step{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted-2)}
+  .step .num{width:21px;height:21px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:600;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+  .step.on{color:#fff}
+  .step.on .num{background:var(--teal);color:#04201d;border-color:var(--teal)}
+  .step.done{color:rgba(52,211,153,.9)}
+  .step.done .num{background:rgba(52,211,153,.16);color:var(--ok);border-color:rgba(52,211,153,.4)}
+  .step-line{flex:1;height:1px;background:rgba(255,255,255,.1);min-width:16px}
+  .wgrid{display:grid;grid-template-columns:1.35fr .9fr;gap:14px;padding:0 18px 16px}
+  .dropzone{border:1.5px dashed rgba(255,255,255,.18);border-radius:13px;padding:20px 16px;text-align:center;background:rgba(255,255,255,.015)}
+  .dropzone:hover{border-color:rgba(45,212,191,.45);background:rgba(45,212,191,.04)}
+  .dz-ico{width:40px;height:40px;margin:0 auto 9px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(45,212,191,.1);color:var(--teal)}
+  .dz-title{font-size:13px;font-weight:500}
+  .dz-sub{font-size:11px;color:var(--muted);margin-top:4px}
+  .dz-actions{margin-top:11px;display:flex;gap:7px;justify-content:center;flex-wrap:wrap}
+  .files{margin-top:11px;display:flex;flex-direction:column;gap:6px}
+  .file{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line-soft);border-radius:10px;background:#14151c}
+  .file .f-ico{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(167,139,250,.14);color:#c4b5fd;flex:0 0 26px}
+  .file .f-ico svg{width:13px;height:13px}
+  .file .f-name{font-size:11.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file .f-dur{font-size:10.5px;padding:2px 5px;border-radius:5px;background:rgba(255,255,255,.06);color:var(--muted)}
+  .side-card{border:1px solid var(--line-soft);border-radius:13px;background:rgba(255,255,255,.02);padding:12px 13px}
+  .side-card h4{margin:0 0 9px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);font-weight:700}
+  .check{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;color:rgba(255,255,255,.82);padding:4px 0;line-height:1.4}
+  .check .ci{width:15px;height:15px;flex:0 0 15px;border-radius:99px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .check .ci svg{width:9px;height:9px}
+  .check.ok .ci{background:rgba(52,211,153,.18);color:var(--ok)}
+  .check.warn .ci{background:rgba(251,191,36,.18);color:var(--warn)}
+  .check .note{font-size:10.5px;color:var(--muted);margin-top:2px}
+  .agree{display:flex;align-items:flex-start;gap:9px;font-size:11.5px;color:rgba(255,255,255,.85);line-height:1.45}
+  .cbox{width:15px;height:15px;flex:0 0 15px;border-radius:4px;border:1px solid rgba(45,212,191,.6);background:rgba(45,212,191,.18);display:flex;align-items:center;justify-content:center;color:var(--teal);margin-top:1px}
+  .cbox svg{width:10px;height:10px}
+  .note-box{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.22);font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.82)}
+  .note-box svg{width:14px;height:14px;color:var(--warn);flex:0 0 14px;margin-top:1px}
+  .kpis{display:flex;gap:9px;flex-wrap:wrap;padding:0 18px 14px}
+  .kpi{flex:1 1 160px;border:1px solid var(--line-soft);border-radius:11px;padding:9px 11px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.01))}
+  .kpi .k-label{font-size:10px;color:var(--muted-2);letter-spacing:.04em;text-transform:uppercase}
+  .kpi .k-value{font-size:16px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+  .kpi .k-value small{font-size:11px;font-weight:400;color:var(--muted);margin-left:3px}
+  .kbar{height:3px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:7px;overflow:hidden}
+  .kbar > i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--cyan))}
+
+  .callout{max-width:940px;width:100%;padding:12px 15px;border:1px dashed rgba(255,255,255,.14);border-radius:11px;color:var(--muted);font-size:11.5px;line-height:1.65}
+  .callout b{color:#fff;font-weight:600}
+
+  .toast{position:fixed;right:22px;bottom:20px;z-index:60;display:flex;align-items:center;gap:9px;background:#12131a;border:1px solid rgba(52,211,153,.35);border-radius:11px;padding:10px 13px;font-size:12px;box-shadow:0 22px 50px -18px rgba(0,0,0,.9)}
+  .toast .ti{width:19px;height:19px;border-radius:99px;background:rgba(52,211,153,.18);color:var(--ok);display:flex;align-items:center;justify-content:center;flex:0 0 19px}
+  .toast .ti svg{width:11px;height:11px}
+  .toast small{display:block;color:var(--muted);font-size:10.5px;margin-top:2px}
+
+  @media (max-width:1100px){ .wgrid{grid-template-columns:1fr} .vgrid{grid-template-columns:1fr} .popover{width:100%} }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- рейл как есть: пункт «Голоса» не добавляем -->
+  <nav class="rail" aria-label="Основная навигация">
+    <div class="rail-logo">VIA</div>
+    <button class="rail-btn active"><svg class="rail-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg><span>Генерация</span></button>
+    <button class="rail-btn"><svg class="rail-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Проекты</span></button>
+    <button class="rail-btn"><svg class="rail-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 7V4M9 12h.01M15 12h.01M9 16h6"/></svg><span>Чат</span></button>
+    <button class="rail-btn"><svg class="rail-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><circle cx="7" cy="15" r="1"/></svg><span>Хранилище</span></button>
+    <button class="rail-btn"><svg class="rail-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/></svg><span>Админка</span></button>
+    <div class="rail-gap g1"></div>
+    <button class="rail-btn"><svg class="rail-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l1.8 4.4L18 9l-4.2 1.6L12 15l-1.8-4.4L6 9l4.2-1.6z"/><path d="M18 15l.9 2.2L21 18l-2.1.8L18 21l-.9-2.2L15 18l2.1-.8z"/></svg><span>ИИ-агент</span></button>
+    <div class="rail-gap g2"></div>
+    <button class="rail-btn"><svg class="rail-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg><span>Оплата</span></button>
+    <button class="rail-btn"><svg class="rail-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M16 12h3M3 9h18"/></svg><span>Выплаты</span></button>
+    <button class="rail-foot-btn" title="Пользователь"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6"/></svg></button>
+    <button class="rail-foot-btn" title="Настройки"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.2A1.7 1.7 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.2A1.7 1.7 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.4 1z"/></svg></button>
+  </nav>
+
+  <div class="stage">
+    <div class="mock-switch">
+      <span class="mock-label">макет · экраны</span>
+      <button class="mock-tab on" data-screen="A">1 · Генерация → Аудио → 11Labs</button>
+      <button class="mock-tab" data-screen="B">2 · Модалка «Голоса»</button>
+      <button class="mock-tab" data-screen="C">3 · Мастер клонирования</button>
+    </div>
+
+    <div class="screens">
+      <!-- ================= ЭКРАН 1 ================= -->
+      <section class="screen active" id="screenA">
+        <div class="create">
+          <div class="feed">
+            <button class="ftab">Все</button>
+            <button class="ftab">Фото</button>
+            <button class="ftab">Видео</button>
+            <button class="ftab on">Аудио</button>
+            <span class="spacer"></span>
+            <span class="hint">История озвучек проекта</span>
+          </div>
+
+          <div class="media-area">
+            <div class="empty-card">
+              <div class="ec-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M21 16l-5-4-6 5"/></svg></div>
+              <div class="ec-title">Нет результата</div>
+              <div class="ec-sub">Здесь появятся озвучки. Выберите голос и нажмите «Сгенерировать».</div>
+            </div>
+          </div>
+
+          <div class="dock-wrap">
+            <!-- поповер выбора модели: аудио-движки -->
+            <div class="popover">
+              <div class="pop-head">
+                <div class="pop-title">Движок и действие</div>
+                <div class="pop-search">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+                  <input type="text" placeholder="Поиск действия (трек, кавер, озвучка, диалог, SFX)…">
+                </div>
+              </div>
+              <div class="pop-body">
+                <div class="engines">
+                  <div class="cap">Движок</div>
+                  <button class="eng"><span class="e-ico">S</span><span><span class="e-name">Suno</span><span class="e-count">6 моделей</span></span></button>
+                  <button class="eng on"><span class="e-ico">11</span><span><span class="e-name">ElevenLabs</span><span class="e-count">2 модели</span></span></button>
+                </div>
+                <div class="actions">
+                  <div class="a-head">
+                    <span class="t">ElevenLabs <span class="tagline">Голос &amp; Речь</span></span>
+                    <span style="font-size:10px;color:rgba(255,255,255,.3);font-family:ui-monospace,Consolas,monospace">2 модели</span>
+                  </div>
+                  <button class="acard on">
+                    <span class="a-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg></span>
+                    <span style="min-width:0;flex:1">
+                      <span class="a-name">Озвучка ElevenLabs v4 (WaveSpeed)</span>
+                      <span class="a-desc">Новейшая модель v4, библиотека русских голосов, аудио-теги эмоций</span>
+                      <span class="a-price">3 кр / 1k символов</span>
+                    </span>
+                    <span class="a-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>
+                  </button>
+                  <button class="acard">
+                    <span class="a-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 15V9M8 18V6M12 16V8M16 19V5M20 14v-4"/></svg></span>
+                    <span style="min-width:0;flex:1">
+                      <span class="a-name">Звуковые эффекты</span>
+                      <span class="a-desc">SFX по описанию: шаги, ветер, удары, интерфейс</span>
+                      <span class="a-price">0.012 $ / сек</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="dock">
+              <div class="dock-row">
+                <button class="chip accent">
+                  <span class="logo">11</span>
+                  <span class="lbl">Модель:</span>
+                  <span class="val">Озвучка ElevenLabs v4</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+
+                <!-- ЧИП ГОЛОСА: сюда приходят клоны -->
+                <button class="chip accent pulse" data-screen-link="B" title="Открыть голоса: клоны, библиотека, стандартные">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg>
+                  <span class="lbl">Голос:</span>
+                  <span class="val">Диктор Алексей</span>
+                  <span class="badge clone">Клон</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+
+                <span class="chip"><span class="lbl">stability</span><span class="mono">0.5</span></span>
+                <span class="chip"><span class="lbl">similarity</span><span class="mono">0.75</span></span>
+                <span class="chip"><span class="lbl">формат</span><span class="mono">mp3 44.1k</span></span>
+              </div>
+
+              <div class="prompt-row">
+                <div class="typetoggle">
+                  <button class="ttype" title="Фото"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M21 16l-5-4-6 5"/></svg></button>
+                  <button class="ttype" title="Видео"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="M15 10l6-3v10l-6-3z"/></svg></button>
+                  <button class="ttype on" title="Аудио"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9M8 18V6M12 16V8M16 19V5M20 14v-4"/></svg></button>
+                </div>
+
+                <div class="prompt-box">
+                  <textarea placeholder="Текст для озвучки. Аудио-теги: [whispers] [laughs] [sighs]…">Он открыл дверь и понял, что за ней никого нет.</textarea>
+                  <div class="prompt-tools">
+                    <span class="pill gray">ASR тайминги</span>
+                    <span class="pill gray">авто-нарезка по кадрам</span>
+                    <span class="spacer"></span>
+                    <span class="price">≈ $0.093 · 62 симв.</span>
+                  </div>
+                </div>
+
+                <button class="gen-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Сгенерировать</button>
+              </div>
+            </div>
+
+            <div class="flowline"></div>
+          </div>
+        </div>
+
+        <div class="callout" style="max-width:940px;margin:14px auto 0">
+          <b>Куда всё это живёт:</b> отдельного раздела в меню нет. Вход — чип «Голос» в доке модели ElevenLabs (то же место, где сейчас выбор из 200 голосов), плюс та же модалка открывается из панели ноды «Озвучка». Клонирование — кнопка внутри этой модалки.
+        </div>
+      </section>
+
+      <!-- ================= ЭКРАН 2 ================= -->
+      <section class="screen" id="screenB">
+        <div class="wrap">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg></div>
+              <div>
+                <h2>Голоса <span class="pill cyan">ElevenLabs</span> <span class="pill gray">для модели «Озвучка v4»</span></h2>
+                <p class="sub">Мои клоны, библиотека и стандартные голоса — один выбор для Генерации и ноды «Озвучка»</p>
+              </div>
+              <div class="right">
+                <button class="btn ghost sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Обновить</button>
+                <button class="btn primary" data-screen-link="C"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Клонировать голос</button>
+              </div>
+            </div>
+
+            <div class="filterbar">
+              <div class="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+                <input id="voiceSearch" type="text" placeholder="Поиск по имени, тембру, характеру…" autofocus>
+              </div>
+              <div class="tabs" id="sourceTabs">
+                <button class="tab on" data-source="clone">Мои клоны <span class="count">4</span></button>
+                <button class="tab" data-source="catalog">Библиотека <span class="count">200</span></button>
+                <button class="tab" data-source="std">Стандартные <span class="count">9</span></button>
+              </div>
+              <div class="chips" id="genderChips">
+                <button class="chipf on" data-gender="all">Все</button>
+                <button class="chipf" data-gender="f">Ж</button>
+                <button class="chipf" data-gender="m">М</button>
+              </div>
+            </div>
+
+            <div class="vgrid" id="voiceGrid"></div>
+            <div class="empty" id="voiceEmpty">Ничего не найдено — измените запрос или фильтр</div>
+
+            <div class="panel-foot">
+              <span id="shownCount">Показано: 4 из 213</span>
+              <span>синхронизировано с ElevenLabs 2 мин назад · лимит клонов: 4 из 10 сегодня</span>
+            </div>
+          </div>
+
+          <div class="callout">
+            <b>Что добавлено к нынешней модалке:</b> таб «Мои клоны» с бейджами статуса, кнопка «Клонировать голос» в шапке, меню «…» на карточке (использовать в проекте, тестовая фраза, переименовать, заменить сэмплы, удалить). Всё остальное — как сейчас: поиск, фильтр по полу, образцы, выбор по клику.
+          </div>
+        </div>
+        <div class="toast">
+          <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>
+          <div>Выбран голос: Диктор Алексей<small>подставлен в чип «Голос» модели</small></div>
+        </div>
+      </section>
+
+      <!-- ================= ЭКРАН 3 ================= -->
+      <section class="screen" id="screenC">
+        <div class="wrap">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="tile" style="background:rgba(45,212,191,.1);color:var(--teal);box-shadow:inset 0 0 0 1px rgba(45,212,191,.25)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg></div>
+              <div>
+                <h2>Новый голос <span class="pill cyan">Мгновенное клонирование</span></h2>
+                <p class="sub">Открывается из модалки «Голоса» — шаг 2 из 3</p>
+              </div>
+              <div class="right"><button class="icon-btn" title="Закрыть" data-screen-link="B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+            </div>
+
+            <div style="padding-top:14px">
+              <div class="steps">
+                <div class="step done"><span class="num">✓</span>Имя и язык</div>
+                <div class="step-line"></div>
+                <div class="step on"><span class="num">2</span>Сэмплы</div>
+                <div class="step-line"></div>
+                <div class="step"><span class="num">3</span>Согласие</div>
+              </div>
+
+              <div class="kpis">
+                <div class="kpi"><div class="k-label">Клонов сейчас</div><div class="k-value">3 <small>из 10 на сегодня</small></div></div>
+                <div class="kpi"><div class="k-label">Речи в файлах</div><div class="k-value">1:58 <small>минимум 0:30</small></div></div>
+                <div class="kpi"><div class="k-label">Стоимость создания</div><div class="k-value">1 <small>создание · оплата по тарифу</small></div></div>
+              </div>
+
+              <div class="wgrid">
+                <div>
+                  <div class="dropzone">
+                    <div class="dz-ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></div>
+                    <div class="dz-title">Перетащите записи сюда</div>
+                    <div class="dz-sub">mp3, wav, m4a, ogg, flac · до 25 МБ · чистая речь, один диктор</div>
+                    <div class="dz-actions">
+                      <button class="btn ghost sm">Выбрать файлы</button>
+                      <button class="btn ghost sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>Записать с микрофона</button>
+                    </div>
+                  </div>
+
+                  <div class="files">
+                    <div class="file">
+                      <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></div>
+                      <span class="f-name">aleksey-studio-01.mp3</span>
+                      <span class="f-dur">0:38</span>
+                      <button class="icon-btn" title="Удалить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+                    </div>
+                    <div class="file">
+                      <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></div>
+                      <span class="f-name">aleksey-studio-02.wav</span>
+                      <span class="f-dur">0:29</span>
+                      <button class="icon-btn" title="Удалить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+                    </div>
+                    <div class="file">
+                      <div class="f-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></div>
+                      <span class="f-name">aleksey-studio-03.m4a</span>
+                      <span class="f-dur">0:51</span>
+                      <button class="icon-btn" title="Удалить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:11px">
+                  <div class="side-card">
+                    <h4>Проверка сэмплов</h4>
+                    <div class="check ok"><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span><div>Хватает речи<div class="note">больше минуты; качество растёт до 3 минут</div></div></div>
+                    <div class="check ok"><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span><div>Один диктор во всех файлах</div></div>
+                    <div class="check ok"><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span><div>Музыки и посторонних голосов нет</div></div>
+                    <div class="check warn"><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 8v5M12 16.5v.5"/></svg></span><div>Щелчок в начале 3-го файла<div class="note">0:00–0:02 — голос вступает не сразу</div></div></div>
+                  </div>
+
+                  <div class="side-card">
+                    <h4>Шаг 3 · Согласие</h4>
+                    <div class="agree">
+                      <span class="cbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></span>
+                      <span>Это мой голос или есть письменное разрешение диктора.</span>
+                    </div>
+                    <div class="note-box" style="margin-top:10px">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>
+                      <div>Создание платное и необратимое. Сэмплы остаются в студии (они нужны для повторного создания) и стираются вместе с голосом.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-foot">
+              <button class="btn ghost sm" data-screen-link="B">Назад к голосам</button>
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="font-size:11px">Голос появится в табе «Мои клоны» и в чипе «Голос»</span>
+                <button class="btn primary">Создать голос</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout">
+            <b>Механика:</b> сэмплы пишутся в <code>data/voices/clones/&lt;id&gt;/</code> → запрос в ElevenLabs → запись в реестре голосов со статусом «Готов» → превью-фраза → клон доступен в Генерации и в ноде «Озвучка». Ошибка сети или тарифа не теряет сэмплы — можно повторить.
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  const VOICES = [
+    {id:'aleksey', name:'Диктор Алексей', src:'clone', gender:'m', initials:'ДА', desc:'Мужской · Русский · создан 12 ноя', dur:'0:42', status:'ok', statusText:'Готов', used:'в 2 проектах', menu:true},
+    {id:'anna', name:'Анна-реклама', src:'clone', gender:'f', initials:'АР', desc:'Женский · Русский · создана 9 ноя', dur:'0:37', status:'ok', statusText:'Готов', used:'в 1 проекте'},
+    {id:'lumen', name:'Голос клиента Lumen', src:'clone', gender:'m', initials:'ЛМ', desc:'Мужской · Русский · 20 мин назад', dur:'—', status:'busy', statusText:'Обучается', progress:40},
+    {id:'nordwind', name:'Голос клиента Nordwind', src:'clone', gender:'f', initials:'НВ', desc:'Женский · Русский · 14 ноя', dur:'—', status:'err', statusText:'Ошибка: мало речи', retry:true},
+    {id:'marina', name:'Marina', src:'catalog', gender:'f', initials:'M', desc:'Soft Clear and Warm · библиотека #1', dur:'0:18', status:'ok', statusText:'Каталог', used:'в 3 проектах'},
+    {id:'adam', name:'Адам (Adam)', src:'std', gender:'m', initials:'АД', desc:'Глубокий, эпичный рассказчик', dur:'0:12', status:'ok', statusText:'Стандарт', used:'в 5 проектах'}
+  ];
+  const SRC_LABEL = {clone:'Клон', catalog:'Каталог', std:'Стандарт'};
+  const ICON = {
+    more:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+    play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+    pause:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
+    use:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h13M12 6l6 6-6 6"/></svg>',
+    test:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v10"/><circle cx="12" cy="16" r="3"/><path d="M5 21h14"/></svg>',
+    rename:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L20 8l-4-4L4 16z"/></svg>',
+    samples:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 15V9M8 18V6M12 16V8M16 19V5M20 14v-4"/></svg>',
+    copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5H6a1 1 0 0 0-1 1v9"/></svg>',
+    trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>'
+  };
+
+  const grid = document.getElementById('voiceGrid');
+  const empty = document.getElementById('voiceEmpty');
+  const shown = document.getElementById('shownCount');
+  const searchEl = document.getElementById('voiceSearch');
+  let source = 'clone', gender = 'all', query = '';
+
+  function waveBars(seed){
+    let out = '';
+    for (let i=0;i<22;i++){
+      out += '<i style="height:'+(3 + Math.round((Math.sin((i+seed)*0.9)+1.2)/2.2*14))+'px"></i>';
+    }
+    return out;
+  }
+
+  function card(v){
+    const g = v.gender === 'f' ? 'f' : 'm';
+    const menu = v.menu ? `
+      <div class="menu open">
+        <button>${ICON.use}Использовать в проекте…</button>
+        <button>${ICON.test}Тестовая фраза…</button>
+        <div class="sep"></div>
+        <button>${ICON.rename}Переименовать</button>
+        <button>${ICON.samples}Заменить сэмплы</button>
+        <button>${ICON.copy}Скопировать voice_id</button>
+        <div class="sep"></div>
+        <button class="danger">${ICON.trash}Удалить</button>
+      </div>` : '';
+    const progress = v.progress ? `<div class="progress"><i style="width:${v.progress}%"></i></div>` : '';
+    const right = v.status === 'err'
+      ? `<button class="link-btn accent">Повторить</button>`
+      : (v.used ? `<span style="color:rgba(255,255,255,.35)">${v.used}</span>` : '');
+    return `
+    <article class="vcard ${v.status==='busy'?'busy':''} ${v.status==='err'?'err':''}"
+             data-src="${v.src}" data-gender="${g}" data-name="${(v.name+' '+v.desc).toLowerCase()}">
+      <div class="vc-head">
+        <div class="avatar ${g}">${v.initials}</div>
+        <div class="vc-title">
+          <div class="vc-name">${v.name}<span class="badge ${v.src}">${SRC_LABEL[v.src]}</span><span class="badge ${g}">${g==='f'?'Ж':'М'}</span></div>
+          <div class="vc-meta">${v.desc}</div>
+        </div>
+        ${v.status==='err' ? '' : `<button class="icon-btn" data-menu="1" title="Действия">${ICON.more}</button>`}
+      </div>
+      <div class="vc-player">
+        <button class="play ${v.status!=='ok'?'dim':''}">${ICON.play}</button>
+        <div class="wave">${waveBars(v.name.length)}</div>
+        <span class="dur">${v.dur}</span>
+      </div>
+      ${progress}
+      <div class="vc-foot">
+        <span class="status ${v.status}"><span class="dot"></span>${v.statusText}</span>
+        <span class="spacer"></span>
+        ${right}
+      </div>
+      ${menu}
+    </article>`;
+  }
+
+  function render(){
+    const list = VOICES.filter(v =>
+      v.src === source &&
+      (gender === 'all' || v.gender === gender) &&
+      (!query || v.name.toLowerCase().includes(query) || v.desc.toLowerCase().includes(query))
+    );
+    grid.innerHTML = list.map(card).join('');
+    empty.style.display = list.length ? 'none' : 'block';
+    shown.textContent = 'Показано: ' + list.length + ' из ' + (source === 'catalog' ? 200 : source === 'std' ? 9 : 4) + '';
+    bind();
+  }
+
+  function bind(){
+    grid.querySelectorAll('.play').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (btn.classList.contains('dim')) return;
+        const playing = btn.classList.contains('playing');
+        grid.querySelectorAll('.play').forEach(b => { b.classList.remove('playing'); b.innerHTML = ICON.play; });
+        if (!playing){ btn.classList.add('playing'); btn.innerHTML = ICON.pause; }
+      });
+    });
+    grid.querySelectorAll('[data-menu]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const m = grid.querySelector('.menu');
+        if (m) m.classList.toggle('open');
+      });
+    });
+  }
+
+  document.querySelectorAll('#sourceTabs .tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('#sourceTabs .tab').forEach(x => x.classList.remove('on'));
+      t.classList.add('on');
+      source = t.dataset.source;
+      render();
+    });
+  });
+  document.querySelectorAll('#genderChips .chipf').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('#genderChips .chipf').forEach(x => x.classList.remove('on'));
+      c.classList.add('on');
+      gender = c.dataset.gender;
+      render();
+    });
+  });
+  searchEl.addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); render(); });
+
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen' + id));
+    document.querySelectorAll('.mock-tab').forEach(t => t.classList.toggle('on', t.dataset.screen === id));
+  }
+  document.querySelectorAll('.mock-tab').forEach(t => t.addEventListener('click', () => showScreen(t.dataset.screen)));
+  document.querySelectorAll('[data-screen-link]').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.screenLink)));
+
+  const wanted = (new URLSearchParams(location.search).get('screen') || 'A').toUpperCase();
+  if (['A','B','C'].includes(wanted)) showScreen(wanted);
+
+  render();
+</script>
+</body>
+</html>

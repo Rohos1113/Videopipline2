@@ -2,8 +2,7 @@
 
 import type React from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { PLANS, PLAN_GROUPS, fmtRub, limitRows, type Plan } from "@/lib/pricing";
-import { FactoryCard, FactoryStyles, IndustrialDivider } from "@/components/home/factory-cards";
+import { PAYG_POINTS, TOPUP_MAX_USD, TOPUP_MIN_USD, TOPUP_PRESETS_USD, fmtUsd } from "@/lib/pricing";
 
 
 const N = (t: string) => `/prompt-bg/node/${t}.webp`;
@@ -100,7 +99,7 @@ const FAQ = [
   ["Можно ли делать мультфильмы с одними и теми же героями?", "Да. Нода «Персонажи» фиксирует внешность героев, и дальше все кадры генерируются с ними."],
   ["Нужно ли уметь монтировать?", "Нет. Сборка, субтитры, музыка и звуки собираются автоматически. Любой шаг можно открыть и поправить вручную."],
   ["Какие модели используются?", "Текстовые LLM для плана и сценария, генераторы изображений и видео для кадров и анимации. Модель выбирается на каждой ноде."],
-  ["Сколько стоит?", "Тарифы ещё формируются — цены ниже указаны как заглушки."],
+  ["Сколько стоит?", "Тарифов и подписок нет. Пополняешь баланс криптой — от $5 — и тратишь его на операции: цена каждого шага видна до запуска, платишь только за то, что реально сгенерировано."],
   ["Можно ли менять промты?", "Да: просматривать, редактировать, сохранять свои версии и выбирать активный промт прямо в настройках ноды."],
 ];
 
@@ -162,31 +161,6 @@ function StartProjectBtn() {
   );
 }
 
-const PlanCard = ({ p, i }: { p: Plan; i: number }) => (
-  <Reveal delay={i * 70} className="h-full">
-    <div className={`group flex h-full flex-col rounded-[1.6rem] p-6 ring-1 transition duration-300 hover:-translate-y-1 hover:bg-[#2bb8a0]/[0.06] hover:ring-[#2bb8a0]/35 ${p.hot ? "bg-[#2bb8a0]/[0.06] ring-[#2bb8a0]/30" : "bg-white/[0.03] ring-white/[0.07]"}`}>
-      <div className="flex items-center justify-between">
-        <div className="text-xl font-medium text-white">{p.name}</div>
-        {p.hot && <span className="rounded-full bg-[#2bb8a0]/15 px-2.5 py-0.5 text-xs text-[#9fe9da]">популярный</span>}
-      </div>
-      <div className="mt-1 text-sm text-white/45">{p.note}</div>
-      <div className="mt-5 text-3xl font-bold text-white">{fmtRub(p.price)}<span className="text-base font-normal text-white/40">{p.group === "factory" ? " / месяц" : " разово"}</span></div>
-      <dl className="mt-5 space-y-1.5 text-sm">
-        {limitRows(p.limits).map(([k, v]) => (
-          <div key={k} className="flex justify-between gap-3 border-b border-white/[0.05] pb-1.5"><dt className="text-white/50">{k}</dt><dd className="text-white/85">{v}</dd></div>
-        ))}
-      </dl>
-      {p.perks && (
-        <ul className="mt-5 space-y-1.5 text-sm text-white/70">
-          {p.base && <li className="text-[#5fd6bf]/80">Всё из {p.base}, плюс:</li>}
-          {p.perks.map((x) => <li key={x} className="flex gap-2"><span className="text-[#5fd6bf]">✓</span>{x}</li>)}
-        </ul>
-      )}
-      <div className="mt-auto pt-6"><a href={`/register?plan=${p.id}`} className={`flex h-11 w-full items-center justify-center rounded-xl text-[15px] font-medium ring-1 transition duration-300 ${p.hot ? "bg-[#2bb8a0]/20 text-[#bff3e8] ring-[#2bb8a0]/40 hover:bg-[#2bb8a0]/30" : "bg-white/[0.04] text-white/75 ring-white/10 hover:bg-[#2bb8a0]/15 hover:text-[#bff3e8] hover:ring-[#2bb8a0]/30"}`}>Выбрать</a></div>
-    </div>
-  </Reveal>
-);
-
 const H2 = ({ k, t, s }: { k: string; t: string; s?: string }) => (
   <Reveal className="mb-8 max-w-3xl">
     <div className="mb-4 text-sm font-medium uppercase tracking-[0.25em] text-[#5fd6bf]/80">{k}</div>
@@ -200,7 +174,7 @@ const NAV = [
   { id: "formats", label: "Форматы" },
   { id: "features", label: "Возможности" },
   { id: "who", label: "Для кого" },
-  { id: "pricing", label: "Тарифы" },
+  { id: "pricing", label: "Оплата" },
   { id: "faq", label: "FAQ" },
   { id: "contacts", label: "Контакты" },
 ];
@@ -426,25 +400,42 @@ export function HomeLanding({ fontClass = "" }: { fontClass?: string }) {
         </div>
       </section>
 
-      {/* PRICING */}
+      {/* ОПЛАТА: тарифов и подписок нет — pay-as-you-go (решение 17.11.2026) */}
       <section id="pricing" className="mx-auto max-w-7xl px-6 py-12">
-        <FactoryStyles />
-        <H2 k="Тарифы" t="Тарифы" s="Начните с пробного пакета или запустите свой завод контента." />
-        {(["trial", "factory"] as const).map((g) => {
-          const list = PLANS.filter((p) => p.group === g);
-          return (
-            <div key={g} className="mb-12">
-              {g === "factory" && <IndustrialDivider />}
-              <div className="mb-5 flex flex-wrap items-baseline gap-3">
-                <h3 className={g === "factory" ? "text-4xl font-bold tracking-tight text-white" : "text-xl font-medium text-white/80"}>{PLAN_GROUPS[g].title}</h3>
-                <span className="text-white/45">{PLAN_GROUPS[g].sub}</span>
+        <H2 k="Оплата" t="Платите за операции, а не за подписку" s="Ни тарифов, ни месячной оплаты: пополняете баланс и тратите его на генерации. Цена шага считается до запуска — платите только за то, что реально сгенерировано." />
+        <div className="grid gap-4 md:grid-cols-3">
+          {PAYG_POINTS.map(([t, d], i) => (
+            <Reveal key={t} delay={i * 70} className="h-full">
+              <div className="flex h-full flex-col rounded-[1.6rem] bg-white/[0.03] p-7 ring-1 ring-white/[0.07] transition duration-300 hover:-translate-y-1 hover:bg-[#2bb8a0]/[0.06] hover:ring-[#2bb8a0]/35">
+                <div className="text-2xl font-medium text-white">{t}</div>
+                <p className="mt-3 text-lg leading-relaxed text-white/55">{d}</p>
               </div>
-              <div className={`grid gap-4 ${g === "trial" ? "md:grid-cols-3" : "md:grid-cols-2 xl:grid-cols-4"}`}>
-                {list.map((p, i) => g === "factory" ? <Reveal key={p.id} delay={i * 80} className="h-full"><FactoryCard p={p} /></Reveal> : <PlanCard key={p.id} p={p} i={i} />)}
+            </Reveal>
+          ))}
+        </div>
+
+        <Reveal className="mt-6">
+          <div className="flex flex-col gap-6 rounded-[1.6rem] bg-gradient-to-br from-[#2bb8a0]/[0.12] to-transparent p-7 ring-1 ring-[#2bb8a0]/25 md:flex-row md:items-center">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium uppercase tracking-[0.25em] text-[#7fe3cf]/80">Пополнение</div>
+              <div className="mt-3 text-3xl font-bold text-white">Криптой, {fmtUsd(TOPUP_MIN_USD)}–{fmtUsd(TOPUP_MAX_USD)}</div>
+              <p className="mt-3 text-lg leading-relaxed text-white/55">
+                Счёт открывается в студии за минуту: выбираете сумму, получаете адрес и QR, токены приходят на баланс после подтверждения сети. Монету и сеть выбираете в окне оплаты.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-start gap-4">
+              <div className="flex flex-wrap gap-2">
+                {TOPUP_PRESETS_USD.map((v) => (
+                  <span key={v} className="rounded-xl bg-white/[0.04] px-4 py-2 text-lg text-white/70 ring-1 ring-white/10">{fmtUsd(v)}</span>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <a href="/" className="inline-flex h-12 items-center rounded-2xl bg-[#2bb8a0]/25 px-6 text-base font-medium text-[#bff3e8] ring-1 ring-[#2bb8a0]/40 transition duration-300 hover:bg-[#2bb8a0]/35">Пополнить в студии</a>
+                <a href="/register" className="inline-flex h-12 items-center rounded-2xl bg-white/[0.04] px-6 text-base text-white/75 ring-1 ring-white/10 transition duration-300 hover:bg-white/[0.08]">Создать аккаунт</a>
               </div>
             </div>
-          );
-        })}
+          </div>
+        </Reveal>
       </section>
 
       {/* FAQ */}
@@ -466,7 +457,7 @@ export function HomeLanding({ fontClass = "" }: { fontClass?: string }) {
 
       {/* CONTACTS */}
       <section id="contacts" className="mx-auto max-w-7xl px-6 py-12">
-        <H2 k="Контакты" t="Связаться с командой VIA" s="Вопросы по студии, тарифам и подключению — выберите удобный путь." />
+        <H2 k="Контакты" t="Связаться с командой VIA" s="Вопросы по студии, оплате и подключению — выберите удобный путь." />
         <div className="grid gap-4 md:grid-cols-3">
           {[
             ["Попробовать студию", "Зарегистрируйтесь и соберите первый ролик на готовом пайплайне.", "/register", "Регистрация"],

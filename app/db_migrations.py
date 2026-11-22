@@ -49,6 +49,20 @@ def alembic_config(connection: Connection | None = None) -> Config:
     return cfg
 
 
+def head_revision() -> str:
+    """Текущая head-ревизия миграций.
+
+    Нужна проверкам «догнал до head»: с литералом каждая новая миграция
+    роняла их, ничего при этом не проверяя по существу.
+    """
+    from alembic.script import ScriptDirectory
+
+    head = ScriptDirectory.from_config(alembic_config()).get_current_head()
+    if head is None:
+        raise RuntimeError("у миграций нет head-ревизии")
+    return head
+
+
 def _state(connection: Connection) -> tuple[bool, bool]:
     """(есть ли пользовательские таблицы, под управлением ли alembic)."""
     inspector = inspect(connection)

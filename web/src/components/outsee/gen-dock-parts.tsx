@@ -830,6 +830,8 @@ export function ModelSettingsDock({
   formatVoice,
   onPanelOpen,
   extras,
+  panelExtras,
+  renderVoice,
   modes = [],
   modeId,
   onModeChange,
@@ -848,6 +850,16 @@ export function ModelSettingsDock({
   /** Перед открытием панели: закрыть пикер модели и чужие выпадашки. */
   onPanelOpen?: () => void;
   extras?: ReactNode;
+  /**
+   * Дополнительные строки ВНУТРИ панели «Параметры» (голоса, аудио-теги и
+   * прочее, что хозяин модели захотел видеть в одном окне с настройками).
+   */
+  panelExtras?: ReactNode;
+  /**
+   * Своё рисование голосового поля внутри панели: выпадающий список справа
+   * вместо модалки. Не задано — поле остаётся кнопкой `onOpenVoiceModal`.
+   */
+  renderVoice?: (descriptor: ModelSettingDescriptor) => ReactNode;
   /** Режимы семейства: первая секция панели + бейдж текущего режима. */
   modes?: ModelSettingModeOption[];
   modeId?: string | null;
@@ -867,6 +879,10 @@ export function ModelSettingsDock({
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
+      // Выпадашки-строки панели (голоса, аудио-теги) живут порталом вне boxRef:
+      // клик по ним не должен закрывать панель до того, как сработает выбор.
+      const target = e.target;
+      if (target instanceof Element && target.closest("[data-params-flyout]")) return;
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
@@ -965,7 +981,9 @@ export function ModelSettingsDock({
                 value={text}
                 title={d.hint || d.label}
                 active={open && !isVoice}
-                onClick={isVoice ? () => onOpenVoiceModal?.() : togglePanel}
+                // Если владелец нарисовал голос внутри панели (renderVoice),
+                // чип ведёт в «Параметры»; иначе — в прежнюю модалку библиотеки.
+                onClick={isVoice ? (renderVoice ? togglePanel : () => onOpenVoiceModal?.()) : togglePanel}
               />
             </span>
           );
@@ -1016,13 +1034,17 @@ export function ModelSettingsDock({
                 <div className="space-y-1.5">
                   {section.items.map((d) => (
                     <div key={d.name} data-setting-name={d.name} data-setting-kind={d.kind}>
-                      <SettingControl
-                        descriptor={d}
-                        value={modelSettingValue(d, values)}
-                        onChange={onChange}
-                        onOpenVoiceModal={onOpenVoiceModal}
-                        formatVoice={formatVoice}
-                      />
+                      {d.kind === "voice" && renderVoice ? (
+                        renderVoice(d)
+                      ) : (
+                        <SettingControl
+                          descriptor={d}
+                          value={modelSettingValue(d, values)}
+                          onChange={onChange}
+                          onOpenVoiceModal={onOpenVoiceModal}
+                          formatVoice={formatVoice}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1036,6 +1058,12 @@ export function ModelSettingsDock({
               >
                 {emptyNote.text}
               </p>
+            )}
+
+            {panelExtras && (
+              <div className="mt-2 space-y-1.5 border-t border-white/[0.08] pt-2">
+                {panelExtras}
+              </div>
             )}
 
             <div className="mt-3 flex items-center justify-between border-t border-white/[0.08] pt-2">

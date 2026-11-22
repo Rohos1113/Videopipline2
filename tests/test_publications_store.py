@@ -18,7 +18,7 @@ import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.db_migrations import upgrade_to_head_sync
+from app.db_migrations import head_revision, upgrade_to_head_sync
 from app.services import publications_store as ps
 from app.services import publish_accounts as pa
 
@@ -375,7 +375,7 @@ def test_database_at_0017_is_caught_up_and_upgrade_is_idempotent(tmp_path):
     assert _tables(db) >= _TABLES
     upgrade_to_head_sync(db)
     with sqlite3.connect(db) as con:
-        assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0024"
+        assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0] == head_revision()
 
 
 async def test_store_works_on_alembic_database_and_matches_its_shape(tmp_path):

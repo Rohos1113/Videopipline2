@@ -436,7 +436,7 @@ function Usage({ d }: { d: D }) {
   );
 }
 
-type Prefs = { lang: "ru" | "en"; fontScale: 100 | 110 | 120 };
+type Prefs = { lang: "ru" | "en" | "both"; fontScale: 100 | 110 | 120 };
 function Settings({ d }: { d: D }) {
   const qc = useQueryClient();
   const [prefs, setPrefs] = useState<Prefs>({ lang: "ru", fontScale: 100 });
@@ -458,7 +458,7 @@ function Settings({ d }: { d: D }) {
       <Card title="Интерфейс" icon={<Monitor className="h-4 w-4" />}>
         <div className="flex flex-col gap-4">
           <div><div className="mb-1.5 text-[14px] text-zinc-300">Размер шрифта</div><Seg value={prefs.fontScale} onChange={(v) => setP({ fontScale: v })} options={[{ v: 100, t: "100%" }, { v: 110, t: "110%" }, { v: 120, t: "120%" }]} /><div className="mt-1.5 text-[12px] text-zinc-600">Применяется сразу ко всей студии.</div></div>
-          <div><div className="mb-1.5 text-[14px] text-zinc-300">Язык <span className="text-zinc-600">(перевод интерфейса — позже)</span></div><Seg value={prefs.lang} onChange={(v) => setP({ lang: v })} options={[{ v: "ru", t: "Русский" }, { v: "en", t: "English" }]} /></div>
+          <div><div className="mb-1.5 text-[14px] text-zinc-300">Язык</div><Seg value={prefs.lang} onChange={(v) => setP({ lang: v })} options={[{ v: "ru", t: "Русский" }, { v: "en", t: "English" }, { v: "both", t: "Оба" }]} /></div>
         </div>
       </Card>
       <Card title="Уведомления" icon={<Bell className="h-4 w-4" />} right={setN.isPending ? <CircleDashed className="h-4 w-4 animate-spin text-zinc-500" /> : null}>

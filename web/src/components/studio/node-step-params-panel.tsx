@@ -17,7 +17,16 @@ import {
   elevenLabsVoiceLabel,
   findElevenLabsVoice,
 } from "@/lib/elevenlabs-voices";
-import { VoiceLibraryModal, getVoiceById } from "@/components/outsee/voice-library-modal";
+import {
+  VoiceLibraryModal,
+  getVoiceById,
+  rememberCloneVoices,
+} from "@/components/outsee/voice-library-modal";
+import {
+  listVoiceLabVoices,
+  voiceLabStatusLabel,
+  type VoiceLabVoice,
+} from "@/lib/voice-lab-api";
 import {
   charCountFromDuration,
   effectiveDurationSeconds,
@@ -145,6 +154,24 @@ function AudioFields({
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [isPlayingSample, setIsPlayingSample] = useState(false);
   const sampleAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Клоны студии: у участника ручки нет (404) — тогда группы в списке просто не будет.
+  const [cloneVoices, setCloneVoices] = useState<VoiceLabVoice[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listVoiceLabVoices()
+      .then((data) => {
+        if (cancelled) return;
+        setCloneVoices(data.voices);
+        rememberCloneVoices(data.voices);
+      })
+      .catch(() => {
+        /* member или ручки нет — тихо пропускаем */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setVoiceDraft(savedId);
@@ -269,6 +296,21 @@ function AudioFields({
           value={voiceDraft}
           onChange={(e) => setVoiceDraft(e.target.value)}
         >
+          {cloneVoices.length > 0 ? (
+            <optgroup label="Мои клоны">
+              {cloneVoices.map((v) => (
+                // value — voice_id провайдера: локальный uuid ElevenLabs не знает.
+                <option
+                  key={v.id}
+                  value={v.external_voice_id || v.id}
+                  disabled={v.status !== "ready"}
+                >
+                  {v.name}
+                  {v.status === "ready" ? "" : ` — ${voiceLabStatusLabel(v.status)}`}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
           <optgroup label="Женские голоса (100)">
             {FEMALE_RU_VOICES.map((v) => (
               <option key={v.id} value={v.id}>

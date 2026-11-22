@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from app.db_migrations import BASELINE_REVISION, upgrade_to_head_sync
+from app.db_migrations import BASELINE_REVISION, head_revision, upgrade_to_head_sync
 
 # Колонки, которых не было в базах «до batch/auto_mode» — их дописывает 0002.
 _LEGACY_ADDED = {"batch_id", "batch_position", "batch_slug", "auto_mode", "title"}
@@ -118,7 +118,7 @@ def test_managed_db_missing_late_tables_is_healed(tmp_path: Path) -> None:
 
     db = tmp_path / "nollm.db"
     upgrade_to_head_sync(db)
-    assert _revision(db) == "0024"
+    assert _revision(db) == head_revision()
 
     cfg = alembic_config()
     cfg.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "migrations"))
@@ -139,7 +139,7 @@ def test_managed_db_missing_late_tables_is_healed(tmp_path: Path) -> None:
 
     upgrade_to_head_sync(db)
 
-    assert _revision(db) == "0024"
+    assert _revision(db) == head_revision()
     tables = _tables(db)
     assert "llm_calls" in tables
     assert "work_leases" in tables
@@ -213,7 +213,7 @@ def test_pipeline_mode_backfill(tmp_path: Path) -> None:
 
     upgrade_to_head_sync(db)
 
-    assert _revision(db) == "0024"
+    assert _revision(db) == head_revision()
     assert _modes(db) == {
         "plain": "v1",
         "shot2": "v2",

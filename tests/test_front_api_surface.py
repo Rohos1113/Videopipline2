@@ -57,6 +57,10 @@ OWNER_UI_PREFIXES: tuple[str, ...] = (
     "/api/auth/operator-token",
     "/api/storage",
     "/api/admin",  # админка пользователей и доступов
+    # Клоны голосов ElevenLabs: инструмент владельца, участнику 404. Кнопка
+    # «Клонировать голос» и таб «Мои клоны» показываются только админу —
+    # ручки владелец получает, участник живёт без них (app/web/routers/voice_lab.py).
+    "/api/voice-lab",
     # Оркестратор: чат разрешён участнику, инструменты владельца — только хозяину
     "/api/orchestrator/kill",
     "/api/orchestrator/reports",

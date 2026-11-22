@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, CircleAlert, CircleDashed, LogOut, X, Sparkles, Image as ImageIcon, Mic, Bot } from "lucide-react";
+import { LANG_EVENT, normalizeLang } from "@/i18n/lang";
 
 const ACCENT = "#2dd4bf";
 const PREFS_KEY = "vp-user-prefs";
 
-type Prefs = { theme: "dark" | "dim"; lang: "ru" | "en"; fontScale: 100 | 110 | 120 };
+type Prefs = { theme: "dark" | "dim"; lang: "ru" | "en" | "both"; fontScale: 100 | 110 | 120 };
 const DEFAULT_PREFS: Prefs = { theme: "dark", lang: "ru", fontScale: 100 };
 
 async function getJson<T>(url: string): Promise<T> {
@@ -78,6 +79,7 @@ export function applyUserPrefs(p: Partial<Prefs>) {
   // большинство размеров в px — масштабируем через zoom (Chromium)
   (root.style as CSSStyleDeclaration & { zoom: string }).zoom = scale === 100 ? "" : String(scale / 100);
   root.lang = p.lang === "en" ? "en" : "ru";
+  if (p.lang !== undefined) window.dispatchEvent(new CustomEvent(LANG_EVENT, { detail: normalizeLang(p.lang) }));
 }
 
 /** Применяет сохранённые настройки при загрузке приложения (монтируется в рейле). */
@@ -188,7 +190,7 @@ export function UserPanel({ onClose }: { onClose: () => void }) {
 
         <Card title="Настройки">
           <div className="flex flex-col gap-2.5">
-            <div><div className="mb-1.5 text-sm text-zinc-400">Язык <span className="text-zinc-600">(перевод интерфейса — позже)</span></div><Seg value={prefs.lang} onChange={(v) => setP({ lang: v })} options={[{ v: "ru", t: "Русский" }, { v: "en", t: "English" }]} /></div>
+            <div><div className="mb-1.5 text-sm text-zinc-400">Язык</div><Seg value={prefs.lang} onChange={(v) => setP({ lang: v })} options={[{ v: "ru", t: "Русский" }, { v: "en", t: "English" }, { v: "both", t: "Оба" }]} /></div>
             <div><div className="mb-1.5 text-sm text-zinc-400">Размер шрифта</div><Seg value={prefs.fontScale} onChange={(v) => setP({ fontScale: v })} options={[{ v: 100, t: "100%" }, { v: 110, t: "110%" }, { v: 120, t: "120%" }]} /></div>
             <div className="text-sm text-zinc-600">Размер шрифта применяется сразу ко всему интерфейсу и сохраняется.</div>
           </div>

@@ -1,7 +1,7 @@
 ai-pack build
-git_head: fb2e8904
-built_at: 2026-10-16 10:32 UTC
-repo: C:\Users\EternalFlow\Documents\OpenCode\general\video-pipeline-web
+git_head: dca62c23
+built_at: 2026-11-17 20:38 UTC
+repo: C:\Users\Admin\Desktop\WebVideoPipeline-keys
 
 copied:
   00_core/AGENTS.md

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createPortal } from "react-dom";
@@ -7,7 +7,7 @@ import { StatusPill, card, ACCENT } from "./ui";
 /**
  * Оплата криптой: счёт Bitcart через прокси студии.
  * Контракт ответов — docs/CRYPTO-TOPUP-CONTRACT.md §8.
- * Суммы и кредиты приходят строками, во float их не переводим: числа нужны только
+ * Суммы и токены приходят строками, во float их не переводим: числа нужны только
  * для проверки ввода и сортировки, не для арифметики.
  */
 
@@ -88,13 +88,13 @@ function leftLabel(sec: number): string {
 
 function statusInfo(inv: CryptoInvoice): { text: string; pill: "успешно" | "ожидает" | "ошибка" } {
   const st = norm(inv.status);
-  if (st === "credited") return { text: `Зачислено, ${inv.credited_credits || inv.credits} кредитов`, pill: "успешно" };
+  if (st === "credited") return { text: `Зачислено, ${inv.credited_credits || inv.credits} токенов`, pill: "успешно" };
   if (st === "paid" || st === "confirmed" || st === "unconfirmed")
     return { text: "Оплата пришла — ждём подтверждение сети", pill: "ожидает" };
   if (st === "partial") return { text: "Пришло меньше суммы, разберём вручную", pill: "ошибка" };
   if (st === "expired") return { text: "Время оплаты вышло, счёт закрыт", pill: "ошибка" };
   if (st === "invalid") return { text: "Счёт недействителен, оплата не принята", pill: "ошибка" };
-  if (st === "refunded") return { text: "Средства вернули, кредиты не начислены", pill: "ошибка" };
+  if (st === "refunded") return { text: "Средства вернули, токены не начислены", pill: "ошибка" };
   if (st === "error") return { text: "Шлюз не смог провести счёт", pill: "ошибка" };
   return { text: "Ждём оплату", pill: "ожидает" };
 }
@@ -102,16 +102,16 @@ function statusInfo(inv: CryptoInvoice): { text: string; pill: "успешно" 
 /** Человеческий текст под статусом: что делать дальше. */
 function statusHint(inv: CryptoInvoice, gone: boolean): string {
   const st = norm(inv.status);
-  if (st === "credited") return "Кредиты уже на балансе, счёт закрыт.";
-  if (st === "partial") return "Пришла только часть суммы. Кредиты пока не начислены — напиши в поддержку и приложи хеш перевода.";
+  if (st === "credited") return "Токены уже на балансе, счёт закрыт.";
+  if (st === "partial") return "Пришла только часть суммы. Токены пока не начислены — напиши в поддержку и приложи хеш перевода.";
   if (st === "expired") return "Никто не заплатил вовремя. Если ты уже отправил — напиши в поддержку с хешем перевода, деньги не потеряются.";
   if (st === "invalid") return "Шлюз отклонил счёт. Начни заново и отправь точную сумму в указанной сети.";
   if (st === "refunded") return "Перевод ушёл обратно отправителю. Начни заново, если хочешь пополнить.";
   if (st === "error") return "Ошибка на стороне шлюза. Начни заново — новый счёт обычно создаётся нормально.";
   if (gone) return "Счёт больше недоступен: возможно, истёк или закрыт. Начни заново.";
   if (st === "paid" || st === "confirmed" || st === "unconfirmed")
-    return "Обычно это секунды или минуты. Кредиты запишутся сами, страницу закрывать не обязательно.";
-  return "Отправь ровно указанную сумму в указанной сети. Кредиты придут сами после подтверждения.";
+    return "Обычно это секунды или минуты. Токены запишутся сами, страницу закрывать не обязательно.";
+  return "Отправь ровно указанную сумму в указанной сети. Токены придут сами после подтверждения.";
 }
 
 const btnBase = "h-10 rounded-[10px] px-3.5 text-[14px] transition-colors disabled:cursor-not-allowed disabled:opacity-50";
@@ -419,7 +419,7 @@ export function CryptoTopupModal({ onClose, onCredited }: { onClose: () => void;
 
               {statusKey === "credited" ? (
                 <div className="rounded-[10px] border border-teal-400/25 bg-teal-400/[0.08] px-3 py-2 text-[13px] text-teal-100">
-                  Зачислено {invoice.credited_credits || invoice.credits} кредитов. Баланс в панели уже обновлён.
+                  Зачислено {invoice.credited_credits || invoice.credits} токенов. Баланс в панели уже обновлён.
                 </div>
               ) : failed ? (
                 <div className="flex flex-wrap gap-2">
